@@ -13,15 +13,57 @@ const showUpload = () => {
 
 <template>
   <div class="container">
-    <h1>WIC LIVE <small>0.0.5</small></h1>
+    <h1>WIC LIVE <small>0.1.1</small></h1>
     <span id="showUpload" @click="showUpload" v-if="!_showUpload">Upload</span>
 
     <maps-upload v-if="_showUpload" />
     <maps-synchronize />
   </div>
+  <footer>
+    © 2024 WIC LIVE is NOT affiliated with Ubisoft or Ubisoft Massive.<br />
+    © 2009 Ubisoft Entertainment. All Rights Reserved. World in Conflict, Ubisoft Massive the Ubisoft Massive logo,
+    Ubisoft, Ubi.com and the Ubisoft logo are all trademarks of Ubisoft Entertainment in the US and/or other countries.
+  </footer>
 </template>
 
-<style scoped>
+<style lang="scss">
+// add font
+
+@font-face {
+  font-family: "eurostib";
+  src: url("./assets/eurostib.ttf");
+}
+
+h1 small {
+  font-size: 12px;
+  color: #fff;
+
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  background: url("./assets/pattern.svg");
+}
+
+* {
+  font-family: "eurostib";
+}
+
+body {
+  background: linear-gradient(180deg, #082224 0%, #0d2f3f 100%);
+  min-height: 100vh;
+}
+
+.container {
+  padding-top: 20px;
+  min-height: calc(100vh - 50px);
+  width: calc(100vw - 100px);
+  max-width: calc(100vw - 100px);
+  flex: 1;
+}
+
+
 #showUpload {
   cursor: pointer;
   color: #fff;
@@ -31,6 +73,17 @@ const showUpload = () => {
   margin: 10px;
   position: absolute;
   top: 10px;
-  right: 10px;
+  right: 60px;
+}
+
+footer {
+  color: #fff;
+  text-align: center;
+  padding: 10px;
+  bottom: 0;
+  width: calc(100vw - 100px);
+  height: 50px;
+  margin: 0 50px;
+  font-size: 11px;
 }
 </style>

@@ -1,0 +1,32 @@
+name: Build WIC LIVE
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Bun
+      run: |
+        iwr https://bun.sh/install | iex
+      shell: powershell
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Build Tauri app with Bun
+      env:
+        TAURI_PRIVATE_KEY: ${{ secrets.SIGN_KEY }}
+        WICLIVE_ENV: production
+      run: bun run tauri build
+      shell: powershell
