@@ -29,7 +29,7 @@ jobs:
 
       - name: Build Tauri app with Bun
         env:
-          TAURI_PRIVATE_KEY: ${{ secrets.SIGN_KEY }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           WICLIVE_ENV: production
         run: bun run tauri build
         shell: powershell
