@@ -32,6 +32,8 @@ backend/uploads
 backend/build
 backend/get-ssl-credentials.ts
 backend/publish.sh
+backend/publish-debug.sh
 
 publish.sh
+publish-debug.sh
 src-tauri/tauri-sign.key

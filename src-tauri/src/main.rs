@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use serde::Serialize;
 use std::env;
 use tauri::Manager;
 
@@ -10,22 +11,24 @@ use std::{
 };
 // use zip_extensions::*;
 // use tokio::fs::File as TokioFile;
-
+#[derive(Serialize)]
 struct Config {
-    api_url: String,
+    API_URL: String,
 }
 
 impl Config {
     fn new() -> Self {
-        let api_url: String;
-        if cfg!(debug_assertions) {
-            api_url = env::var("API_URL").unwrap_or_else(|_| "http://localhost:3243".to_string());
-        } else {
-            api_url =
-                env::var("API_URL").unwrap_or_else(|_| "https://techtile.media:3243".to_string());
-        }
+        let env = env!("WICLIVE_ENV");
+        println!("Environment: {}", env);
+        let API_URL = match env {
+            "development" => "http://localhost:3243".to_string(),
+            "staging" => "https://techtile.media:3243".to_string(),
+            "production" => "https://techtile.media:3243".to_string(),
+            _ => "http://localhost:3243".to_string(),
+        };
+        println!("API URL: {}", API_URL.as_str());
 
-        Config { api_url }
+        Config { API_URL }
     }
 }
 
@@ -72,7 +75,7 @@ async fn get_map_data() -> Result<serde_json::Map<String, serde_json::Value>, St
     // check if cache file exists
     println!("checking for cache file {}", cache_file_path);
     if std::path::Path::new(&cache_file_path).exists() {
-        println!("cache file exists");
+        println!("cache file exists, reading.");
         let cache_file = std::fs::read_to_string(cache_file_path).map_err(|e| e.to_string())?;
 
         let cache_data: serde_json::Map<String, serde_json::Value> =
@@ -88,25 +91,41 @@ async fn get_map_data() -> Result<serde_json::Map<String, serde_json::Value>, St
 
 #[tauri::command]
 async fn update_map_cache() -> Result<serde_json::Map<String, serde_json::Value>, String> {
+    println!("updating map cache");
     let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
     let maps_directory = userprofile.clone() + "\\Documents\\World in Conflict\\Downloaded\\maps";
     // write result data to cache file
-    let cache_file_path =
-        userprofile + "\\Documents\\World in Conflict\\Downloaded\\maps\\_cache.json";
+    let cache_file_path = maps_directory.clone() + "\\_cache.json";
 
     // create a new JSON object to store map data
     let mut result_data = serde_json::Map::new();
 
     // for each file in maps_directory, get the md5 hash and add it to the result_data object
-    for entry in std::fs::read_dir(maps_directory).map_err(|e| e.to_string())? {
-        // skip cache file
-        if entry.as_ref().unwrap().path().file_name().unwrap() == "_cache.json" {
+    println!("reading directory contents");
+    let entries = std::fs::read_dir(maps_directory).map_err(|e| e.to_string())?;
+    for entry in entries {
+        println!("unwrapping filename");
+        // skip directories
+        if entry.as_ref().unwrap().path().is_dir() {
+            println!(
+                "skipping directory {}",
+                entry.as_ref().unwrap().path().to_str().unwrap()
+            );
+            continue;
+        }
+        // skip files not ending in .sdf
+        if entry.as_ref().unwrap().path().extension().unwrap() != "sdf" {
+            println!(
+                "skipping file {}",
+                entry.as_ref().unwrap().path().to_str().unwrap()
+            );
             continue;
         }
 
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         let file_name = path.file_name().unwrap().to_str().unwrap();
+        println!("getting md5 hash for {}", file_name);
         let map_hash = get_map_md5(&path.to_str().unwrap()).map_err(|e| e.to_string())?;
 
         println!("adding {}: {}", file_name, map_hash);
@@ -131,7 +150,7 @@ async fn download_map(map: &str) -> Result<(), String> {
     let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
     let maps_directory = userprofile.clone() + "\\Documents\\World in Conflict\\Downloaded\\maps";
 
-    let map_url = format!("{}/maps/download/{}", &CONFIG.api_url, map);
+    let map_url = format!("{}/maps/download/{}", &CONFIG.API_URL, map);
 
     download_file(
         map_url.as_str(),
@@ -145,12 +164,8 @@ async fn download_map(map: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn get_environment() -> String {
-    if cfg!(debug_assertions) {
-        return "development".to_string();
-    } else {
-        return "production".to_string();
-    }
+fn get_config() -> Result<Config, String> {
+    return Ok(Config::new());
 }
 
 fn main() {
@@ -159,7 +174,7 @@ fn main() {
             get_map_data,
             download_map,
             update_map_cache,
-            get_environment
+            get_config
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

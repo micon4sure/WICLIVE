@@ -8,7 +8,7 @@ import axios from 'axios'
 import { invoke } from "@tauri-apps/api/tauri";
 import { onMounted, reactive, ref } from 'vue';
 
-import config from '../CONFIG'
+import get_config from '../get_config'
 
 const state = ref({
   actions: []
@@ -35,7 +35,7 @@ const runAction = async (title, executor) => {
 }
 
 const synchronize = async () => {
-  const CONFIG = await config()
+  const CONFIG: any = await get_config()
   let localMapData
   await runAction('get local map data', async (action) => {
     localMapData = await invoke("get_map_data");

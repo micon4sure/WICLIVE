@@ -10,20 +10,29 @@
     body {
       margin: 15px;
     }
+
+    td {
+      padding: 5px;
+    }
   </style>
 </head>
 
 <body>
   <h1>WIC LIVE MAP LIST!</h1>
-  <ul>
+  <table>
     <% _.forEach(maps, map=> { %>
-      <li>
-        <a href="/maps/download/<%= map %>">
-          <%= map %>
-        </a>
-      </li>
+      <tr>
+        <td>
+          <a href="/maps/download/<%= map %>">
+            <%= map.name %>
+          </a>
+        </td>
+        <td>
+          <%= map.date %>
+        </td>
+      </tr>
       <% }); %>
-  </ul>
+  </table>
 </body>
 
 </html>

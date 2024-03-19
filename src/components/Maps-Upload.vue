@@ -3,7 +3,7 @@ import _ from 'lodash'
 import { reactive, ref } from 'vue';
 import actionsVue from './actions.vue'
 import axios from 'axios'
-import config from '../CONFIG'
+import config from '../get_config'
 
 const _uploadActions = ref([])
 const $file = ref(null)
@@ -11,7 +11,7 @@ const $key = ref(null)
 
 
 const upload = async () => {
-  const CONFIG = await config()
+  const CONFIG: any = await config()
   const uploadAction = reactive({
     title: 'upload map',
     status: 'pending',

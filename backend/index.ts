@@ -9,13 +9,16 @@ import md5 from 'md5-file'
 
 import keys from './keys.json'
 
-// clear cache on startup
-try {
-  fs.unlinkSync('./maps/_cache.json');
-  console.log('deleted cache')
-} catch (error) {
-  console.log('no cache to delete')
-}
+const clearCache = () => {
+  // clear cache on startup
+  try {
+    fs.unlinkSync('./maps/_cache.json');
+    console.log('deleted cache')
+  } catch (error) {
+    console.log('no cache to delete')
+  }
+};
+clearCache();
 
 const app = express();
 app.use((req, res, next) => {
@@ -46,7 +49,8 @@ app.get('/maps/hashes', async (req, res) => {
       console.log('calculating hashes for all maps', files)
       for (let index in files) {
         const file = files[index]
-        if (file === '_cache.json') continue;
+        // skip files not ending in .sdf
+        if (!file.endsWith('.sdf')) continue;
         const filePath = `${mapsDirectory}/${file}`;
         fileHashes[file] = (await md5(filePath)).toUpperCase();
         console.log('ADDING HASH', file, fileHashes[file])
@@ -69,12 +73,34 @@ app.get('/maps/hashes', async (req, res) => {
 // ### LIST MAPS
 app.get('/maps/list', async (req, res) => {
   console.log('GET /maps/list');
-  fs.readdir(mapsDirectory, async (err, files) => {
 
+  const formatDate = (date) => {
+    const pad = (num) => (num < 10 ? '0' + num : num);
+
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1); // getMonth() is zero-based
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+
+  fs.readdir(mapsDirectory, async (err, files) => {
+    files = files.filter(file => file !== '_cache.json');
+    // get file modification dates
+    const fileStats = files.map(file => {
+      const stats = fs.statSync(`${mapsDirectory}/${file}`);
+      return {
+        name: file,
+        date: formatDate(new Date(stats.mtime))
+      }
+    });
     // read the template file
     const templateRaw = fs.readFileSync('maplist.html', 'utf8');
     const template = _.template(templateRaw);
-    const content = template({ maps: files });
+    const content = template({ maps: fileStats });
 
     if (err) {
       console.error(err);
@@ -102,7 +128,7 @@ app.get('/maps/download/:filename', async (req, res) => {
 const mapTempUploadDir = 'uploads';
 fs.existsSync(mapTempUploadDir) || fs.mkdirSync(mapTempUploadDir, { recursive: true });
 app.post('/maps/upload', async (req, res) => {
-  console.log('POST /maps/upload (' + fields.key[0] + ')');
+  console.log('POST /maps/upload');
   const form = formidable();
   form.uploadDir = mapTempUploadDir;
   form.keepExtensions = true;
@@ -136,17 +162,21 @@ app.post('/maps/upload', async (req, res) => {
       res.send('File uploaded and moved successfully.');
     });
 
-    // clear cache
-    fs.unlinkSync(mapsDirectory + '/_cache.json');
+    clearCache();
   });
 })
 
-const currentVersion = '0.0.5'
+const currentVersion = '0.1.0'
 app.get('/wiclive/download/:version?', async (req, res) => {
   console.log(`/wiclive/download/${req.params.version}`)
   if (!req.params.version) {
     console.log('wiclive download request base')
     return res.download(`./updates/wiclive_${currentVersion}_x64-setup.exe`);
+  }
+
+  if (req.params.version == 'wiclive-debug.exe') {
+    console.log('wiclive download request debug')
+    return res.download(`./updates/wiclive-debug.exe`);
   }
 
   // sanitize filename
@@ -157,6 +187,8 @@ app.get('/wiclive/download/:version?', async (req, res) => {
 
   return res.download(`./updates/wiclive_${currentVersion}_x64-setup.nsis.zip`);
 });
+
+
 app.get('/wiclive/version/:version', async (req, res) => {
   console.log(`/wiclive/version/${req.params.version}`)
   // get version signature
