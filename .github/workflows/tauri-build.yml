@@ -63,6 +63,7 @@ jobs:
 
       - if: steps.check_tag.outputs.exists == 'false'
         name: Create GitHub Release
+        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,3 +72,26 @@ jobs:
           release_name: Release ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
+      
+      - name: Generate version.json
+        run: |
+          $json = @{
+            version = "${{ steps.get_version.outputs.version }}"
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = ""
+                url = "https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/your-application-name-setup-${{ steps.get_version.outputs.version }}.exe"
+              }
+            }
+          } | ConvertTo-Json -Depth 3
+          $json | Out-File -Encoding utf8 "./docs/version.json"
+        shell: powershell
+
+      - name: Commit version.json
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/version.json
+          git commit -m "Add version.json for ${{ steps.get_version.outputs.version }}"
+          git push
+        shell: bash

@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "wiclive",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
   "tauri": {
     "allowlist": {
@@ -48,7 +48,7 @@
         "installerArgs": []
       },
       "endpoints": [
-        "https://techtile.media:3243/wiclive/version/{{current_version}}"
+        "https://micon4sure.github.io/WICLIVE/docs/version.json"
       ]
     }
   }
