@@ -8,28 +8,66 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Install Bun
-      run: |
-        irm bun.sh/install.ps1|iex
-        echo "C:\Users\runneradmin\.bun\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
-      shell: powershell
+      - name: Install Bun
+        run: |
+          irm bun.sh/install.ps1 | iex
+          echo "C:\Users\runneradmin\.bun\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+        shell: powershell
 
-    - name: Install Bun modules
-      run: bun install
-      shell: powershell
+      - name: Install Bun modules
+        run: bun install
+        shell: powershell
 
-    - name: Setup Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
 
-    - name: Build Tauri app with Bun
-      env:
-        TAURI_PRIVATE_KEY: ${{ secrets.SIGN_KEY }}
-        WICLIVE_ENV: production
-      run: bun run tauri build
-      shell: powershell
+      - name: Build Tauri app with Bun
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.SIGN_KEY }}
+          WICLIVE_ENV: production
+        run: bun run tauri build
+        shell: powershell
+
+      - name: Get version from tauri.conf.json
+        id: get_version
+        run: |
+          $version = (Get-Content ./src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).package.version
+          echo "::set-output name=version::$version"
+        shell: powershell
+
+      - name: Check if Tag Exists
+        id: check_tag
+        run: |
+          $tagExists = git ls-remote --tags origin ${{ steps.get_version.outputs.version }}
+          if ($tagExists) {
+            echo "Tag already exists."
+            echo "::set-output name=exists::true"
+          } else {
+            echo "::set-output name=exists::false"
+          }
+        shell: powershell
+
+      - if: steps.check_tag.outputs.exists == 'false'
+        name: Create and Push Tag
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git tag -a ${{ steps.get_version.outputs.version }} -m "Release ${{ steps.get_version.outputs.version }}"
+          git push origin ${{ steps.get_version.outputs.version }}
+
+      - if: steps.check_tag.outputs.exists == 'false'
+        name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: Release ${{ steps.get_version.outputs.version }}
+          draft: false
+          prerelease: false
