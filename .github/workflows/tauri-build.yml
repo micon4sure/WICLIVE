@@ -15,6 +15,10 @@ jobs:
         iwr https://bun.sh/install | iex
       shell: powershell
 
+    - name: Install Bun modules
+      run: bun install
+      shell: powershell
+
     - name: Setup Rust
       uses: actions-rs/toolchain@v1
       with:
