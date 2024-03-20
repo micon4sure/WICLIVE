@@ -25,16 +25,17 @@ onMounted(async () => {
     <div class="card">
       <div class="card-header">Where can I get WIC LIVE?</div>
       <div class="card-body">
-        <p>WIC LIVE can be downloaded <a href="https://github.com/micon4sure/WICLIVE/releases">directly off
-            github</a>. Just grab the latest release <a href="https://github.com/micon4sure/WICLIVE/releases">here</a>
+        <p>WIC LIVE can be downloaded directly off github. Just grab <a
+            :href="`https://github.com/micon4sure/WICLIVE/releases/download/${_version}/wiclive_${_version}_x64-setup.exe`">the
+            latest release</a>.
         </p>
       </div>
     </div>
     <div class="card">
       <div class="card-header">How to use WIC LIVE?</div>
       <div class="card-body">
-        <p>Using WIC LIVE is really simple. Just <a href="https://github.com/micon4sure/WICLIVE/releases">download
-            it</a>, install it and run it before you play. There is a feature planned that automatically
+        <p>Using WIC LIVE is really simple. Just download it, install it and run it before you play. There is a feature
+          planned that automatically
           starts World in Conflict after maps are synchronized. Coming soon.</p>
       </div>
     </div>
