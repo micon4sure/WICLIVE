@@ -1,4 +1,4 @@
-name: Build and publish github page
+name: Build and Publish GitHub Page
 
 on:
   push:
@@ -8,23 +8,24 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+        uses: actions/checkout@v4
+        uses: oven-sh/setup-bun@v1
+
       - name: Install dependencies and build
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
-      run: |
-        bun install
-        bun run build
+        run: |
+          bun install
+          bun run build
 
-    - name: Move build output to docs/
-      run: |
-        cp docs/version.json dist/version.json
-        rm -rf docs
-        mv dist docs
+      - name: Move build output to docs/
+        run: |
+          cp docs/version.json dist/version.json || true # Prevents failure if version.json does not exist
+          rm -rf docs
+          mv dist docs
 
-    - name: Commit and push changes
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add docs
-        git commit -m "Deploy GitHub Pages" -a || echo "No changes to commit"
-        git push
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs
+          git commit -m "Deploy GitHub Pages" -a || echo "No changes to commit"
+          git push
