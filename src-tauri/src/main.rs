@@ -10,17 +10,6 @@ use std::{
     io::{self, copy, Read},
 };
 
-// Define structures to match the expected JSON structure
-#[derive(Deserialize)]
-struct TauriConf {
-    package: PackageConf,
-}
-
-#[derive(Deserialize)]
-struct PackageConf {
-    version: String,
-}
-
 #[derive(Serialize)]
 struct Config {
     API_URL: String,
@@ -40,14 +29,8 @@ impl Config {
         };
         println!("API URL: {}", api_url.as_str());
 
-        // set version
-        let version: String;
-        let tauri_conf_contents =
-            std::fs::read_to_string("./tauri.conf.json").expect("Failed to read tauri.conf.json");
-        let tauri_conf: TauriConf =
-            serde_json::from_str(&tauri_conf_contents).expect("Failed to parse tauri.conf.json");
-        version = tauri_conf.package.version.clone();
-
+        // get version from cargo.toml
+        let version = env!("CARGO_PKG_VERSION").to_string();
         Config {
             API_URL: api_url,
             VERSION: version,
