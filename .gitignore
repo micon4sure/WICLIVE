@@ -37,3 +37,5 @@ backend/publish-debug.sh
 publish.sh
 publish-debug.sh
 src-tauri/tauri-sign.key
+
+docs
