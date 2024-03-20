@@ -59,7 +59,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe
+          asset_path: src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe
           asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe
           asset_content_type: application/octet-stream
 
@@ -69,7 +69,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
+          asset_path: src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
           asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
           asset_content_type: application/octet-stream
 
@@ -79,14 +79,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig
+          asset_path: src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig
           asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig
           asset_content_type: application/octet-stream
 
       - name: Encode Signature File
         id: encode_signature
         run: |
-          $signaturePath = "./target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig"
+          $signaturePath = "src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig"
           $signatureContent = Get-Content $signaturePath -Raw
           $encodedSignature = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($signatureContent))
           echo "signature=$encodedSignature" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
