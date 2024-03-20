@@ -27,3 +27,6 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+backend
+src-tauri
