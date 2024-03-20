@@ -26,13 +26,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// app.get('/WICLIVE/:content?', (req, res) => {
-//   if (!req.params.content) {
-//     res.sendFile(path.resolve('../wiclive-pages/dist/index.html'));
-//     return;
-//   }
-//   res.sendFile(path.resolve(`../wiclive-pages/dist/${req.params.content}`));
-// });
+app.get('/WICLIVE/*', (req, res) => {
+  const content = req.params[0];
+  if (!content) {
+    res.sendFile(path.resolve('../github-page/dist/index.html'));
+    return;
+  }
+  console.log('delivering', path.resolve(`../github-page/dist/` + content))
+  res.sendFile(path.resolve(`../github-page/dist/${content}`));
+});
 
 const mapsDirectory = './maps';
 
