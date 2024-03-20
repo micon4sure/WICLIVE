@@ -5,7 +5,7 @@ import vue from "@vitejs/plugin-vue";
 export default defineConfig(async () => ({
   plugins: [vue()],
 
-  base: '/WICLIVE/'
+  base: '/WICLIVE/',
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
