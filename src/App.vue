@@ -4,7 +4,7 @@ import { onMounted, ref } from 'vue';
 
 const _version = ref('')
 onMounted(async () => {
-  const versionJSON = await axios.get('https://raw.githubusercontent.com/micon4sure/WICLIVE/master/docs/version.json')
+  const versionJSON = await axios.get('https://raw.githubusercontent.com/micon4sure/WICLIVE/master/version.json')
   _version.value = versionJSON.data.version
 });
 </script>
