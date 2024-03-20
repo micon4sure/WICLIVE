@@ -63,15 +63,6 @@ jobs:
           asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe
           asset_content_type: application/octet-stream
 
-      - name: Upload Release Asset NSIS ZIP
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
-          asset_content_type: application/zip
 
       - name: Upload Release Asset NSIS ZIP SIG
         uses: actions/upload-release-asset@v1
@@ -83,6 +74,15 @@ jobs:
           asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig
           asset_content_type: application/octet-stream
 
+      - name: Upload Release Asset NSIS ZIP
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
+          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
+          asset_content_type: application/zip
       - name: Generate version.json in the docs directory
         run: |
           $version = "${{ steps.get_version.outputs.version }}"
