@@ -8,32 +8,24 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+.DS_Store
 dist-ssr
+coverage
 *.local
+
+/cypress/videos/
+/cypress/screenshots/
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# wic live
-_install
+*.tsbuildinfo
 
-backend/maps
-backend/keys.json
-backend/uploads
-backend/build
-backend/get-ssl-credentials.ts
-backend/publish.sh
-backend/publish-debug.sh
-
-publish.sh
-publish-debug.sh
-src-tauri/tauri-sign.key
+docs

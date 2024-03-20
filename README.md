@@ -1,17 +1,33 @@
-# WIC LIVE
+# github-page
 
-This is the World in Conflict LIVE tool. It enables map creators to upload their maps and have the latest version synchronized to players.
+This template should help get you started developing with Vue 3 in Vite.
 
-## Features
-- Map upload
-- Automatic map download of new and outdated maps
+## Recommended IDE Setup
 
-## Roadmap
-- Implement possibility to run WiC from WIC LIVE so it always updates to the latest maps before launching the game
-- Better brand / CI integration, overall styling
-- Sign executables to avoid windows defender from complaining
-- Add map list so users can manually download maps
+[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
 
+## Type Support for `.vue` Imports in TS
 
-© 2024 WIC LIVE is NOT affiliated with Ubisoft or Ubisoft Massive.\
-© 2009 Ubisoft Entertainment. All Rights Reserved. World in Conflict, Ubisoft Massive the Ubisoft Massive logo, Ubisoft, Ubi.com and the Ubisoft logo are all trademarks of Ubisoft Entertainment in the US and/or other countries.
+TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+
+## Customize configuration
+
+See [Vite Configuration Reference](https://vitejs.dev/config/).
+
+## Project Setup
+
+```sh
+bun install
+```
+
+### Compile and Hot-Reload for Development
+
+```sh
+bun dev
+```
+
+### Type-Check, Compile and Minify for Production
+
+```sh
+bun build
+```

@@ -16,14 +16,13 @@ jobs:
 
       - name: Install dependencies and build
         run: |
-          cd github-page
           bun install
           bun run build
 
       - name: Move build output to docs/
         run: |
           rm -rf docs
-          mv github-page/dist docs
+          mv dist docs
 
       - name: Commit and push changes
         run: |
