@@ -1,9 +1,0 @@
-﻿{
-    "version":  "0.1.2",
-    "platforms":  {
-                      "windows-x86_64":  {
-                                             "signature":  "",
-                                             "url":  "https://github.com/micon4sure/WICLIVE/releases/download/0.1.2/your-application-name-setup-0.1.2.exe"
-                                         }
-                  }
-}

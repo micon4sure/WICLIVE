@@ -2,7 +2,7 @@ name: Build and Publish GitHub Page
 
 on:
   push:
-    branches: [ master ]
+    branches: [ page ]
 
 jobs:
   build-and-deploy:
@@ -16,14 +16,15 @@ jobs:
 
       - name: Install dependencies and build
         run: |
+          cd github-page
           bun install
           bun run build
 
       - name: Move build output to docs/
         run: |
-          cp docs/version.json dist/version.json || true # Prevents failure if version.json does not exist
+          cp docs/version.json github-page/dist/version.json || true # Prevents failure if version.json does not exist
           rm -rf docs
-          mv dist docs
+          mv github-page/dist docs
 
       - name: Commit and push changes
         run: |
