@@ -22,7 +22,6 @@ jobs:
 
       - name: Move build output to docs/
         run: |
-          cp docs/version.json github-page/dist/version.json || true # Prevents failure if version.json does not exist
           rm -rf docs
           mv github-page/dist docs
 
