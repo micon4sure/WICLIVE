@@ -12,7 +12,7 @@ const showUpload = () => {
 
 const _version = ref('');
 onMounted(async () => {
-  const config = await invoke('get_config')
+  const config: any = await invoke('get_config')
   _version.value = config.VERSION
 })
 
