@@ -44,13 +44,19 @@ jobs:
 
       - name: Check if Release Exists
         run: |
-          $version = "${{ steps.get_version.outputs.version }}"
-          $releaseExists = curl -s -H "Authorization: token ***" "https://api.github.com/repos/micon4sure/WICLIVE/releases/tags/$version" | ConvertFrom-Json | Select-Object -ExpandProperty message
-          if ($releaseExists -ne 'Not Found') {
-            Write-Output "Release $version already exists. Aborting workflow."
-            exit 1
+          $version = "0.1.2"
+          $uri = "https://api.github.com/repos/micon4sure/WICLIVE/releases/tags/$version"
+          $headers = @{
+              "Authorization" = "token ***"
+              "User-Agent" = "PowerShell"
+          }
+          $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers -ErrorAction SilentlyContinue
+
+          if ($response -ne $null) {
+              Write-Output "Release $version already exists. Aborting workflow."
+              exit 1
           } else {
-            Write-Output "Release $version does not exist. Continuing workflow."
+              Write-Output "Release $version does not exist. Continuing workflow."
           }
         shell: powershell          
 
