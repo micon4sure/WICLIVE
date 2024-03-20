@@ -44,14 +44,13 @@ jobs:
 
       - name: Check if Release Exists
         run: |
-          $releaseExists = curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.get_version.outputs.version }}" \
-          | jq -r '.message' -ne 'Not Found'
-          if ($releaseExists -eq $true) {
-            Write-Output "Release ${{ steps.get_version.outputs.version }} already exists. Aborting workflow."
-            exit 0
+          $version = "${{ steps.get_version.outputs.version }}"
+          $releaseExists = curl -s -H "Authorization: token ***" "https://api.github.com/repos/micon4sure/WICLIVE/releases/tags/$version" | ConvertFrom-Json | Select-Object -ExpandProperty message
+          if ($releaseExists -ne 'Not Found') {
+            Write-Output "Release $version already exists. Aborting workflow."
+            exit 1
           } else {
-            Write-Output "Release ${{ steps.get_version.outputs.version }} does not exist. Continuing workflow."
+            Write-Output "Release $version does not exist. Continuing workflow."
           }
         shell: powershell          
 
