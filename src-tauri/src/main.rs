@@ -3,7 +3,7 @@
 
 use serde::Serialize;
 use std::env;
-use tauri::Manager;
+use tauri::{Manager, PhysicalSize};
 
 use std::{
     fs::File,
@@ -20,15 +20,15 @@ impl Config {
     fn new() -> Self {
         let env = env!("WICLIVE_ENV");
         println!("Environment: {}", env);
-        let API_URL = match env {
+        let api_url = match env {
             "development" => "http://localhost:3243".to_string(),
             "staging" => "https://techtile.media:3243".to_string(),
             "production" => "https://techtile.media:3243".to_string(),
             _ => "http://localhost:3243".to_string(),
         };
-        println!("API URL: {}", API_URL.as_str());
+        println!("API URL: {}", api_url.as_str());
 
-        Config { API_URL }
+        Config { API_URL: api_url }
     }
 }
 

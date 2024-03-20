@@ -57,7 +57,7 @@ body {
 
 .container {
   padding-top: 20px;
-  min-height: calc(100vh - 50px);
+  min-height: calc(100vh - 75px);
   width: calc(100vw - 100px);
   max-width: calc(100vw - 100px);
   flex: 1;
@@ -82,7 +82,7 @@ footer {
   padding: 10px;
   bottom: 0;
   width: calc(100vw - 100px);
-  height: 50px;
+  height: 75px;
   margin: 0 50px;
   font-size: 11px;
 }

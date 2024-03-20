@@ -5,11 +5,13 @@ on:
     branches: [ master ]
 
 jobs:
-  build-and-release:
+  install-tools:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
     steps:
       - uses: actions/checkout@v2
-
+      
       - name: Install Bun
         run: |
           irm bun.sh/install.ps1 | iex
@@ -27,6 +29,19 @@ jobs:
           profile: minimal
           override: true
 
+      - name: Get version from tauri.conf.json
+        id: get_version
+        run: |
+          $version = (Get-Content ./src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).package.version
+          echo "::set-output name=version::$version"
+        shell: powershell
+
+  build-app:
+    needs: install-tools
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+
       - name: Build Tauri app with Bun
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
@@ -35,12 +50,11 @@ jobs:
         run: bun run tauri build
         shell: powershell
 
-      - name: Get version from tauri.conf.json
-        id: get_version
-        run: |
-          $version = (Get-Content ./src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).package.version
-          echo "::set-output name=version::$version"
-        shell: powershell
+  create-release:
+    needs: build-app
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
 
       - name: Create GitHub Release
         id: create_release
@@ -48,14 +62,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.get_version.outputs.version }}
-          release_name: Release ${{ steps.get_version.outputs.version }}
+          tag_name: ${{ needs.install-tools.outputs.version }}
+          release_name: Release ${{ needs.install-tools.outputs.version }}
           draft: false
           prerelease: false
-      
-      - name: List files in the NSIS directory
-        run: Get-ChildItem src-tauri/target/release/bundle/nsis/ -Name
-        shell: powershell
 
       - name: Upload Release Asset EXE
         uses: actions/upload-release-asset@v1
@@ -63,64 +73,39 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe
+          asset_path: ./src-tauri/target/release/bundle/nsis/wiclive_${{ needs.install-tools.outputs.version }}_x64-setup.exe
+          asset_name: wiclive_${{ needs.install-tools.outputs.version }}_x64-setup.exe
           asset_content_type: application/octet-stream
 
-      - name: Upload Release Asset NSIS
+      - name: Upload Release Asset NSIS ZIP
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
-          asset_content_type: application/octet-stream
+          asset_path: ./src-tauri/target/release/bundle/nsis/wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip
+          asset_name: wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip
+          asset_content_type: application/zip
 
-      - name: Upload Release Asset NSIS SIG
+      - name: Upload Release Asset NSIS ZIP SIG
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig
+          asset_path: ./src-tauri/target/release/bundle/nsis/wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip.sig
+          asset_name: wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip.sig
           asset_content_type: application/octet-stream
 
-      - name: Encode Signature File
-        id: encode_signature
-        run: |
-          $signaturePath = "src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig"
-          $signatureContent = Get-Content $signaturePath -Raw
-          $encodedSignature = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($signatureContent))
-          echo "signature=$encodedSignature" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
-        shell: powershell
+  set-up-version:
+    needs: create-release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
 
-      
       - name: Generate version.json in the docs directory
         run: |
-          $version = "${{ steps.get_version.outputs.version }}"
+          $version = "${{ needs.install-tools.outputs.version }}"
           $url = "https://github.com/${{ github.repository }}/releases/download/$version/wiclive_$version_x64-setup.exe"
-          $signature = $env:signature
-          $json = @{
-            version = $version
-            platforms = @{
-              "windows-x86_64" = @{
-                signature = $signature
-                url = $url
-              }
-            }
-          } | ConvertTo-Json -Depth 3
-          $jsonPath = "docs/version.json"
-          New-Item -Path $jsonPath -ItemType File -Force
-          $json | Out-File -FilePath $jsonPath -Encoding utf8
-        shell: powershell
-
-      - name: Commit and Push version.json
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add docs/version.json
-          git commit -m "Update version.json for ${{ steps.get_version.outputs.version }}"
-          git push
-        shell: bash
+          $signaturePath = "./src-tauri/target/release/bundle/nsis/wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip.sig"
+         
