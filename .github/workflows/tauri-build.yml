@@ -98,7 +98,7 @@ jobs:
           asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig
           asset_content_type: application/octet-stream
 
-      - name: Generate version.json in the docs directory
+      - name: Generate version.json
         if: steps.check_tag.outputs.tagExists == 'false'
         run: |
           $url = "https://github.com/${{ github.repository }}/releases/download/$version/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe"
@@ -113,7 +113,7 @@ jobs:
               }
             }
           } | ConvertTo-Json -Depth 3
-          $jsonPath = "docs/version.json"
+          $jsonPath = "version.json"
           New-Item -Path $jsonPath -ItemType File -Force
           $json | Out-File -FilePath $jsonPath -Encoding utf8
         shell: powershell
@@ -124,7 +124,7 @@ jobs:
           git fetch
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add docs/version.json
+          git add version.json
           git commit -m "Update version.json for ${{ steps.get_version.outputs.version }}"
           git push origin HEAD:master
         shell: bash
