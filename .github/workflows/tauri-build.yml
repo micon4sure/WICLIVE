@@ -52,6 +52,10 @@ jobs:
           release_name: Release ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
+      
+      - name: List files in the NSIS directory
+        run: Get-ChildItem src-tauri/target/release/bundle/nsis/ -Name
+        shell: powershell
 
       - name: Upload Release Asset EXE
         uses: actions/upload-release-asset@v1
