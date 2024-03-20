@@ -1,0 +1,9 @@
+﻿{
+    "version":  null,
+    "platforms":  {
+                      "windows-x86_64":  {
+                                             "signature":  "ZFc1MGNuVnpkR1ZrSUdOdmJXMWxiblE2SUhOcFoyNWhkSFZ5WlNCbWNtOXRJSFJoZFhKcElITmxZM0psZENCclpYa0tVbFZVTTNsTVkwY3dPWGhTUzBFMGQxTnphMUZJVERkU1VHRnZOVXRrUmpCbWFFWnZhbkpFYkhWWWEyZE1hV05vZGxWd2VrOW9TREZET1dwaFYwZHhhakF6YnpKU2NXUlJXVmcwYjBwdE5teDNjbXd6VTFGVE5GUllkV0ZpVDJGdWFuZEJQUXAwY25WemRHVmtJR052YlcxbGJuUTZJSFJwYldWemRHRnRjRG94TnpFd09UY3pOalkwQ1dacGJHVTZkMmxqYkdsMlpWOHdMakV1TWw5NE5qUXRjMlYwZFhBdWJuTnBjeTU2YVhBS1ZURTRPRTlhTlhVMVpWTkhiVW9yVURWU1YwNVhZMmR3YkdaV1RISjBlV3RsYmtwM1RqaG1iMFZDVDJWc04yZG9UR05IYjI4MmVWRndSSEpqVFhCblFtTmlhWFZ0WmtWYVJIbzJjV0Z1Ynk5WWVFMDVSSGM5UFFvPQ==",
+                                             "url":  "https://github.com/micon4sure/WICLIVE/releases/download//wiclive_0.1.2_x64-setup.exe"
+                                         }
+                  }
+}
