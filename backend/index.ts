@@ -26,14 +26,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// app.get('/WICLIVE/:content?', (req, res) => {
-//   if (!req.params.content) {
-//     res.sendFile(path.resolve('../wiclive-pages/dist/index.html'));
-//     return;
-//   }
-//   res.sendFile(path.resolve(`../wiclive-pages/dist/${req.params.content}`));
-// });
-
 const mapsDirectory = './maps';
 
 // ### GET MAPS
