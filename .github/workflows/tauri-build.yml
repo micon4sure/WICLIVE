@@ -42,6 +42,19 @@ jobs:
           echo "::set-output name=version::$version"
         shell: powershell
 
+      - name: Check if Release Exists
+        run: |
+          $releaseExists = curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.get_version.outputs.version }}" \
+          | jq -r '.message' -ne 'Not Found'
+          if ($releaseExists -eq $true) {
+            Write-Output "Release ${{ steps.get_version.outputs.version }} already exists. Aborting workflow."
+            exit 1
+          } else {
+            Write-Output "Release ${{ steps.get_version.outputs.version }} does not exist. Continuing workflow."
+          }
+        shell: powershell          
+
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -63,6 +76,15 @@ jobs:
           asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe
           asset_content_type: application/octet-stream
 
+      - name: Upload Release Asset NSIS ZIP
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip
+          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
+          asset_content_type: application/zip
 
       - name: Upload Release Asset NSIS ZIP SIG
         uses: actions/upload-release-asset@v1
@@ -70,24 +92,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig
+          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
           asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig
           asset_content_type: application/octet-stream
 
-      - name: Upload Release Asset NSIS ZIP
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
-          asset_content_type: application/zip
       - name: Generate version.json in the docs directory
         run: |
           $version = "${{ steps.get_version.outputs.version }}"
           $url = "https://github.com/${{ github.repository }}/releases/download/$version/wiclive_$version_x64-setup.exe"
-          $signaturePath = "${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig"
+          $signaturePath = "${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig"
           $signature = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($signaturePath))
           $json = @{
             version = $version
