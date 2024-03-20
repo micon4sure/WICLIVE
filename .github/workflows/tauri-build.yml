@@ -73,7 +73,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./src-tauri/target/release/bundle/nsis/wiclive_${{ needs.install-tools.outputs.version }}_x64-setup.exe
+          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ needs.install-tools.outputs.version }}_x64-setup.exe
           asset_name: wiclive_${{ needs.install-tools.outputs.version }}_x64-setup.exe
           asset_content_type: application/octet-stream
 
@@ -83,7 +83,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./src-tauri/target/release/bundle/nsis/wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip
+          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip
           asset_name: wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip
           asset_content_type: application/zip
 
@@ -93,7 +93,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./src-tauri/target/release/bundle/nsis/wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip.sig
+          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip.sig
           asset_name: wiclive_${{ needs.install-tools.outputs.version }}_x64-setup-nsis.zip.sig
           asset_content_type: application/octet-stream
 
