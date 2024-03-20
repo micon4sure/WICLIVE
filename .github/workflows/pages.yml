@@ -4,6 +4,17 @@ on:
   push:
     branches: [ master ]
 
+on:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+      tags:
+        description: 'Test tags'
+
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
