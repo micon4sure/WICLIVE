@@ -1,23 +1,35 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::env;
-use tauri::{Manager, PhysicalSize};
+use tauri::{utils::config::TauriConfig, Manager, PhysicalSize};
 
 use std::{
     fs::File,
     io::{self, copy, Read},
 };
-// use zip_extensions::*;
-// use tokio::fs::File as TokioFile;
+
+// Define structures to match the expected JSON structure
+#[derive(Deserialize)]
+struct TauriConf {
+    package: PackageConf,
+}
+
+#[derive(Deserialize)]
+struct PackageConf {
+    version: String,
+}
+
 #[derive(Serialize)]
 struct Config {
     API_URL: String,
+    VERSION: String,
 }
 
 impl Config {
     fn new() -> Self {
+        // set api url
         let env = env!("WICLIVE_ENV");
         println!("Environment: {}", env);
         let api_url = match env {
@@ -28,7 +40,18 @@ impl Config {
         };
         println!("API URL: {}", api_url.as_str());
 
-        Config { API_URL: api_url }
+        // set version
+        let version: String;
+        let tauri_conf_contents =
+            std::fs::read_to_string("./tauri.conf.json").expect("Failed to read tauri.conf.json");
+        let tauri_conf: TauriConf =
+            serde_json::from_str(&tauri_conf_contents).expect("Failed to parse tauri.conf.json");
+        version = tauri_conf.package.version.clone();
+
+        Config {
+            API_URL: api_url,
+            VERSION: version,
+        }
     }
 }
 

@@ -1,19 +1,26 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 
 import MapsSynchronize from './components/Maps-Synchronize.vue'
 import MapsUpload from './components/Maps-Upload.vue'
+import { invoke } from '@tauri-apps/api';
 
 const _showUpload = ref(false)
 const showUpload = () => {
   _showUpload.value = true
 }
 
+const _version = ref('');
+onMounted(async () => {
+  const config = await invoke('get_config')
+  _version.value = config.VERSION
+})
+
 </script>
 
 <template>
   <div class="container">
-    <h1>WIC LIVE <small>0.1.1</small></h1>
+    <h1>WIC LIVE <small>{{ _version }}</small></h1>
     <span id="showUpload" @click="showUpload" v-if="!_showUpload">Upload</span>
 
     <maps-upload v-if="_showUpload" />
@@ -27,8 +34,6 @@ const showUpload = () => {
 </template>
 
 <style lang="scss">
-// add font
-
 @font-face {
   font-family: "eurostib";
   src: url("./assets/eurostib.ttf");

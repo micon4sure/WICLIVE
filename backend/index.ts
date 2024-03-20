@@ -166,47 +166,6 @@ app.post('/maps/upload', async (req, res) => {
   });
 })
 
-const currentVersion = '0.1.0'
-app.get('/wiclive/download/:version?', async (req, res) => {
-  console.log(`/wiclive/download/${req.params.version}`)
-  if (!req.params.version) {
-    console.log('wiclive download request base')
-    return res.download(`./updates/wiclive_${currentVersion}_x64-setup.exe`);
-  }
-
-  if (req.params.version == 'wiclive-debug.exe') {
-    console.log('wiclive download request debug')
-    return res.download(`./updates/wiclive-debug.exe`);
-  }
-
-  // sanitize filename
-  if (req.params.version.includes('..')) {
-    res.status(400).send('Invalid filename');
-    return;
-  }
-
-  return res.download(`./updates/wiclive_${currentVersion}_x64-setup.nsis.zip`);
-});
-
-
-app.get('/wiclive/version/:version', async (req, res) => {
-  console.log(`/wiclive/version/${req.params.version}`)
-  // get version signature
-  const signature = fs.readFileSync(`./updates/wiclive_${currentVersion}_x64-setup.nsis.zip.sig`);
-
-  fs.readFile(`./wiclive_${req.params.version}_x64-setup.exe`, (err, data) => {
-    res.json({
-      version: currentVersion,
-      platforms: {
-        "windows-x86_64": {
-          signature: signature.toString(),
-          url: 'https://techtile.media:3243/wiclive/download/' + currentVersion
-        }
-      }
-    });
-  })
-})
-
 import ssl from './get-ssl-credentials';
 const port = 3243
 try {

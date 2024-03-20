@@ -94,8 +94,7 @@ jobs:
 
       - name: Generate version.json in the docs directory
         run: |
-          $version = "${{ steps.get_version.outputs.version }}"
-          $url = "https://github.com/${{ github.repository }}/releases/download/$version/wiclive_$version_x64-setup.exe"
+          $url = "https://github.com/${{ github.repository }}/releases/download/$version/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe"
           $signaturePath = "${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig"
           $signature = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($signaturePath))
           $json = @{
