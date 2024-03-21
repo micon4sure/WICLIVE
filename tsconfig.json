@@ -7,7 +7,7 @@
     "alwaysStrict": false,
     "noUnusedLocals": false,
     "noImplicitAny": false,
-    "noImplicitReturns": false,
+    "noImplicitReturns": false
   },
   "files": [],
   "references": [

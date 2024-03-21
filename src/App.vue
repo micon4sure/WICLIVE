@@ -11,7 +11,7 @@ onMounted(async () => {
 
 <template>
   <div class="container">
-    <h1>WIC LIVE <small>{{ _version }}</small></h1>
+    <h1><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></h1>
     <div class="card">
       <div class="card-header">What is WIC LIVE?</div>
       <div class="card-body">
@@ -84,10 +84,28 @@ onMounted(async () => {
   src: url("./assets/eurostib.ttf");
 }
 
+
+h1 {
+  display: flex;
+  align-items: flex-end;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
+  margin: 0 -60px 30px -60px;
+  padding: 20px;
+}
+
+
 h1 small {
+  margin-left: 10px;
   font-size: 12px;
   color: #fff;
+}
 
+.card-header {
+  background: linear-gradient(to right, #055479 0%, transparentize(#ce2e06, 1) 50%);
+  border: none;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  padding-left: 15px;
 }
 
 #app {

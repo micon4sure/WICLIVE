@@ -28,5 +28,7 @@ coverage
 
 *.tsbuildinfo
 
+_install
 backend
 src-tauri
+dist
