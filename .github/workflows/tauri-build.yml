@@ -104,7 +104,7 @@ jobs:
         if: steps.check_tag.outputs.tagExists == 'false'
         run: |
           $version = "${{ steps.get_version.outputs.version }}"
-          $url = "https://github.com/${{ github.repository }}/releases/download/$version/wiclive_" + $version + "_x64-setup.exe"
+          $url = "https://github.com/${{ github.repository }}/releases/download/$version/wiclive_" + $version + "_x64-setup.nsis.zip"
           $signaturePath = "${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_" + $version + "_x64-setup.nsis.zip.sig"
           $signature = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($signaturePath))
           $json = @{
