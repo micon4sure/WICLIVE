@@ -160,11 +160,11 @@ watch(maps.value, () => {
           <th>Status</th>
           <th>Actions</th>
         </tr>
-        <tr v-for="  map   in   maps  " :key="map.name">
+        <tr v-for="map in maps" :key="map.name.toString()">
           <td>{{ map.name }}</td>
           <td>{{ map.status }}</td>
           <td>
-            <span class="btn-container" @click="downloadMap(map.name)"
+            <span class="btn-container" @click="downloadMap(map.name.toString())"
               v-if="map.status == 'missing' || map.status == 'outdated'">
               <button class="btn btn-sm btn-secondary">
                 <iconDownload class="icon" />
