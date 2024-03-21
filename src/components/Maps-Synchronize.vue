@@ -52,7 +52,6 @@ const initialize = async () => {
   let localMapFiles
   await runAction('read local map files', async (action) => {
     localMapFiles = await invoke("get_map_files");
-    console.log('localMapData', localMapFiles)
     localMapFiles = localMapFiles;
   })
 
@@ -71,24 +70,28 @@ const initialize = async () => {
     maps.value.push({ name: filename, status: "?" })
   });
 
-
   // get hashes where needed
-  await runAction('complete local cache', async (actions) => {
+  await runAction('complete local cache', async (action) => {
+    let newHash = false;
+    console.log(cache)
     for (const filename of intersection) {
       let hash;
       if (cache.has(filename) && cache.get(filename).hash) {
         hash = cache.get(filename).hash
       } else {
+        action.info.push('hashing ' + filename)
         hash = await invoke("get_map_hash", { filename })
+        newHash = true;
       }
 
-      actions.info.push('hashing ' + filename)
-      console.log('hash', filename, hash)
       const map = { name: filename, hash } as WIC_Map;
       cache.set(filename, map)
 
       const index = maps.value.findIndex((map) => map.name === filename)
       maps.value[index].status = hash == remoteMapData[filename] ? 'current' : 'outdated'
+    }
+    if (newHash) {
+      action.info.push('done.')
     }
   })
 
@@ -249,8 +252,13 @@ watch(maps.value, () => {
       background: #222;
     }
 
-    &.inactive button {
-      background: #000;
+    &.inactive {
+      background: #333;
+      color: #666;
+
+      svg {
+        fill: #666;
+      }
     }
 
     button {

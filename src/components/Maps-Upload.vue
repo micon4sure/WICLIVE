@@ -4,6 +4,7 @@ import { reactive, ref } from 'vue';
 import actionsVue from './actions.vue'
 import axios from 'axios'
 import config from '../get_config'
+import WIC_Cache, { WIC_Map } from '../wic-cache';
 
 const _uploadActions = ref([])
 const $file = ref(null)
@@ -34,7 +35,9 @@ const upload = async () => {
     return
   }
 
-  uploadAction.info.push(`Uploading ${$file.value.files![0].name}...`)
+  const filename = $file.value.files![0].name;
+
+  uploadAction.info.push(`Uploading ${filename}...`)
 
   const formData = new FormData()
   formData.append('file', $file.value.files![0])
@@ -57,6 +60,10 @@ const upload = async () => {
 
   // set key in local storage
   localStorage.setItem('upload-key', $key.value.value)
+
+  // // add map to map cache
+  // const cache = WIC_Cache.instance()
+  // cache.set(filename, { name: filename } as WIC_Map)
 }
 </script>
 

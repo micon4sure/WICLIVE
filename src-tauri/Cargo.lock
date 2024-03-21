@@ -3926,7 +3926,7 @@ dependencies = [
 
 [[package]]
 name = "wiclive"
-version = "0.2.1"
+version = "0.2.4"
 dependencies = [
  "lazy_static",
  "reqwest",

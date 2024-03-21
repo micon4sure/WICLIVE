@@ -5,7 +5,7 @@ export default class WIC_Cache {
   private data: { [key: string]: WIC_Map } = {};
 
   private constructor() {
-    // localStorage.setItem('cache', JSON.stringify({}));
+    localStorage.setItem('cache', JSON.stringify(contents));
     const cache = localStorage.getItem('cache');
     if (cache) {
       this.data = JSON.parse(cache)
@@ -22,7 +22,6 @@ export default class WIC_Cache {
 
   public set(key: string, value: WIC_Map): void {
     this.data[key] = value;
-
     localStorage.setItem('cache', JSON.stringify(this.data));
   }
 
