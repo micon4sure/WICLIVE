@@ -121,13 +121,14 @@ jobs:
           $json | Out-File -FilePath $jsonPath -Encoding utf8
         shell: powershell
 
-      - name: Commit and Push version.json
+      - name: Upload Release Asset NSIS ZIP SIG
         if: steps.check_tag.outputs.tagExists == 'false'
-        run: |
-          git fetch
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add version.json
-          git commit -m "Update version.json for ${{ steps.get_version.outputs.version }}"
-          git push origin HEAD:master
-        shell: bash
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/version.json
+          asset_name: version.json
+          asset_content_type: application/json
+
