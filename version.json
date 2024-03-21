@@ -1,9 +1,9 @@
 ﻿{
-    "version":  "0.2.1",
+    "version":  "0.2.2",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "ZFc1MGNuVnpkR1ZrSUdOdmJXMWxiblE2SUhOcFoyNWhkSFZ5WlNCbWNtOXRJSFJoZFhKcElITmxZM0psZENCclpYa0tVbFZVTTNsTVkwY3dPWGhTUzB4c2RuTkpORmRaZFVJdkwyeFRWamQxWjFscU9HeHNhblZVVW1kYVRFcFVXV2hvYVZKcWRGVXdZemRIVG5ndmFXOXRNa3B2T0U1Q2MycHplVGhEWkdWbmIwMVZWbU5FVUZCMlZrNVhiMlZCU1dKaVVIZG5QUXAwY25WemRHVmtJR052YlcxbGJuUTZJSFJwYldWemRHRnRjRG94TnpFeE1ETXhNRFV6Q1dacGJHVTZkMmxqYkdsMlpWOHdMakl1TVY5NE5qUXRjMlYwZFhBdWJuTnBjeTU2YVhBS2VqYzNORlZVVkU1SlEyNWFUSGh1T0hVelpEVnpSREpGTWpsT2VraDRSMVpoVVRSNlJ6QnNVakYzWldWQmJGQlVSRWxKY2preFEzcHRSRkZvUW05UmFYWkZSa2RXTmpkWU1qbEpPVnBQT0hwWmJHY3pSRkU5UFFvPQ==",
-                                             "url":  "https://github.com/micon4sure/WICLIVE/releases/download/0.2.1/wiclive_0.2.1_x64-setup.nsis.zip"
+                                             "signature":  "ZFc1MGNuVnpkR1ZrSUdOdmJXMWxiblE2SUhOcFoyNWhkSFZ5WlNCbWNtOXRJSFJoZFhKcElITmxZM0psZENCclpYa0tVbFZVTTNsTVkwY3dPWGhTUzBSdGRXaEllRXBMWVVGM1NrWmpSVVZTT1dGWVFTczNiR2hNUlZSc05DczBRbU5VVUVOWGRYWm9SakZMWm1zNWNsTnBkRUZVT0Zkd2JIUjZialJRVlVoaFRIZHdjbGxIVjNCb0wwWkZOamRxWkhWYVRtZEJQUXAwY25WemRHVmtJR052YlcxbGJuUTZJSFJwYldWemRHRnRjRG94TnpFeE1ETXlNVE0yQ1dacGJHVTZkMmxqYkdsMlpWOHdMakl1TWw5NE5qUXRjMlYwZFhBdWJuTnBjeTU2YVhBS2MxWXpNWHBoU3pGNWVXODRXVzUyUTJ3cmFrbGxabmgxTVZaalRFNUZRVTl2Y1dWbGVsTXlTMjlQV0ZoNlRsTjRTSGM1WkZONGRtRXZUVFZ0Y0dweU5UUnlWbkpzWVdaTVJGRnNVWEo0VjJOVE1tMVNRVUU5UFFvPQ==",
+                                             "url":  "https://github.com/micon4sure/WICLIVE/releases/download/0.2.2/wiclive_0.2.2_x64-setup.nsis.zip"
                                          }
                   }
 }
