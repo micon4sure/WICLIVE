@@ -76,10 +76,10 @@ const initialize = async () => {
   await runAction('complete local cache', async (actions) => {
     for (const filename of intersection) {
       let hash;
-      if (cache.has(filename)) {
+      if (cache.has(filename) && cache.get(filename).hash) {
         hash = cache.get(filename).hash
       } else {
-        const hash = await invoke("get_map_hash", { filename })
+        hash = await invoke("get_map_hash", { filename })
       }
 
       actions.info.push('hashing ' + filename)
