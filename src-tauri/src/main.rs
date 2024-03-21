@@ -2,8 +2,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
-use std::env;
+use std::{env, fs, path::PathBuf};
 use tauri::{utils::config::TauriConfig, Manager, PhysicalSize};
+
+use std::hash::Hasher;
+use twox_hash::XxHash64;
 
 use std::{
     fs::File,
@@ -42,12 +45,30 @@ lazy_static::lazy_static! {
     static ref CONFIG: Config = Config::new();
 }
 
-fn get_map_md5(path: &str) -> io::Result<String> {
-    let mut file = File::open(path)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-    let hash = md5::compute(buffer);
-    Ok(format!("{:x}", hash).to_uppercase())
+#[tauri::command]
+fn get_map_hash(filename: &str) -> Result<String, String> {
+    let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
+    let maps_directory =
+        PathBuf::from(userprofile).join("Documents\\World in Conflict\\Downloaded\\maps");
+    let path = maps_directory.join(filename);
+
+    let mut file = File::open(path).map_err(|e| e.to_string())?;
+    let mut hasher = XxHash64::with_seed(0xCAFE_BABE);
+    let mut buffer = [0; 1024];
+
+    loop {
+        let bytes_read = file
+            .read(&mut buffer)
+            .map_err(|e| format!("Failed to read {}", e))?;
+        if bytes_read == 0 {
+            break; // EOF
+        }
+        hasher.write(&buffer[..bytes_read]);
+    }
+
+    let hash = hasher.finish();
+
+    Ok(format!("{:016x}", hash))
 }
 
 async fn download_file(url: &str, target: &str) -> Result<(), String> {
@@ -72,82 +93,41 @@ async fn download_file(url: &str, target: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn get_map_data() -> Result<serde_json::Map<String, serde_json::Value>, String> {
+async fn get_map_files() -> Result<Vec<String>, String> {
+    use std::env;
+    use std::path::PathBuf;
+
     let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
-    // write result data to cache file
-    let cache_file_path =
-        userprofile + "\\Documents\\World in Conflict\\Downloaded\\maps\\_cache.json";
+    let maps_directory =
+        PathBuf::from(userprofile).join("Documents\\World in Conflict\\Downloaded\\maps");
 
-    // check if cache file exists
-    println!("checking for cache file {}", cache_file_path);
-    if std::path::Path::new(&cache_file_path).exists() {
-        println!("cache file exists, reading.");
-        let cache_file = std::fs::read_to_string(cache_file_path).map_err(|e| e.to_string())?;
+    let mut result: Vec<String> = Vec::new();
 
-        let cache_data: serde_json::Map<String, serde_json::Value> =
-            serde_json::from_str(&cache_file)
-                .map_err(|e| format!("error parsing cache file{}", e.to_string()))?;
-
-        println!("returning cached data");
-        return Ok(cache_data);
-    }
-
-    return update_map_cache().await;
-}
-
-#[tauri::command]
-async fn update_map_cache() -> Result<serde_json::Map<String, serde_json::Value>, String> {
-    println!("updating map cache");
-    let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
-    let maps_directory = userprofile.clone() + "\\Documents\\World in Conflict\\Downloaded\\maps";
-    // write result data to cache file
-    let cache_file_path = maps_directory.clone() + "\\_cache.json";
-
-    // create a new JSON object to store map data
-    let mut result_data = serde_json::Map::new();
-
-    // for each file in maps_directory, get the md5 hash and add it to the result_data object
-    println!("reading directory contents");
     let entries = std::fs::read_dir(maps_directory).map_err(|e| e.to_string())?;
     for entry in entries {
-        println!("unwrapping filename");
+        let entry = entry.map_err(|e| e.to_string())?; // Properly handle the Result
+        let path = entry.path(); // Bind the path to a variable
+
         // skip directories
-        if entry.as_ref().unwrap().path().is_dir() {
-            println!(
-                "skipping directory {}",
-                entry.as_ref().unwrap().path().to_str().unwrap()
-            );
-            continue;
-        }
-        // skip files not ending in .sdf
-        if entry.as_ref().unwrap().path().extension().unwrap() != "sdf" {
-            println!(
-                "skipping file {}",
-                entry.as_ref().unwrap().path().to_str().unwrap()
-            );
+        if path.is_dir() {
+            println!("skipping directory {}", path.to_str().unwrap());
             continue;
         }
 
-        let entry = entry.map_err(|e| e.to_string())?;
-        let path = entry.path();
-        let file_name = path.file_name().unwrap().to_str().unwrap();
-        println!("getting md5 hash for {}", file_name);
-        let map_hash = get_map_md5(&path.to_str().unwrap()).map_err(|e| e.to_string())?;
+        // skip non-sdf files
+        if path.extension().unwrap_or_default() != "sdf" {
+            println!("skipping file {}", path.to_str().unwrap());
+            continue;
+        }
 
-        println!("adding {}: {}", file_name, map_hash);
-
-        result_data.insert(file_name.to_string(), serde_json::Value::String(map_hash));
+        if let Some(filename) = path.file_name().and_then(|f| f.to_str()) {
+            result.push(filename.to_string());
+        } else {
+            println!("failed to convert filename to string");
+            continue;
+        }
     }
-
-    // write result_data to cache file
-    println!("writing cache file");
-    let cache_file = File::create(&cache_file_path)
-        .map_err(|e| format!("error creating cache file{}", e.to_string()))?;
-    serde_json::to_writer(cache_file, &result_data)
-        .map_err(|e| format!("error writing cache file{}", e.to_string()))?;
-
-    println!("returning new data: {:?}", result_data);
-    return Ok(result_data);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -177,9 +157,9 @@ fn get_config() -> Result<Config, String> {
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            get_map_data,
+            get_map_files,
+            get_map_hash,
             download_map,
-            update_map_cache,
             get_config
         ])
         .setup(|app| {

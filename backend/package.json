@@ -13,6 +13,7 @@
     "formidable": "^3.5.1",
     "lodash": "^4.17.21",
     "md5-file": "^5.0.0",
-    "mustache": "^4.2.0"
+    "mustache": "^4.2.0",
+    "xxhashjs": "^0.2.2"
   }
 }

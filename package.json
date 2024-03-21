@@ -10,11 +10,13 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.5.1",
     "@tauri-apps/api": "^1",
     "axios": "^1.6.8",
     "bootswatch": "^5.3.3",
     "cors": "^2.8.5",
     "lodash": "^4.17.21",
+    "vite-svg-loader": "^5.1.0",
     "vue": "^3.3.4"
   },
   "devDependencies": {

@@ -4,15 +4,16 @@ import formidable from 'formidable';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
-import { execSync } from 'child_process';
-import md5 from 'md5-file'
+import xxhash from 'xxhashjs';
 
 import keys from './keys.json'
+
+let mapsDirectory = './maps';
 
 const clearCache = () => {
   // clear cache on startup
   try {
-    fs.unlinkSync('./maps/_cache.json');
+    fs.unlinkSync(mapsDirectory + '/_cache.json');
     console.log('deleted cache')
   } catch (error) {
     console.log('no cache to delete')
@@ -25,8 +26,6 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   next();
 });
-
-const mapsDirectory = './maps';
 
 // ### GET MAPS
 app.get('/maps/hashes', async (req, res) => {
@@ -51,10 +50,11 @@ app.get('/maps/hashes', async (req, res) => {
         const file = files[index]
         // skip files not ending in .sdf
         if (!file.endsWith('.sdf')) continue;
-        const filePath = `${mapsDirectory}/${file}`;
-        fileHashes[file] = (await md5(filePath)).toUpperCase();
-        console.log('ADDING HASH', file, fileHashes[file])
 
+        const content = fs.readFileSync(`${mapsDirectory}/${file}`);
+        const seed = 0xCAFE_BABE;
+        fileHashes[file] = xxhash.h64(content, seed).toString(16);
+        console.log('ADDING HASH', file, fileHashes[file])
       }
       console.log('done creating file hashes', fileHashes)
 
@@ -113,6 +113,7 @@ app.get('/maps/list', async (req, res) => {
 
 // ### DOWNLOAD MAP
 app.get('/maps/download/:filename', async (req, res) => {
+  await new Promise(resolve => setTimeout(resolve, 10000));
   console.log(`GET /maps/download/${req.params.filename}`);
   // sanitize filename
   if (req.params.filename.includes('..')) {

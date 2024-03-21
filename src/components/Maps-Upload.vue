@@ -7,8 +7,12 @@ import config from '../get_config'
 
 const _uploadActions = ref([])
 const $file = ref(null)
-const $key = ref(null)
 
+// check for key in local storage
+const $key = ref(null)
+if (localStorage.getItem('upload-key')) {
+  $key.value = localStorage.getItem('upload-key')
+}
 
 const upload = async () => {
   const CONFIG: any = await config()
@@ -50,6 +54,9 @@ const upload = async () => {
 
   uploadAction.info.push('Upload complete..')
   uploadAction.status = 'success'
+
+  // set key in local storage
+  localStorage.setItem('upload-key', $key.value.value)
 }
 </script>
 

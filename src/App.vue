@@ -20,7 +20,7 @@ onMounted(async () => {
 
 <template>
   <div class="container">
-    <h1>WIC LIVE <small>{{ _version }}</small></h1>
+    <h1><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></h1>
     <span id="showUpload" @click="showUpload" v-if="!_showUpload">Upload</span>
 
     <maps-upload v-if="_showUpload" />
@@ -39,16 +39,32 @@ onMounted(async () => {
   src: url("./assets/eurostib.ttf");
 }
 
+h1 {
+  display: flex;
+  align-items: flex-end;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
+  margin: 0 -60px 30px -60px;
+  padding: 20px;
+}
+
+
 h1 small {
+  margin-left: 10px;
   font-size: 12px;
   color: #fff;
+}
 
+h2 {
+  background: linear-gradient(to right, #055479 0%, transparentize(#ce2e06, 1) 50%);
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  padding-left: 15px;
 }
 
 #app {
   display: flex;
   flex-direction: column;
-  background: url("./assets/pattern.svg");
+  background: url("./assets/pattern-stripes.svg");
 }
 
 * {
@@ -72,10 +88,9 @@ body {
 #showUpload {
   cursor: pointer;
   color: #fff;
-  background-color: #000;
+  background-color: rgba(0, 0, 0, 0.2);
   padding: 10px;
   border-radius: 5px;
-  margin: 10px;
   position: absolute;
   top: 10px;
   right: 60px;
