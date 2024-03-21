@@ -48,7 +48,7 @@
         "installerArgs": []
       },
       "endpoints": [
-        "https://raw.githubusercontent.com/micon4sure/WICLIVE/releases/latest/download/version.json"
+        "https://github.com/micon4sure/WICLIVE/releases/latest/download/version.json"
       ]
     }
   }
