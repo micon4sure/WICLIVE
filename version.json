@@ -1,17 +1,9 @@
 ﻿{
-    "version":  "0.2.9",
+    "version":  "0.2.10",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  {
-                                                               "value":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUM3lMY0cwOXhSS0d1TXplMG41aCs0ZkVBVGlaUHdFU1pNMjJTL1JOZVNNeVJ3N09KVDdVWnlYalR6UTRqdVc1NGVEdEpIY2EzVkVQUC9ORVp6NDdXN01wQ1pXc1Q3MUFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzExMDM4NjA1CWZpbGU6d2ljbGl2ZV8wLjIuOV94NjQtc2V0dXAubnNpcy56aXAKRHUrYWpMQklsQ3hnNjB4azNSZzRQcGtEbmNjcVB4bGFXU2QrMXl3bTRqYVZCWkVrU21PSHRSRzI1MG4xaVdjS0wzc2NvN3Fhc0ZId1YyVVUzSndyRGc9PQo=",
-                                                               "PSPath":  "D:\\a\\WICLIVE\\WICLIVE\\src-tauri\\target\\release\\bundle\\nsis\\wiclive_0.2.9_x64-setup.nsis.zip.sig",
-                                                               "PSParentPath":  "D:\\a\\WICLIVE\\WICLIVE\\src-tauri\\target\\release\\bundle\\nsis",
-                                                               "PSChildName":  "wiclive_0.2.9_x64-setup.nsis.zip.sig",
-                                                               "PSDrive":  "D",
-                                                               "PSProvider":  "Microsoft.PowerShell.Core\\FileSystem",
-                                                               "ReadCount":  1
-                                                           },
-                                             "url":  "https://github.com/micon4sure/WICLIVE/releases/download/0.2.9/wiclive_0.2.9_x64-setup.nsis.zip"
+                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUM3lMY0cwOXhSS0RQK25uNkdFSUoyZ3VMTlJYODJJQVRSZkVieXJybTVidldRMVZPSS9wZTRTbUFJN2NRKzcxM2FWVVh6cmluVWZUTEJLM3lUNVpoR0hpQ1NKbUdEYWdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzExMDM5NzM3CWZpbGU6d2ljbGl2ZV8wLjIuMTBfeDY0LXNldHVwLm5zaXMuemlwClA3Y3ZTazRxdHVSczlMYUprTmlENmFIZkEzb2FRVU1hRytXbU9RNmVCbVpseGRVT0ZyM0FNRi9iMEUrQ2IzUVlicTA1YXIxVGo1OUlMNW9mR1pCRkJ3PT0K",
+                                             "url":  "https://github.com/micon4sure/WICLIVE/releases/download/0.2.10/wiclive_0.2.10_x64-setup.nsis.zip"
                                          }
                   }
 }
