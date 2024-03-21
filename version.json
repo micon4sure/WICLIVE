@@ -1,9 +1,17 @@
 ﻿{
-    "version":  "0.2.5",
+    "version":  "0.2.6",
     "platforms":  {
                       "windows-x86_64":  {
-                                             "signature":  "ZFc1MGNuVnpkR1ZrSUdOdmJXMWxiblE2SUhOcFoyNWhkSFZ5WlNCbWNtOXRJSFJoZFhKcElITmxZM0psZENCclpYa0tVbFZVTTNsTVkwY3dPWGhTUzBKbUwyOTBPRWQ1TVhVd2FIWXJTbWxQVVhaa1prTmxOMDA1T1ZFMlkzcElNVmRWTlRFd1lXTjFUbU5CVG1SYVZuWlBTek55YkVobmFIaDNlR2h2YmtNNWJXWjJkalZoUjNGdGIwMXBkbE5tYTBaWVRtZEpQUXAwY25WemRHVmtJR052YlcxbGJuUTZJSFJwYldWemRHRnRjRG94TnpFeE1ETTFOemsyQ1dacGJHVTZkMmxqYkdsMlpWOHdMakl1TlY5NE5qUXRjMlYwZFhBdWJuTnBjeTU2YVhBS0wwUlJNMUJhUWxacFZuaExWVkI2VGtoc2FYZzVUV0ZJZEdKcE5EZGhURXcyU2pocll6ZHNTMjltYzFab1ZucGhTMHRaVEdwRFRWcDNTVWRFS3pocFEySkRXR3Q0T1VWTlpuRmtOR3B1YUVwWlRHTXhRMmM5UFFvPQ==",
-                                             "url":  "https://github.com/micon4sure/WICLIVE/releases/download/0.2.5/wiclive_0.2.5_x64-setup.nsis.zip"
+                                             "signature":  {
+                                                               "value":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUM3lMY0cwOXhSS0NONllkUGs1cWFxWkxSTUpjL1NzRnZtZ2VXaTRVUW9Ici9yb1VtT2xDUDVDTHMxYlB3SWZTZTNFSGpHc3BwdDNESFpxS250bFNVR0E3aHkyS3Y0b2drPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzExMDM2NDkzCWZpbGU6d2ljbGl2ZV8wLjIuNl94NjQtc2V0dXAubnNpcy56aXAKaWcxQUExNy9xR21xSE9WaXE4NHpMbjIxVTQvL09zR2xUekdXQnQrZW1ydXJKNFlDVzIrdU5IWThrRTkrZy80ZzlMUlRXYVFXYUsvbVZoN2YxcG1QQUE9PQo=",
+                                                               "PSPath":  "D:\\a\\WICLIVE\\WICLIVE\\src-tauri\\target\\release\\bundle\\nsis\\wiclive_0.2.6_x64-setup.nsis.zip.sig",
+                                                               "PSParentPath":  "D:\\a\\WICLIVE\\WICLIVE\\src-tauri\\target\\release\\bundle\\nsis",
+                                                               "PSChildName":  "wiclive_0.2.6_x64-setup.nsis.zip.sig",
+                                                               "PSDrive":  "D",
+                                                               "PSProvider":  "Microsoft.PowerShell.Core\\FileSystem",
+                                                               "ReadCount":  1
+                                                           },
+                                             "url":  "https://github.com/micon4sure/WICLIVE/releases/download/0.2.6/wiclive_0.2.6_x64-setup.nsis.zip"
                                          }
                   }
 }
