@@ -43,7 +43,7 @@ h1 {
   display: flex;
   align-items: flex-end;
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
-  margin: 0 -40px 30px -40px;
+  margin: 20px -30px;
   padding: 20px 40px;
 }
 
@@ -92,7 +92,7 @@ body {
   padding: 10px;
   border-radius: 5px;
   position: absolute;
-  top: 10px;
+  top: 40px;
   right: 40px;
 }
 

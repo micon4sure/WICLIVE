@@ -167,6 +167,10 @@ app.post('/maps/upload', async (req, res) => {
   });
 })
 
+// app.get('/wiclive/version', async (req, res) => {
+//   res.download('https://github.com/micon4sure/WICLIVE/releases/latest/download/version.json');
+// });
+
 import ssl from './get-ssl-credentials';
 const port = 3243
 try {

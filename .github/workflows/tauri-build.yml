@@ -128,7 +128,7 @@ jobs:
           $json | Out-File -FilePath $jsonPath -Encoding utf8
         shell: powershell
 
-      - name: Upload Release Asset NSIS ZIP SIG
+      - name: Upload Release Asset version.json
         if: steps.check_tag.outputs.tagExists == 'false'
         uses: actions/upload-release-asset@v1
         env:
@@ -137,5 +137,5 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/version.json
           asset_name: version.json
-          asset_content_type: application/json
+          # asset_content_type: application/json
 
