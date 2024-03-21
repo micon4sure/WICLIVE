@@ -8,7 +8,8 @@ jobs:
   build-and-release:
     runs-on: windows-latest
     steps:
-      # - uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v4
       # - name: Install Bun
       #   run: |
       #     irm bun.sh/install.ps1 | iex
