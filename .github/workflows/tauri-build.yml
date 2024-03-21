@@ -19,9 +19,13 @@ jobs:
       #   run: bun install
       #   shell: powershell
 
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4      
-        run: npm i
+      - name: Setup Node/NPM
+        uses: actions/checkout@v4
+        uses: actions/setup-node@v4      
+
+      - name: Install node modules
+        run: npm install
+        shell: powershell
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
