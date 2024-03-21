@@ -43,8 +43,8 @@ h1 {
   display: flex;
   align-items: flex-end;
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
-  margin: 0 -60px 30px -60px;
-  padding: 20px;
+  margin: 0 -40px 30px -40px;
+  padding: 20px 40px;
 }
 
 
@@ -79,8 +79,8 @@ body {
 .container {
   padding-top: 20px;
   min-height: calc(100vh - 75px);
-  width: calc(100vw - 100px);
-  max-width: calc(100vw - 100px);
+  width: calc(100vw - 40px);
+  max-width: calc(100vw - 40px);
   flex: 1;
 }
 
@@ -93,7 +93,7 @@ body {
   border-radius: 5px;
   position: absolute;
   top: 10px;
-  right: 60px;
+  right: 40px;
 }
 
 footer {

@@ -12,6 +12,7 @@ jobs:
 
       - name: Install Bun
         run: |
+          echo $PSVersionTable
           irm bun.sh/install.ps1 | iex
           echo "C:\Users\runneradmin\.bun\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
         shell: powershell
