@@ -8,16 +8,20 @@ jobs:
   build-and-release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      # - uses: actions/checkout@v2
+      # - name: Install Bun
+      #   run: |
+      #     irm bun.sh/install.ps1 | iex
+      #     echo "C:\Users\runneradmin\.bun\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+      #   shell: powershell
 
-      - name: Install Bun
-        run: |
-          irm bun.sh/install.ps1 | iex
-        shell: powershell
+      # - name: Install Bun modules
+      #   run: bun install
+      #   shell: powershell
 
-      - name: Install Bun modules
-        run: bun install
-        shell: powershell
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4      
+        run: npm i
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
@@ -26,12 +30,12 @@ jobs:
           profile: minimal
           override: true
 
-      - name: Build Tauri app with Bun
+      - name: Build Tauri app
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ""
           WICLIVE_ENV: production
-        run: bun run tauri build
+        run: npm run tauri build
         shell: powershell
 
       - name: Get version from tauri.conf.json
