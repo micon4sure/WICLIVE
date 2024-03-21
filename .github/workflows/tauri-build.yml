@@ -1,3 +1,5 @@
+https://github.com/micon4sure/WICLIVE/releases/download/0.2.2/wiclive_0.2.2_x64-setup.nsis.zip
+https://github.com/micon4sure/WICLIVE/releases/download/0.2.2/wiclive_0.2.2_x64-setup.nsis.zip
 name: Build and Release WIC LIVE
 
 on:
@@ -86,7 +88,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip
+          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip
           asset_content_type: application/zip
 
       - name: Upload Release Asset NSIS ZIP SIG
@@ -97,7 +99,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup-nsis.zip.sig
+          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
           asset_content_type: application/octet-stream
 
       - name: Generate version.json
