@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::{env, fs, path::PathBuf};
-use tauri::{utils::config::TauriConfig, Manager, PhysicalSize};
+use tauri::{utils::config::TauriConfig, Manager, PhysicalSize, Size};
 
 use std::hash::Hasher;
 use twox_hash::XxHash64;
@@ -165,6 +165,13 @@ fn main() {
         .setup(|app| {
             #[cfg(debug_assertions)]
             app.get_window("main").unwrap().open_devtools();
+            app.get_window("main")
+                .unwrap()
+                .set_size(Size::Physical(PhysicalSize {
+                    width: 1920,
+                    height: 1080,
+                }))
+                .unwrap();
             Ok(())
         })
         .run(tauri::generate_context!())
