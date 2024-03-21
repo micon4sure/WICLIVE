@@ -110,23 +110,27 @@ jobs:
       - name: Generate version.json
         if: steps.check_tag.outputs.tagExists == 'false'
         run: |
-          $version = "${{ steps.get_version.outputs.version }}"
-          $url = "https://github.com/${{ github.repository }}/releases/download/$version/wiclive_" + $version + "_x64-setup.nsis.zip"
-          $signaturePath = "${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_" + $version + "_x64-setup.nsis.zip.sig"
-          $signature = (Get-Content -Raw -Path $signaturePath)
-          $json = @{
-            version = $version
-            platforms = @{
-              "windows-x86_64" = @{
-                signature = "" + $signature
-                url = $url
+          const fs = require('fs');
+          const version = "${{ steps.get_version.outputs.version }}";
+          const url = `https://github.com/${{ github.repository }}/releases/download/${version}/wiclive_${version}_x64-setup.nsis.zip`;
+          const signaturePath = `${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${version}_x64-setup.nsis.zip.sig`;
+          
+          // Read the signature file. Assuming it's a simple text file.
+          const signature = fs.readFileSync(signaturePath, 'utf8');
+          
+          const json = {
+            version: version,
+            platforms: {
+              "windows-x86_64": {
+                signature: signature,
+                url: url
               }
             }
-          } | ConvertTo-Json -Depth 3
-          $jsonPath = "version.json"
-          New-Item -Path $jsonPath -ItemType File -Force
-          $json | Out-File -FilePath $jsonPath -Encoding utf8
-        shell: powershell
+          };
+          
+          // Write the JSON object to a file
+          fs.writeFileSync("version.json", JSON.stringify(json, null, 2), 'utf8');
+        shell: bash
 
       - name: Upload Release Asset version.json
         if: steps.check_tag.outputs.tagExists == 'false'
