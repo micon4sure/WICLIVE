@@ -137,5 +137,5 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/version.json
           asset_name: version.json
-          # asset_content_type: application/json
+          asset_content_type: text/json
 
