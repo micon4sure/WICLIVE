@@ -111,7 +111,7 @@ jobs:
             version = $version
             platforms = @{
               "windows-x86_64" = @{
-                signature = $signature
+                signature = "" + $signature
                 url = $url
               }
             }
