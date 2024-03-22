@@ -3983,7 +3983,7 @@ dependencies = [
 
 [[package]]
 name = "wiclive"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "lazy_static",
  "md5",

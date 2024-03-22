@@ -22,14 +22,12 @@ impl Config {
     fn new() -> Self {
         // set api url
         let env = env!("WICLIVE_ENV");
-        println!("Environment: {}", env);
         let api_url = match env {
             "development" => "http://localhost:3243".to_string(),
             "staging" => "https://techtile.media:3243".to_string(),
             "production" => "https://techtile.media:3243".to_string(),
             _ => "http://localhost:3243".to_string(),
         };
-        println!("API URL: {}", api_url.as_str());
 
         // get version from cargo.toml
         let version = env!("CARGO_PKG_VERSION").to_string();

@@ -36,7 +36,18 @@ const runAction = async (title, executor) => {
   }
 }
 
-let maps = ref([] as { name: String, status: String }[])
+let _maps = ref([] as { name: String, status: String }[])
+watch(_maps.value, () => {
+  _maps.value = _.orderBy(_maps.value, [
+    (map) => {
+      if (map.status == 'missing') return 0;
+      if (map.status == 'outdated') return 1;
+      if (map.status == 'pending') return 2;
+    },
+    'name'
+  ],
+  )
+})
 let remoteMapData
 
 const initialize = async () => {
@@ -60,13 +71,19 @@ const initialize = async () => {
     remoteMapData = remote.data
   })
 
+  const missingMaps = _.difference(Object.keys(remoteMapData), localMapFiles)
+  console.log('missingMaps', missingMaps)
+  _.each(missingMaps, (filename) => {
+    _maps.value.push({ name: filename, status: "missing" })
+  })
+
   // get intersection of local and remote maps
   const intersection = _.intersection(Object.keys(remoteMapData), localMapFiles)
   console.log({ remote: Object.keys(remoteMapData), localMapFiles, intersection })
 
   // create map list
   _.each(intersection, (filename) => {
-    maps.value.push({ name: filename, status: "?" })
+    _maps.value.push({ name: filename, status: "?" })
   });
 
   // get hashes where needed
@@ -86,20 +103,11 @@ const initialize = async () => {
       const map = { name: filename, hash } as WIC_Map;
       cache.set(filename, map)
 
-      const index = maps.value.findIndex((map) => map.name === filename)
-      maps.value[index].status = hash == remoteMapData[filename] ? 'current' : 'outdated'
+      const index = _maps.value.findIndex((map) => map.name === filename)
+      _maps.value[index].status = hash == remoteMapData[filename] ? 'current' : 'outdated'
     }
-    if (newHash) {
-      action.info.push('done.')
-    }
+    action.info.push('done.')
   })
-
-  const missingMaps = _.difference(Object.keys(remoteMapData), localMapFiles)
-  console.log('missingMaps', missingMaps)
-  _.each(missingMaps, (filename) => {
-    maps.value.push({ name: filename, status: "missing" })
-  })
-
 }
 onMounted(async () => {
   try {
@@ -113,10 +121,9 @@ const downloadMap = async (filename: string) => {
   const cache = await WIC_Cache.instance();
 
   await runAction(`download map ${filename}`, async (action) => {
-    const listEntry = _.find(maps.value, { name: filename });
+    const listEntry = _.find(_maps.value, { name: filename });
     listEntry.status = 'pending'
     await invoke("download_map", { map: filename })
-    action.info.push('checking hash')
     console.log('building hash')
     const hash: string = await invoke("get_map_hash", { filename })
     console.log('building hash done', hash)
@@ -134,18 +141,20 @@ const downloadMap = async (filename: string) => {
 
 const synchronize = async () => {
   if (!actionNeeded.value) return;
-  await runAction('synchronizing', async (action) => {
-    for (const map of maps.value) {
+  runAction('synchronizing', async (action) => {
+    const promises = []
+    for (const map of _maps.value) {
       if (map.status == 'missing' || map.status == 'outdated') {
-        await downloadMap(map.name as string)
+        promises.push(downloadMap(map.name as string))
       }
     }
+    await Promise.all(promises)
   })
 }
 
 const actionNeeded = ref(false)
-watch(maps.value, () => {
-  actionNeeded.value = maps.value.some((map) => map.status == 'missing' || map.status == 'outdated')
+watch(_maps.value, () => {
+  actionNeeded.value = _maps.value.some((map) => map.status == 'missing' || map.status == 'outdated')
 })
 </script>
 
@@ -162,7 +171,7 @@ watch(maps.value, () => {
         </span>
       </div>
       <table id="maps-list">
-        <tr v-for="map in maps" :key="map.name.toString()">
+        <tr v-for="map in _maps" :key="map.name.toString()">
           <td>{{ map.name }}</td>
           <td class="status">
             <span class="btn-container" @click="downloadMap(map.name.toString())"
