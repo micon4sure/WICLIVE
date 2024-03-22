@@ -1,17 +1,9 @@
 <script setup lang="ts">
-import axios from 'axios'
-import { onMounted, ref } from 'vue';
-
-const _version = ref('')
-onMounted(async () => {
-  const versionJSON = await axios.get('https://github.com/micon4sure/WICLIVE/releases/latest/download/version.json')
-  _version.value = versionJSON.data.version
-});
 </script>
 
 <template>
   <div class="container">
-    <h1><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></h1>
+    <h1><img src="./assets/wiclive.png" alt="WIC LIVE" /></h1>
     <div class="card">
       <div class="card-header">What is WIC LIVE?</div>
       <div class="card-body">
@@ -25,8 +17,8 @@ onMounted(async () => {
     <div class="card">
       <div class="card-header">Where can I get WIC LIVE?</div>
       <div class="card-body">
-        <p>WIC LIVE can be downloaded directly off github. Just grab <a
-            :href="`https://github.com/micon4sure/WICLIVE/releases/download/${_version}/wiclive_${_version}_x64-setup.exe`">the
+        <p>WIC LIVE can be downloaded directly off github. Just grab the setup .exe of <a
+            :href="`https://github.com/micon4sure/WICLIVE/releases/latest`">the
             latest release</a>.
         </p>
       </div>
