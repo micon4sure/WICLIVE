@@ -32,10 +32,9 @@ backend/uploads
 backend/build
 backend/get-ssl-credentials.ts
 backend/publish.sh
-backend/publish-debug.sh
+backend/publish.ps1
+backend/_cache.json
 
-publish.sh
-publish-debug.sh
 src-tauri/tauri-sign.key
 
 docs

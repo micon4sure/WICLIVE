@@ -13,11 +13,11 @@ const action = props.action as any
 </script>
 
 <template>
-  <div class="action">
+  <div :class="['action', action.status]">
     <span class="action-status">
-      <iconCheck v-if="action.status === 'success'" class="success" />
-      <iconXMark v-if="action.status === 'error'" class="error" />
-      <div class="spinner-border text-primary" role="status" v-if="action.status == 'pending'">
+      <iconCheck v-if="action.status === 'success'" />
+      <iconXMark v-if="action.status === 'error'" />
+      <div class="spinner-border" role="status" v-if="action.status == 'pending'">
         <span class="sr-only">&nbsp;</span>
       </div>
     </span>
@@ -31,44 +31,64 @@ const action = props.action as any
 </template>
 
 <style lang="scss">
-div.action * {
-  font-family: monospace;
-}
-
 div.action {
   display: flex;
-}
 
-.action .action.card-body {
-  padding: 0 5px;
-}
-
-.action-status svg {
-  width: 20px;
-  height: 20px;
-  fill: #fff;
-  margin: 0 10px;
-
-  &.success {
-    fill: #148614;
+  * {
+    font-family: monospace;
   }
-}
 
-.action-header {
-  font-size: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-direction: row;
-}
+  .action.card-body {
+    padding: 0 5px;
+  }
 
-.action-info {
-  font-family: monospace;
+  svg {
+    width: 20px;
+    height: 20px;
+    fill: #fff;
+    margin: 0 10px;
+  }
 
-  li {
+  .spinner-border {
+    width: 20px;
+    height: 20px;
+    color: red;
+    margin: 0 10px;
+    color: rgb(0, 162, 255)
+  }
+
+  &.error {
+    svg {
+      fill: #ff0000cc;
+    }
+
+    .action-title {
+      background: #ff0000;
+      padding: 5px;
+
+    }
+  }
+
+  &.success svg {
+    fill: #15a315;
+  }
+
+  .action-title,
+  .action-info {
+    font-family: monospace;
+    font-size: 14px;
+  }
+
+  .action-info {
     background: #000;
-    padding: 3px 10px;
-    border-radius: 4px;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+
+    li {
+      padding: 3px 10px;
+      border-radius: 4px;
+    }
+
   }
 }
 </style>

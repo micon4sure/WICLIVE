@@ -12,6 +12,7 @@ import { onMounted, reactive, ref, watch } from 'vue';
 import get_config from '../get_config'
 
 import iconDownload from '@fortawesome/fontawesome-free/svgs/solid/download.svg';
+import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg';
 
 const state = ref({
   actions: [],
@@ -27,14 +28,11 @@ const runAction = async (title, executor) => {
   })
   state.value.actions.push(action)
   try {
-    // console.log('starting action', action)
     await executor(action)
-    // console.log('done with that.', action)
     action.status = 'success'
   } catch (error) {
     action.status = 'error'
     action.info.push(error)
-    throw error
   }
 }
 
@@ -113,18 +111,19 @@ onMounted(async () => {
 const downloadMap = async (filename: string) => {
   await runAction(`download map ${filename}`, async (action) => {
     const listEntry = _.find(maps.value, { name: filename });
-    listEntry.status = 'downloading'
+    listEntry.status = 'pending'
     await invoke("download_map", { map: filename })
-    listEntry.status = 'building hash'
+    action.info.push('checking hash')
     console.log('building hash')
     const hash: string = await invoke("get_map_hash", { filename })
     console.log('building hash done', hash)
-    let current = remoteMapData[filename] == hash
-    if (!current) {
-      action.status = 'error'
-      action.info.push('hash mismatch')
-      return;
+    let success = remoteMapData[filename] == hash
+    if (!success) {
+      listEntry.status = 'outdated'
+      console.log('hash mismatch', remoteMapData[filename], hash)
+      throw new Error('hash mismatch')
     }
+    action.info.push('done.')
     listEntry.status = 'current'
     cache.set(filename, { name: filename, hash })
   })
@@ -151,22 +150,18 @@ watch(maps.value, () => {
   <h2>MAPS</h2>
   <div id="maps">
     <div id="maps-list-container">
-      <span id="maps-list-synchronize" :class="{ 'btn-container': true, inactive: !actionNeeded }" @click="synchronize">
-        <button class="btn btn-secondary">
-          <iconDownload class="icon" />
-        </button>
-        Download missing/outdated
-      </span>
+      <div id="maps-list-synchronize" :class="{ inactive: !actionNeeded }" @click="synchronize">
+        <span class="btn-container">
+          <button class="btn btn-secondary">
+            <iconDownload class="icon" />
+          </button>
+          Download all missing/outdated
+        </span>
+      </div>
       <table id="maps-list">
-        <tr>
-          <th>Map</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
         <tr v-for="map in maps" :key="map.name.toString()">
           <td>{{ map.name }}</td>
-          <td>{{ map.status }}</td>
-          <td>
+          <td class="status">
             <span class="btn-container" @click="downloadMap(map.name.toString())"
               v-if="map.status == 'missing' || map.status == 'outdated'">
               <button class="btn btn-sm btn-secondary">
@@ -174,9 +169,11 @@ watch(maps.value, () => {
               </button>
               Download
             </span>
-            <div class="spinner-border text-primary" role="status" v-if="map.status == 'downloading'">
+            <div class="spinner-border" role="status" v-if="map.status == 'pending'">
               <span class="sr-only">&nbsp;</span>
             </div>
+            <iconCheck class="icon map-current" v-if="map.status == 'current'" />
+
           </td>
         </tr>
       </table>
@@ -193,9 +190,13 @@ watch(maps.value, () => {
 
   display: flex;
 
+  .spacer {
+    flex: 1;
+  }
+
   .btn-container {
     cursor: pointer;
-    display: block;
+    display: inline-block;
     justify-content: space-between;
     align-items: center;
     height: 35px;
@@ -205,7 +206,8 @@ watch(maps.value, () => {
     // background: linear-gradient(0deg, #791c05 0%, #ce2e06 100%);
     height: 35px;
     line-height: 35px;
-    padding: 0 0 0 10px;
+    padding: 0 10px;
+    text-align: left;
 
     button {
       height: 35px;
@@ -238,14 +240,16 @@ watch(maps.value, () => {
   #maps-list-synchronize {
     height: 50px;
 
-    &.btn-container {
-      border-radius: 5px;
+    display: flex;
+    justify-content: flex-end;
+
+    .btn-container {
       height: 50px;
       padding: 0 15px;
       height: 50px;
       line-height: 50px;
-      border-bottom-left-radius: 0px;
-      border-bottom-right-radius: 0px;
+      border-radius: 0;
+      border-top-right-radius: 5px;
     }
 
     &.inactive span {
@@ -271,6 +275,7 @@ watch(maps.value, () => {
     .icon {
       margin: 7px 5px;
     }
+
   }
 
   #maps-list {
@@ -280,7 +285,11 @@ watch(maps.value, () => {
     border-bottom-right-radius: 5px;
 
     td .spinner-border {
-      color: rgb(0, 162, 255) !important;
+      color: rgb(0, 162, 255);
+    }
+
+    td.status {
+      text-align: right;
     }
 
     td,
@@ -299,6 +308,12 @@ watch(maps.value, () => {
       &:last-of-type {
         border-bottom: none;
       }
+    }
+
+    .icon.map-current {
+      fill: #15a315;
+      height: 1.5em;
+
     }
   }
 

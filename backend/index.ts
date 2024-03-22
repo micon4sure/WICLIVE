@@ -4,16 +4,17 @@ import formidable from 'formidable';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
-import xxhash from 'xxhashjs';
+import md5 from 'md5-file'
 
 import keys from './keys.json'
 
 let mapsDirectory = './maps';
+const cacheFile = './_cache.json';
 
 const clearCache = () => {
   // clear cache on startup
   try {
-    fs.unlinkSync(mapsDirectory + '/_cache.json');
+    fs.unlinkSync(cacheFile);
     console.log('deleted cache')
   } catch (error) {
     console.log('no cache to delete')
@@ -37,9 +38,9 @@ app.get('/maps/hashes', async (req, res) => {
     } else {
 
       // read cache file if it exists
-      if (fs.existsSync(mapsDirectory + '/_cache.json')) {
+      if (fs.existsSync(cacheFile)) {
         console.log('returning cached map list')
-        const cache = fs.readFileSync(mapsDirectory + '/_cache.json', 'utf8');
+        const cache = fs.readFileSync(cacheFile, 'utf8');
         res.json(JSON.parse(cache));
         return;
       }
@@ -50,16 +51,14 @@ app.get('/maps/hashes', async (req, res) => {
         const file = files[index]
         // skip files not ending in .sdf
         if (!file.endsWith('.sdf')) continue;
-
-        const content = fs.readFileSync(`${mapsDirectory}/${file}`);
-        const seed = 0xCAFE_BABE;
-        fileHashes[file] = xxhash.h64(content, seed).toString(16);
+        const filePath = `${mapsDirectory}/${file}`;
+        fileHashes[file] = (await md5(filePath)).toUpperCase();
         console.log('ADDING HASH', file, fileHashes[file])
       }
       console.log('done creating file hashes', fileHashes)
 
       // write result to cache file
-      fs.writeFile(mapsDirectory + '/_cache.json', JSON.stringify(fileHashes), (err) => {
+      fs.writeFile(cacheFile, JSON.stringify(fileHashes), (err) => {
         if (err) {
           console.error(err);
         }
@@ -88,7 +87,7 @@ app.get('/maps/list', async (req, res) => {
   }
 
   fs.readdir(mapsDirectory, async (err, files) => {
-    files = files.filter(file => file !== '_cache.json');
+    files = files.filter(file => file.endsWith('.sdf'));
     // get file modification dates
     const fileStats = files.map(file => {
       const stats = fs.statSync(`${mapsDirectory}/${file}`);
@@ -166,10 +165,6 @@ app.post('/maps/upload', async (req, res) => {
     clearCache();
   });
 })
-
-// app.get('/wiclive/version', async (req, res) => {
-//   res.download('https://github.com/micon4sure/WICLIVE/releases/latest/download/version.json');
-// });
 
 import ssl from './get-ssl-credentials';
 const port = 3243

@@ -6,7 +6,6 @@ use std::{env, fs, path::PathBuf};
 use tauri::{utils::config::TauriConfig, Manager, PhysicalSize, Size};
 
 use std::hash::Hasher;
-use twox_hash::XxHash64;
 
 use std::{
     fs::File,
@@ -53,22 +52,10 @@ fn get_map_hash(filename: &str) -> Result<String, String> {
     let path = maps_directory.join(filename);
 
     let mut file = File::open(path).map_err(|e| e.to_string())?;
-    let mut hasher = XxHash64::with_seed(0xCAFE_BABE);
-    let mut buffer = [0; 1024];
-
-    loop {
-        let bytes_read = file
-            .read(&mut buffer)
-            .map_err(|e| format!("Failed to read {}", e))?;
-        if bytes_read == 0 {
-            break; // EOF
-        }
-        hasher.write(&buffer[..bytes_read]);
-    }
-
-    let hash = hasher.finish();
-
-    Ok(format!("{:016x}", hash))
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
+    let hash = md5::compute(buffer);
+    Ok(format!("{:x}", hash).to_uppercase())
 }
 
 async fn download_file(url: &str, target: &str) -> Result<(), String> {
@@ -168,8 +155,8 @@ fn main() {
             app.get_window("main")
                 .unwrap()
                 .set_size(Size::Physical(PhysicalSize {
-                    width: 1920,
-                    height: 1080,
+                    width: 1024,
+                    height: 768,
                 }))
                 .unwrap();
             Ok(())
