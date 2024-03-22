@@ -4,7 +4,7 @@ import { onMounted, ref } from 'vue';
 
 const _version = ref('')
 onMounted(async () => {
-  const versionJSON = await axios.get('https://raw.githubusercontent.com/micon4sure/WICLIVE/master/version.json')
+  const versionJSON = await axios.get('https://github.com/micon4sure/WICLIVE/releases/latest/download/version.json')
   _version.value = versionJSON.data.version
 });
 </script>
@@ -89,8 +89,9 @@ h1 {
   display: flex;
   align-items: flex-end;
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
-  margin: 0 -60px 30px -60px;
-  padding: 20px;
+  margin: 0 -40px;
+  margin-bottom: 20px;
+  padding: 20px 40px;
 }
 
 
@@ -126,8 +127,8 @@ body {
 .container {
   padding-top: 20px;
   min-height: calc(100vh - 75px);
-  width: calc(100vw - 100px);
-  max-width: calc(100vw - 100px);
+  width: calc(100vw - 40px);
+  max-width: calc(100vw - 40px);
   flex: 1;
 }
 
