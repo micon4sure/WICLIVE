@@ -49,7 +49,7 @@ h1 {
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
   margin: 0 -20px;
   margin-bottom: 20px;
-  padding: 20px 40px;
+  padding: 20px;
 }
 
 
