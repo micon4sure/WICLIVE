@@ -8,9 +8,7 @@ This is the World in Conflict LIVE tool. It enables map creators to upload their
 
 ## Roadmap
 - Implement possibility to run WiC from WIC LIVE so it always updates to the latest maps before launching the game
-- Better brand / CI integration, overall styling
 - Sign executables to avoid windows defender from complaining
-- Add map list so users can manually download maps
 
 
 © 2024 WIC LIVE is NOT affiliated with Ubisoft or Ubisoft Massive.\
