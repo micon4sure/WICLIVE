@@ -37,10 +37,11 @@ const runAction = async (title, executor) => {
 }
 
 let maps = ref([] as { name: String, status: String }[])
-const cache = WIC_Cache.instance();
 let remoteMapData
 
 const initialize = async () => {
+  const cache = await WIC_Cache.instance();
+
   while (state.value.actions.length > 0) {
     state.value.actions.pop()
   }
@@ -109,6 +110,8 @@ onMounted(async () => {
 })
 
 const downloadMap = async (filename: string) => {
+  const cache = await WIC_Cache.instance();
+
   await runAction(`download map ${filename}`, async (action) => {
     const listEntry = _.find(maps.value, { name: filename });
     listEntry.status = 'pending'

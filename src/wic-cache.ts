@@ -1,5 +1,7 @@
 import _ from 'lodash';
 
+import get_config from './get_config';
+
 export default class WIC_Cache {
   private static singleton: WIC_Cache;
   private data: { [key: string]: WIC_Map } = {};
@@ -10,8 +12,19 @@ export default class WIC_Cache {
       this.data = JSON.parse(cache)
     }
   }
+  public static async init() {
+    const config: any = await get_config();
+    if (localStorage.getItem('version') && localStorage.getItem('version') == config.VERSION)
+      return;
 
-  public static instance(): WIC_Cache {
+    console.log('new version, invalidating cache')
+    localStorage.clear();
+
+    localStorage.setItem('version', config.VERSION);
+  }
+
+  public static async instance(): Promise<WIC_Cache> {
+    await WIC_Cache.init();
     if (!WIC_Cache.singleton) {
       WIC_Cache.singleton = new WIC_Cache();
     }
