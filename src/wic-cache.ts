@@ -14,8 +14,8 @@ export default class WIC_Cache {
   }
   public static async init() {
     const config: any = await get_config();
-    if (localStorage.getItem('version') && localStorage.getItem('version') == config.VERSION)
-      return;
+    // if (localStorage.getItem('version') && localStorage.getItem('version') == config.VERSION)
+    //   return;
 
     console.log('new version, invalidating cache')
     localStorage.clear();

@@ -4,13 +4,15 @@
 use serde::{Deserialize, Serialize};
 use std::{env, fs, path::PathBuf};
 use tauri::{utils::config::TauriConfig, Manager, PhysicalSize, Size};
+use tokio::fs::File;
+use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
 
 use std::hash::Hasher;
 
-use std::{
-    fs::File,
-    io::{self, copy, Read},
-};
+use std::io::{self, copy, Read};
+
+use futures_util::stream::StreamExt;
 
 #[derive(Serialize)]
 struct Config {
@@ -43,37 +45,66 @@ lazy_static::lazy_static! {
 }
 
 #[tauri::command]
-fn get_map_hash(filename: &str) -> Result<String, String> {
+async fn get_map_hash(filename: &str) -> Result<String, String> {
     let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
     let maps_directory =
         PathBuf::from(userprofile).join("Documents\\World in Conflict\\Downloaded\\maps");
     let path = maps_directory.join(filename);
 
-    let mut file = File::open(path).map_err(|e| e.to_string())?;
+    // Open the file asynchronously
+    let mut file = File::open(path).await.map_err(|e| e.to_string())?;
+
+    // Create a new, empty buffer
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
-    let hash = md5::compute(buffer);
+
+    // Read the file's contents into the buffer asynchronously
+    file.read_to_end(&mut buffer)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Compute the MD5 hash of the buffer's contents
+    let hash = md5::compute(&buffer);
+
+    // Return the hash as a hexadecimal string, uppercase
     Ok(format!("{:x}", hash).to_uppercase())
 }
 
-async fn download_file(url: &str, target: &str) -> Result<(), String> {
+async fn download_file<F: FnMut(usize, usize) + Send + 'static>(
+    url: &str,
+    target: &str,
+    mut progress_callback: F,
+) -> Result<(), String> {
     println!("downloading file {} to {}", url, target);
-    let response = reqwest::get(url)
+    let client = reqwest::Client::new();
+    let response = client
+        .get(url)
+        .send()
         .await
         .map_err(|e| format!("Failed to send request: {}", e))?;
 
-    if response.status() != 200 {
+    if response.status() != reqwest::StatusCode::OK {
         return Err(format!("Failed to download file: {}", response.status()));
     }
 
-    let mut file = File::create(target).map_err(|e| format!("Failed to create file: {}", e))?;
+    let total_size = response
+        .content_length()
+        .ok_or("Failed to get content length")?;
 
-    let content = response
-        .bytes()
+    let mut file = File::create(target)
         .await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
-    copy(&mut content.as_ref(), &mut file)
-        .map_err(|e| format!("Failed to write to file: {}", e))?;
+        .map_err(|e| format!("Failed to create file: {}", e))?;
+    let mut downloaded: usize = 0;
+
+    let mut stream = response.bytes_stream();
+    while let Some(item) = stream.next().await {
+        let chunk = item.map_err(|e| format!("Failed to read chunk: {}", e))?;
+        file.write_all(&chunk)
+            .await
+            .map_err(|e| format!("Failed to write to file: {}", e))?;
+        downloaded += chunk.len();
+
+        progress_callback(downloaded, total_size as usize);
+    }
 
     Ok(())
 }
@@ -117,16 +148,31 @@ async fn get_map_files() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-async fn download_map(map: &str) -> Result<(), String> {
+async fn download_map(window: tauri::Window, map: &str) -> Result<(), String> {
     println!("downloading map {}", map);
     let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
     let maps_directory = userprofile.clone() + "\\Documents\\World in Conflict\\Downloaded\\maps";
 
     let map_url = format!("{}/maps/download/{}", &CONFIG.API_URL, map);
 
+    let map_cloned = map.to_string(); // Clone `map` here
+    let progress_callback = move |current: usize, total: usize| {
+        let percentage = (current as f64 / total as f64) * 100.0;
+        window
+            .emit(
+                "download-progress",
+                format!(
+                    "{{\"map\": \"{}\", \"percentage\": {:.2}}}",
+                    map_cloned, percentage
+                ),
+            )
+            .expect("Failed to emit progress");
+    };
+
     download_file(
         map_url.as_str(),
         format!("{}\\{}", maps_directory, map).as_str(),
+        progress_callback,
     )
     .await
     .map_err(|e| e.to_string())?;

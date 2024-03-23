@@ -2,7 +2,7 @@ import _ from "lodash"
 import express from 'express';
 import formidable from 'formidable';
 import fs from 'fs';
-import path from 'path';
+import path, { format } from 'path';
 import https from 'https';
 import md5 from 'md5-file'
 
@@ -11,16 +11,6 @@ import keys from './keys.json'
 let mapsDirectory = './maps';
 const cacheFile = './_cache.json';
 
-const clearCache = () => {
-  // clear cache on startup
-  try {
-    fs.unlinkSync(cacheFile);
-    console.log('deleted cache')
-  } catch (error) {
-    console.log('no cache to delete')
-  }
-};
-clearCache();
 
 const app = express();
 app.use((req, res, next) => {
@@ -28,46 +18,58 @@ app.use((req, res, next) => {
   next();
 });
 
-// ### GET MAPS
-app.get('/maps/hashes', async (req, res) => {
-  console.log('GET /maps/hashes');
-  fs.readdir(mapsDirectory, async (err, files) => {
-    if (err) {
-      console.error(err);
-      res.status(500).send('Internal Server Error');
-    } else {
+// read cache file
+let cache = {};
 
-      // read cache file if it exists
-      if (fs.existsSync(cacheFile)) {
-        console.log('returning cached map list')
-        const cache = fs.readFileSync(cacheFile, 'utf8');
-        res.json(JSON.parse(cache));
-        return;
-      }
+const saveCache = () => {
+  console.log(saveCache, cache)
+  fs.writeFileSync(cacheFile, JSON.stringify(cache));
+}
 
-      const fileHashes: { [filename: string]: string } = {};
-      console.log('calculating hashes for all maps', files)
-      for (let index in files) {
-        const file = files[index]
-        // skip files not ending in .sdf
-        if (!file.endsWith('.sdf')) continue;
-        const filePath = `${mapsDirectory}/${file}`;
-        fileHashes[file] = (await md5(filePath)).toUpperCase();
-        console.log('ADDING HASH', file, fileHashes[file])
-      }
-      console.log('done creating file hashes', fileHashes)
+const formatDate = (date) => {
+  const pad = (num) => (num < 10 ? '0' + num : num);
 
-      // write result to cache file
-      fs.writeFile(cacheFile, JSON.stringify(fileHashes), (err) => {
-        if (err) {
-          console.error(err);
-        }
-      });
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1); // getMonth() is zero-based
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
 
-      res.json(fileHashes);
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+try {
+  cache = JSON.parse(await fs.readFileSync(cacheFile, 'utf8'));
+} catch (error) {
+  cache = {};
+
+  console.log('no cache file found, building')
+
+  const files = fs.readdirSync(mapsDirectory);
+  const promises = _.map(files, async (file) => {
+    if (!file.endsWith('.sdf')) return;
+    const filePath = `${mapsDirectory}/${file}`;
+    const hash = (await md5(filePath)).toUpperCase();
+    let stats = fs.statSync(filePath);
+    cache[file] = {
+      name: file,
+      hash,
+      date: formatDate(new Date(stats.mtime)),
+      uploader: 'unknown',
+      version: 1
     }
   });
+  await Promise.all(promises);
+  saveCache();
+}
+
+app.get('/maps/data')
+console.log('loaded cache', cache)
+
+app.get('/maps/data', async (req, res) => {
+  res.json(cache);
 });
+
 
 // ### LIST MAPS
 app.get('/maps/list', async (req, res) => {
@@ -120,6 +122,9 @@ app.get('/maps/download/:filename', async (req, res) => {
   }
   const filename = req.params.filename;
   const filePath = `${mapsDirectory}/${filename}`;
+
+  const stat = fs.statSync(filePath);
+
   res.download(filePath);
 });
 
@@ -152,6 +157,8 @@ app.post('/maps/upload', async (req, res) => {
     if (!_.includes(Object.values(keys), key)) {
       return res.status(401).send('Invalid API key');
     }
+    console.log(key, key)
+    const uploader = _.findKey(keys, (value) => value === key);
 
     const mapName = files.file[0].originalFilename;
     if (mapName.includes('..')) {
@@ -170,7 +177,11 @@ app.post('/maps/upload', async (req, res) => {
       res.send('File uploaded and moved successfully.');
     });
 
-    clearCache();
+    cache[mapName].version++;
+    cache[mapName].uploader = uploader;
+    cache[mapName].date = formatDate(new Date());
+
+    saveCache();
   });
 })
 

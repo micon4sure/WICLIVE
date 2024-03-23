@@ -36,18 +36,18 @@ const runAction = async (title, executor) => {
   }
 }
 
-let _maps = ref([] as { name: String, status: String }[])
-watch(_maps.value, () => {
-  _maps.value = _.orderBy(_maps.value, [
-    (map) => {
-      if (map.status == 'missing') return 0;
-      if (map.status == 'outdated') return 1;
-      if (map.status == 'pending') return 2;
-    },
-    'name'
-  ],
-  )
-})
+let _maps = ref({})
+// watch(_maps.value, () => {
+//   _maps.value = _.orderBy(_maps.value, [
+//     (map) => {
+//       if (map.status == 'missing') return 0;
+//       if (map.status == 'outdated') return 1;
+//       if (map.status == 'pending') return 2;
+//     },
+//     'name'
+//   ],
+//   )
+// })
 let remoteMapData
 
 const initialize = async () => {
@@ -67,14 +67,15 @@ const initialize = async () => {
 
   // read remote map data
   await runAction('get remote map data', async (action) => {
-    const remote = await axios.get(CONFIG.API_URL + '/maps/hashes')
+    const remote = await axios.get(CONFIG.API_URL + '/maps/data')
     remoteMapData = remote.data
   })
 
   const missingMaps = _.difference(Object.keys(remoteMapData), localMapFiles)
   console.log('missingMaps', missingMaps)
   _.each(missingMaps, (filename) => {
-    _maps.value.push({ name: filename, status: "missing" })
+    _maps.value[filename] = remoteMapData[filename]
+    _maps.value[filename].status = 'missing'
   })
 
   // get intersection of local and remote maps
@@ -83,29 +84,32 @@ const initialize = async () => {
 
   // create map list
   _.each(intersection, (filename) => {
-    _maps.value.push({ name: filename, status: "?" })
+    _maps.value[filename] = remoteMapData[filename]
+    _maps.value[filename].status = '?'
   });
+
+
+  console.log('maps', _maps.value)
 
   // get hashes where needed
   await runAction('complete local cache', async (action) => {
-    let newHash = false;
     console.log(cache)
-    for (const filename of intersection) {
+
+    const promises = _.map(intersection, async (filename) => {
       let hash;
       if (cache.has(filename) && cache.get(filename).hash) {
         hash = cache.get(filename).hash
       } else {
         action.info.push('hashing ' + filename)
         hash = await invoke("get_map_hash", { filename })
-        newHash = true;
       }
-
       const map = { name: filename, hash } as WIC_Map;
       cache.set(filename, map)
+      console.log(filename, _maps.value)
+      _maps.value[filename].status = hash == remoteMapData[filename].hash ? 'current' : 'outdated'
+    })
+    await Promise.all(promises)
 
-      const index = _maps.value.findIndex((map) => map.name === filename)
-      _maps.value[index].status = hash == remoteMapData[filename] ? 'current' : 'outdated'
-    }
     action.info.push('done.')
   })
 }
@@ -127,7 +131,7 @@ const downloadMap = async (filename: string) => {
     console.log('building hash')
     const hash: string = await invoke("get_map_hash", { filename })
     console.log('building hash done', hash)
-    let success = remoteMapData[filename] == hash
+    let success = remoteMapData[filename].hash == hash
     if (!success) {
       listEntry.status = 'outdated'
       console.log('hash mismatch', remoteMapData[filename], hash)
@@ -143,7 +147,8 @@ const synchronize = async () => {
   if (!actionNeeded.value) return;
   runAction('synchronizing', async (action) => {
     const promises = []
-    for (const map of _maps.value) {
+    for (const name in _maps.value) {
+      const map = _maps.value[name]
       if (map.status == 'missing' || map.status == 'outdated') {
         promises.push(downloadMap(map.name as string))
       }
@@ -153,15 +158,19 @@ const synchronize = async () => {
 }
 
 const actionNeeded = ref(false)
+const _mapNames = ref(Object.keys(_maps.value))
 watch(_maps.value, () => {
-  actionNeeded.value = _maps.value.some((map) => map.status == 'missing' || map.status == 'outdated')
+  // check if any of the maps are outdated or missing
+  _mapNames.value = Object.keys(_maps.value)
+  actionNeeded.value = _.some(_maps.value, (map) => map.status == 'outdated' || map.status == 'missing')
 })
+
 </script>
 
 <template>
   <h2>MAPS</h2>
   <div id="maps">
-    <div id="maps-list-container" :class="{ hidden: !_maps.length }">
+    <div id="maps-list-container" :class="{ hidden: !Object.keys(_maps).length }">
       <div id="maps-list-synchronize" :class="{ inactive: !actionNeeded }" @click="synchronize">
         <span class="btn-container">
           <button class="btn btn-secondary">
@@ -170,9 +179,15 @@ watch(_maps.value, () => {
           Download all missing/outdated
         </span>
       </div>
-      <table id="maps-list" v-if="_maps.length">
-        <tr v-for="map in _maps" :key="map.name.toString()">
-          <td>{{ map.name }}</td>
+      <table id="maps-list" v-if="_mapNames.length">
+        <tr v-for="map of _maps" :key="map.name">
+          <td>
+            {{ map.name }} <br />
+            <small>v{{ map.version }} @ {{ map.date }} by {{ map.uploader }}</small>
+          </td>
+          <td>
+            <span v-if="map.status != 'current'">{{ map.status }}</span>
+          </td>
           <td class="status">
             <span class="btn-container" @click="downloadMap(map.name.toString())"
               v-if="map.status == 'missing' || map.status == 'outdated'">
