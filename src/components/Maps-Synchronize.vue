@@ -161,7 +161,7 @@ watch(_maps.value, () => {
 <template>
   <h2>MAPS</h2>
   <div id="maps">
-    <div id="maps-list-container">
+    <div id="maps-list-container" :class="{ hidden: !_maps.length }">
       <div id="maps-list-synchronize" :class="{ inactive: !actionNeeded }" @click="synchronize">
         <span class="btn-container">
           <button class="btn btn-secondary">
@@ -170,7 +170,7 @@ watch(_maps.value, () => {
           Download all missing/outdated
         </span>
       </div>
-      <table id="maps-list">
+      <table id="maps-list" v-if="_maps.length">
         <tr v-for="map in _maps" :key="map.name.toString()">
           <td>{{ map.name }}</td>
           <td class="status">
@@ -234,6 +234,11 @@ watch(_maps.value, () => {
   }
 
   #maps-list-container {
+    &.hidden {
+      visibility: hidden;
+    }
+
+    width: 65%;
     padding: 0;
     margin: 0;
     border: 1px solid #333;
@@ -246,10 +251,10 @@ watch(_maps.value, () => {
       margin: 0;
     }
 
-    width: 65%;
   }
 
   #maps-list-synchronize {
+
     height: 50px;
 
     display: flex;
