@@ -112,7 +112,6 @@ app.get('/maps/list', async (req, res) => {
 
 // ### DOWNLOAD MAP
 app.get('/maps/download/:filename', async (req, res) => {
-  await new Promise(resolve => setTimeout(resolve, 10000));
   console.log(`GET /maps/download/${req.params.filename}`);
   // sanitize filename
   if (req.params.filename.includes('..')) {
@@ -129,6 +128,15 @@ const mapTempUploadDir = 'uploads';
 fs.existsSync(mapTempUploadDir) || fs.mkdirSync(mapTempUploadDir, { recursive: true });
 app.post('/maps/upload', async (req, res) => {
   console.log('POST /maps/upload');
+
+  // limit time to upload between tuesday noon and thursday noon
+  const now = new Date();
+  const day = now.getDay();
+  const hour = now.getHours();
+  if (day < 2 || day > 4 || (day === 2 && hour < 12) || (day === 4 && hour >= 12)) {
+    // return res.status(403).send('Uploads are only allowed between Tuesday noon and Thursday noon.');
+  }
+
   const form = formidable();
   form.uploadDir = mapTempUploadDir;
   form.keepExtensions = true;

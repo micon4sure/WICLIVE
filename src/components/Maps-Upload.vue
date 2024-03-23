@@ -10,9 +10,9 @@ const _uploadActions = ref([])
 const $file = ref(null)
 
 // check for key in local storage
-const $key = ref(null)
+const _key = ref(null)
 if (localStorage.getItem('upload-key')) {
-  $key.value = localStorage.getItem('upload-key')
+  _key.value = localStorage.getItem('upload-key')
 }
 
 const upload = async () => {
@@ -24,7 +24,7 @@ const upload = async () => {
   })
   _uploadActions.value.push(uploadAction)
 
-  if (!$key.value.value) {
+  if (!_key.value) {
     uploadAction.status = 'error'
     uploadAction.info.push('No API Key')
     return
@@ -41,7 +41,7 @@ const upload = async () => {
 
   const formData = new FormData()
   formData.append('file', $file.value.files![0])
-  formData.append('key', $key.value.value)
+  formData.append('key', _key.value)
 
   try {
     await axios.post(CONFIG.API_URL + '/maps/upload', formData, {
@@ -53,13 +53,14 @@ const upload = async () => {
     uploadAction.status = 'error'
     console.error(error)
     uploadAction.info.push(error + ' (' + error.response?.data + ')')
+    return
   }
 
   uploadAction.info.push('Upload complete..')
   uploadAction.status = 'success'
 
   // set key in local storage
-  localStorage.setItem('upload-key', $key.value.value)
+  localStorage.setItem('upload-key', _key.value)
 
   // // add map to map cache
   // const cache = WIC_Cache.instance()
@@ -70,7 +71,7 @@ const upload = async () => {
 <template>
   <div>
     <input type="file" id="file" ref="$file" class="form-control" />
-    <input type="text" id="key" placeholder="API KEY" ref="$key" class="form-control" />
+    <input type="text" id="key" placeholder="API KEY" class="form-control" v-model="_key" />
     <button id="upload" @click="upload" class="btn btn-primary">Upload</button>
     <actions-vue :actions="_uploadActions" />
   </div>

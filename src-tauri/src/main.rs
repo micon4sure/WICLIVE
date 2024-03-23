@@ -57,6 +57,7 @@ fn get_map_hash(filename: &str) -> Result<String, String> {
 }
 
 async fn download_file(url: &str, target: &str) -> Result<(), String> {
+    println!("downloading file {} to {}", url, target);
     let response = reqwest::get(url)
         .await
         .map_err(|e| format!("Failed to send request: {}", e))?;
