@@ -1,6 +1,7 @@
 export enum WIC_Map_Status {
   MISSING = 'missing',
   OUTDATED = 'outdated',
+  PENDING = 'pending',
   LOADING = 'loading',
   CURRENT = 'current',
   UNKNOWN = 'unknown'

@@ -5,7 +5,7 @@ import jobsVue from './jobs.vue'
 import axios from 'axios'
 
 import { invoke } from "@tauri-apps/api/tauri";
-import { onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 
 import get_config from '../get_config'
 
@@ -87,6 +87,7 @@ let busy = false
 const downloadMap = async name => {
   if (queue.includes(name)) return;
   queue.push(name)
+  _.find(state.value.maps, { name: name }).status = WIC_Map_Status.PENDING
   if (busy) return;
   busy = true
 
@@ -123,22 +124,24 @@ const downloadMap = async name => {
 
 // watch for action needed
 const actionNeeded = ref(false)
-watch(state.value.maps, () => {
+watch(() => state.value.maps, () => {
   actionNeeded.value = _.some(state.value.maps, (map) => map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED)
-})
+}, { deep: true })
 
-// watch for cache changes
-watch(state.value.maps, () => {
-  state.value.maps = _.orderBy(state.value.maps, [
+// computed sorted maps
+const _maps = computed(() => {
+  return _.orderBy(state.value.maps, [
     (map) => {
       if (map.status == WIC_Map_Status.MISSING) return 0;
       if (map.status == WIC_Map_Status.OUTDATED) return 1;
       if (map.status == WIC_Map_Status.LOADING) return 2;
-      return 3
+      if (map.status == WIC_Map_Status.PENDING) return 3;
+      return 4
     },
     map => map.name
   ])
 })
+
 const synchronize = async () => {
   if (!actionNeeded.value) return;
   runJob('synchronizing', async (job) => {
@@ -172,8 +175,8 @@ onMounted(async () => {
           Download all missing/outdated
         </span>
       </div>
-      <table id="maps-list" v-if="Object.keys(state.maps).length">
-        <tr v-for="map in state.maps" :key="map.name">
+      <table id="maps-list" v-if="_maps.length">
+        <tr v-for="map in _maps" :key="map.name">
           <th>
             {{ map.name }}
           </th>
@@ -406,4 +409,4 @@ ul {
 span.title {
   font-size: 1.2em;
 }
-</style>../lib/wic-download-progress
+</style>

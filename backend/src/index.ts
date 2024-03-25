@@ -86,7 +86,6 @@ class WIC_Database_Backend {
 
   async uploaded(mapName, uploader) {
     if (!this.maps[mapName]) {
-      console.log('DO ADD MAP', mapName, uploader)
       await this.addMap(mapName, uploader);
       this.save();
       return;
@@ -120,7 +119,7 @@ database.save();
 console.log('loaded cache', database)
 
 app.get('/maps/data', async (req, res) => {
-  console.log('GET /maps/data', database.data);
+  console.log('GET /maps/data');
   res.json(database.data.maps);
 });
 
