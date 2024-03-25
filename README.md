@@ -7,9 +7,10 @@ This is the World in Conflict LIVE tool. It enables map creators to upload their
 - Automatic map download of new and outdated maps
 
 ## Roadmap
-- Implement possibility to run WiC from WIC LIVE so it always updates to the latest maps before launching the game
 - Sign executables to avoid windows defender from complaining
 
+## License
+The project is published under MIT license. See src-tauri/LICENSE
 
-© 2024 WIC LIVE is NOT affiliated with Ubisoft or Ubisoft Massive.\
-© 2009 Ubisoft Entertainment. All Rights Reserved. World in Conflict, Ubisoft Massive the Ubisoft Massive logo, Ubisoft, Ubi.com and the Ubisoft logo are all trademarks of Ubisoft Entertainment in the US and/or other countries.
+This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with MASSIVE Entertainment or UBISOFT, or any of their subsidiaries or affiliates.
+All trademarks and registered trademarks are the property of their respective owners. The use of these names, trademarks, and brands does not imply endorsement.
