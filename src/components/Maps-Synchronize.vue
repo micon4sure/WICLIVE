@@ -207,16 +207,16 @@ onMounted(async () => {
             {{ map.name }}
           </th>
           <td>
-            {{ map.size }} MB
+            v{{ map.version }}
           </td>
           <td>
-            v{{ map.version }}
+            {{ map.uploader }}
           </td>
           <td>
             {{ map.date }}
           </td>
           <td>
-            {{ map.uploader }}
+            {{ map.size }} MB
           </td>
           <td>
             <span v-if="map.status != 'current'">{{ map.status }}</span>
