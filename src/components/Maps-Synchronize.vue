@@ -68,10 +68,10 @@ const init = async () => {
 
   // check for maps removed on fs
   _.each(cache.data, (map, name) => {
-    if (!_.includes(local, name)) {
-      console.log('MAP REMOVED LOCALLY', name)
-      cache.remove(name)
+    if (_.includes(local, name)) {
+      return
     }
+    cache.remove(name)
   })
 
   // add new maps to cache
@@ -85,13 +85,20 @@ const init = async () => {
         return;
       }
 
-      const hash = await invoke("get_map_hash", { filename: map.name })
+      const hash: string = await invoke("get_map_hash", { filename: map.name })
       const status = remote[map.name].hash != hash ? WIC_Map_Status.OUTDATED : WIC_Map_Status.CURRENT;
-      console.log('MAP STATUS', map.name, status)
       cache.add(map, status)
+      cache.get(map.name).hash = hash
+      return;
+    }
+
+    const localMap = cache.get(map.name)
+    if (localMap.hash != map.hash) {
+      localMap.status = WIC_Map_Status.OUTDATED
     }
   })
   await Promise.all(promises)
+  cache.save()
 }
 
 const downloadMap = async name => {
@@ -114,6 +121,7 @@ const downloadMap = async name => {
       throw new Error('hash mismatch')
     }
 
+    map.hash = hash
     progress.off(progressKey)
     job.info.push('done.')
     map.status = WIC_Map_Status.CURRENT
@@ -192,7 +200,7 @@ onMounted(async () => {
           <button class="btn">
             <iconRefresh class="icon" />
           </button>
-          Reset cache
+          Clear cache
         </span>
         <span class="btn-container primary" @click="synchronize" :class="{ inactive: !actionNeeded }">
           <button class="btn">

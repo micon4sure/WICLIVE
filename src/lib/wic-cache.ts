@@ -20,7 +20,6 @@ export default class WIC_Cache {
       this.save()
       return;
     }
-    console.log('LOADING CACHE', stored)
     const parsed = JSON.parse(stored)
     _.each(parsed, (map: WIC_Map_Frontend, name) => {
       this.maps[name] = map
