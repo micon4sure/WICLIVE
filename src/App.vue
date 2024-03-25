@@ -73,7 +73,7 @@ h2 {
 #container {
   padding: 20px;
   margin: 0px;
-  width: 100vw;
+  width: calc(100vw - 20px);
   min-height: calc(100vh - 75px);
   flex: 1;
 }
