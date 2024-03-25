@@ -10,14 +10,14 @@
         <p>In recent times, a lot of custom made maps have come out. Active players had to manually download them and
           keep them up to date.</p>
         <p> This has resulted in a lot of effort in our dedicated map makers being wasted because a majority of players
-          didn't have the maps or an old version</p>
+          didn't have the maps or an old version.</p>
         <p>WIC LIVE is the solution to this problem. It automatically downloads and updates community maps.</p>
       </div>
     </div>
     <div class="card">
       <div class="card-header">Where can I get WIC LIVE?</div>
       <div class="card-body">
-        <p>WIC LIVE can be downloaded directly off github. Just grab the setup .exe of <a
+        <p>WIC LIVE can be downloaded directly off github. Just grab the setup.exe of <a
             :href="`https://github.com/micon4sure/WICLIVE/releases/latest`">the
             latest release</a>.
         </p>
@@ -26,9 +26,16 @@
     <div class="card">
       <div class="card-header">How to use WIC LIVE?</div>
       <div class="card-body">
-        <p>Using WIC LIVE is really simple. Just download it, install it and run it before you play. There is a feature
-          planned that automatically
-          starts World in Conflict after maps are synchronized. Coming soon.</p>
+        <p>Using WIC LIVE is really simple. Just download it, install it and run it before you play. The use is
+          self-explanatory.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Do I have to run WIC LIVE before every game start?</div>
+      <div class="card-body">
+        <p>No. Map makers can only upload new maps and versions between tuesday noon and thursday noon. It is enough to
+          update once for the weekend any time after thursday noon (UTC / Zulu time)
+        </p>
       </div>
     </div>
     <div class="card">
