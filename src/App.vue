@@ -6,9 +6,10 @@
     <router-view />
   </div>
   <footer>
-    © 2024 WIC LIVE is NOT affiliated with Ubisoft or Ubisoft Massive.<br />
-    © 2009 Ubisoft Entertainment. All Rights Reserved. World in Conflict, Ubisoft Massive the Ubisoft Massive logo,
-    Ubisoft, Ubi.com and the Ubisoft logo are all trademarks of Ubisoft Entertainment in the US and/or other countries.
+    This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with MASSIVE
+    Entertainment or UBISOFT, or any of their subsidiaries or affiliates.<br />
+    All trademarks and registered trademarks are the property of their respective owners. The use of these names,
+    trademarks, and brands does not imply endorsement.
   </footer>
 </template>
 
