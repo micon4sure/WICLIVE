@@ -3,7 +3,7 @@ import _ from 'lodash'
 import axios from 'axios'
 import { onMounted, ref } from 'vue'
 
-const _maps = ref([])
+const _maps = ref([] as any[])
 onMounted(async () => {
   const response = await axios.get('https://techtile.media:3243/maps/data')
   console.log(response.data)
