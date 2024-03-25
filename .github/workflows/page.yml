@@ -18,6 +18,10 @@ jobs:
         run: |
           bun install
           bun run build
+      
+      - name: Prepare for GitHub Pages
+        run: cp dist/index.html dist/404.html
+
 
       - name: Move build output to docs/
         run: |
