@@ -106,33 +106,46 @@ const init = async () => {
   cache.save()
 }
 
+const queue = []
+let busy = false
 const downloadMap = async name => {
-  await runJob(`download map ${name}`, async (job) => {
-    const progressKey = progress.on(name, (event) => {
-      job.progress = event.percentage
+  if (queue.includes(name)) return;
+  queue.push(name)
+  if (busy) return;
+  busy = true
+
+  while (queue.length) {
+    const name = queue.shift()
+
+
+    await runJob(`download map ${name}`, async (job) => {
+      const progressKey = progress.on(name, (event) => {
+        job.progress = event.percentage
+      })
+
+      const map = cache.get(name)
+      map.status = WIC_Map_Status.PENDING
+
+      await invoke("download_map", { map: name })
+
+      job.info.push('building hash...')
+      const hash: string = await invoke("get_map_hash", { filename: name })
+
+      if (remoteData[name].hash != hash) {
+        map.status = WIC_Map_Status.OUTDATED
+        console.log('hash mismatch', remoteData[name].hash, hash)
+        throw new Error('hash mismatch')
+      }
+
+      map.hash = hash
+      progress.off(progressKey)
+      job.info.push('done.')
+      map.status = WIC_Map_Status.CURRENT
+
+      cache.save();
     })
-
-    const map = cache.get(name)
-    map.status = WIC_Map_Status.PENDING
-
-    await invoke("download_map", { map: name })
-
-    job.info.push('building hash...')
-    const hash: string = await invoke("get_map_hash", { filename: name })
-
-    if (remoteData[name].hash != hash) {
-      map.status = WIC_Map_Status.OUTDATED
-      console.log('hash mismatch', remoteData[name].hash, hash)
-      throw new Error('hash mismatch')
-    }
-
-    map.hash = hash
-    progress.off(progressKey)
-    job.info.push('done.')
-    map.status = WIC_Map_Status.CURRENT
-
-    cache.save();
-  })
+  }
+  busy = false
 }
 
 // watch for action needed
