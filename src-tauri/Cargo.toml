@@ -1,8 +1,8 @@
 [package]
 name = "wiclive"
-version = "0.4.26"
-description = "A Tauri App"
-authors = ["you"]
+version = "0.4.27"
+description = "WIC LIVE"
+authors = ["mICON"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
