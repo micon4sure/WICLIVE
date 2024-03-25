@@ -22,20 +22,20 @@ onMounted(async () => {
     <h2>MAPS</h2>
     <table>
       <tr>
+        <th>Download</th>
         <th>Map Name</th>
         <th>Version</th>
         <th>Author</th>
         <th>Date</th>
         <th>Size</th>
-        <th>Download</th>
       </tr>
       <tr v-for="map in _maps" :key="map.id">
+        <td><a :href="'https://techtile.media:3243/maps/download/' + map.name">Download</a></td>
         <td>{{ map.name }}</td>
         <td>v{{ map.version }}</td>
         <td>{{ map.uploader }}</td>
         <td>{{ map.date }}</td>
         <td>{{ map.size }}</td>
-        <td><a :href="'https://techtile.media:3243/maps/download/' + map.name">Download</a></td>
       </tr>
     </table>
   </div>
