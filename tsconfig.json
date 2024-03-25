@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "noPropertyAccessFromIndexSignature": false,
     "noFallthroughCasesInSwitch": false,
     "noUnusedParameters": false,
     "strictNullChecks": false,
@@ -7,7 +8,13 @@
     "alwaysStrict": false,
     "noUnusedLocals": false,
     "noImplicitAny": false,
-    "noImplicitReturns": false
+    "noImplicitReturns": false,
+    "target": "ES2022",
+    "lib": [
+      "ES2015",
+      "DOM"
+    ],
+    "module": "ESNext",
   },
   "files": [],
   "references": [
