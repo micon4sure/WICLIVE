@@ -14,18 +14,15 @@ import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg';
 import iconRefresh from '@fortawesome/fontawesome-free/svgs/solid/rotate.svg';
 
 import WIC_DownloadProgress from '../lib/wic-download-progress'
-import WIC_Cache from '../lib/wic-cache'
 
-import { WIC_Map_Backend, WIC_Map_Frontend, WIC_Map_Display, WIC_Map_Status } from '../lib/wic-map'
+import { WIC_Map_Frontend, WIC_Map_Status } from '../lib/wic-map'
 
 const progress = new WIC_DownloadProgress
 let remoteData = {} as any
 
-const cache = new WIC_Cache;
-
 const state = ref({
   jobs: [],
-  maps: {} as { [key: string]: WIC_Map_Display }
+  maps: [] as WIC_Map_Frontend[]
 })
 
 const runJob = async (title, executor) => {
@@ -49,61 +46,40 @@ const runJob = async (title, executor) => {
 
 const init = async () => {
   const CONFIG: any = await get_config()
-  const cacheVersion = localStorage.getItem('wic-version')
-  if (cacheVersion != CONFIG.VERSION) {
-    localStorage.removeItem('wic-cache')
-    localStorage.setItem('wic-version', CONFIG.VERSION)
-  }
-
-  const local = await invoke("get_map_files");
+  const local: Array<String> = await invoke("get_map_files");
   console.log('local maps are', local)
 
   const remote = (await axios.get(CONFIG.API_URL + '/maps/data')).data
   remoteData = remote
 
-  cache.init()
-
-  // check for maps not on remote anymore
-  _.each(cache.data, (map, name) => {
-    if (!remote[name]) {
-      console.log('MAP REMOVED ON REMOTE', name)
-      cache.remove(name)
-    }
-  })
-
-  // check for maps removed on fs
-  _.each(cache.data, (map, name) => {
-    if (_.includes(local, name)) {
-      return
-    }
-    cache.remove(name)
-  })
-
-  // add new maps to cache
-  const promises = _.map(remote, async (map: WIC_Map_Backend) => {
-    if (!cache.has(map.name)) {
-      console.log('MAP NOT IN CACHE', map.name)
-
-      if (!_.includes(local, map.name)) {
-        console.log('MAP MISSING', map.name)
-        cache.add(map, WIC_Map_Status.MISSING)
-        return;
+  let promises = _.map(remote, async (map) => {
+    let status: WIC_Map_Status;
+    if (!_.includes(local, map.name)) {
+      status = WIC_Map_Status.MISSING
+    } else {
+      const hash = await invoke("get_map_hash", { filename: map.name })
+      if (hash != map.hash) {
+        status = WIC_Map_Status.OUTDATED
+      } else {
+        status = WIC_Map_Status.CURRENT
       }
-
-      const hash: string = await invoke("get_map_hash", { filename: map.name })
-      const status = remote[map.name].hash != hash ? WIC_Map_Status.OUTDATED : WIC_Map_Status.CURRENT;
-      cache.add(map, status)
-      cache.get(map.name).hash = hash
-      return;
     }
 
-    const localMap = cache.get(map.name)
-    if (localMap.hash != map.hash) {
-      localMap.status = WIC_Map_Status.OUTDATED
-    }
+    let size = map.size / 1024 / 1024
+    size = Math.round(size * 100) / 100
+    const data = {
+      name: map.name,
+      status: status,
+      date: map.date,
+      uploader: map.uploader,
+      version: map.version,
+      size
+    } as WIC_Map_Frontend
+
+    state.value.maps.push(data)
   })
   await Promise.all(promises)
-  cache.save()
+
 }
 
 const queue = []
@@ -117,14 +93,13 @@ const downloadMap = async name => {
   while (queue.length) {
     const name = queue.shift()
 
-
-    await runJob(`download map ${name}`, async (job) => {
+    await runJob(`downloading ${name}`, async (job) => {
       const progressKey = progress.on(name, (event) => {
         job.progress = event.percentage
       })
 
-      const map = cache.get(name)
-      map.status = WIC_Map_Status.PENDING
+      const map = _.find(state.value.maps, { name: name })
+      map.status = WIC_Map_Status.LOADING
 
       await invoke("download_map", { map: name })
 
@@ -141,8 +116,6 @@ const downloadMap = async name => {
       progress.off(progressKey)
       job.info.push('done.')
       map.status = WIC_Map_Status.CURRENT
-
-      cache.save();
     })
   }
   busy = false
@@ -150,34 +123,17 @@ const downloadMap = async name => {
 
 // watch for action needed
 const actionNeeded = ref(false)
-watch(cache.data, () => {
-  actionNeeded.value = _.some(cache.data, (map) => map.status == 'outdated' || map.status == 'missing')
+watch(state.value.maps, () => {
+  actionNeeded.value = _.some(state.value.maps, (map) => map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED)
 })
 
 // watch for cache changes
-watch(cache.data, () => {
-  const maps = _.map(cache.data, (map) => {
-    const remoteMap = remoteData[map.name];
-
-    // size bytes to megabytes
-    let size = remoteMap.size / 1024 / 1024
-    size = Math.round(size * 100) / 100
-
-    const result = {
-      name: map.name,
-      size,
-      version: remoteMap.version,
-      date: remoteMap.date,
-      uploader: remoteMap.uploader,
-      status: map.status
-    } as WIC_Map_Display
-    return result
-  })
-  state.value.maps = _.orderBy(maps, [
+watch(state.value.maps, () => {
+  state.value.maps = _.orderBy(state.value.maps, [
     (map) => {
-      if (map.status == 'missing') return 0;
-      if (map.status == 'outdated') return 1;
-      if (map.status == 'pending') return 2;
+      if (map.status == WIC_Map_Status.MISSING) return 0;
+      if (map.status == WIC_Map_Status.OUTDATED) return 1;
+      if (map.status == WIC_Map_Status.LOADING) return 2;
       return 3
     },
     map => map.name
@@ -186,8 +142,8 @@ watch(cache.data, () => {
 const synchronize = async () => {
   if (!actionNeeded.value) return;
   runJob('synchronizing', async (job) => {
-    const promises = _.map(cache.data, async (map) => {
-      if (map.status == 'missing' || map.status == 'outdated') {
+    const promises = _.map(state.value.maps, async (map) => {
+      if (map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED) {
         await downloadMap(map.name)
       }
     })
@@ -195,15 +151,8 @@ const synchronize = async () => {
   })
 }
 
-const resetCache = async () => {
-  await runJob('reset cache', async (job) => {
-    localStorage.removeItem('wic-cache')
-    await init()
-  })
-}
-
 onMounted(async () => {
-  await runJob('init', async (job) => {
+  await runJob('initializing', async (job) => {
     await init()
   })
 })
@@ -214,11 +163,7 @@ onMounted(async () => {
   <div id="maps">
     <div id="maps-list-container" :class="{ hidden: !state.maps.length }">
       <div id="maps-list-actions">
-        <span class="btn-container secondary" @click="resetCache">
-          <button class="btn">
-            <iconRefresh class="icon" />
-          </button>
-          Clear cache
+        <span class="btn-container secondary">
         </span>
         <span class="btn-container primary" @click="synchronize" :class="{ inactive: !actionNeeded }">
           <button class="btn">
@@ -245,20 +190,20 @@ onMounted(async () => {
             {{ map.size }} MB
           </td>
           <td>
-            <span v-if="map.status != 'current'">{{ map.status }}</span>
+            <span v-if="map.status != WIC_Map_Status.CURRENT">{{ map.status }}</span>
           </td>
           <td class="status">
             <span class="btn-container primary" @click="downloadMap(map.name.toString())"
-              v-if="map.status == 'missing' || map.status == 'outdated'">
+              v-if="map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED">
               <button class="btn btn-sm btn-secondary">
                 <iconDownload class="icon" />
               </button>
               Download
             </span>
-            <div class="spinner-border" role="status" v-if="map.status == 'pending'">
+            <div class="spinner-border" role="status" v-if="map.status == WIC_Map_Status.LOADING">
               <span class="sr-only">&nbsp;</span>
             </div>
-            <iconCheck class="icon map-current" v-if="map.status == 'current'" />
+            <iconCheck class="icon map-current" v-if="map.status == WIC_Map_Status.CURRENT" />
           </td>
         </tr>
       </table>

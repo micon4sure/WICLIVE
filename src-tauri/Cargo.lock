@@ -4002,7 +4002,7 @@ dependencies = [
 
 [[package]]
 name = "wiclive"
-version = "0.4.21"
+version = "0.4.22"
 dependencies = [
  "futures",
  "futures-util",
