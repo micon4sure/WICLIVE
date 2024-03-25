@@ -49,6 +49,11 @@ const runJob = async (title, executor) => {
 
 const init = async () => {
   const CONFIG: any = await get_config()
+  const cacheVersion = localStorage.getItem('wic-version')
+  if (cacheVersion != CONFIG.VERSION) {
+    localStorage.removeItem('wic-cache')
+    localStorage.setItem('wic-version', CONFIG.VERSION)
+  }
 
   const local = await invoke("get_map_files");
   console.log('local maps are', local)
