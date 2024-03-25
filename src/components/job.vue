@@ -26,6 +26,10 @@ const action = props.action as any
       <ul class="action-info" v-if="action.info.length">
         <li v-for="( info, idx ) in  action.info " :key="idx + info">{{ info }}</li>
       </ul>
+      <div class="progress" v-if="action.progress && action.progress < 100">
+        <div class="progress-bar bg-info" role="progressbar" :style="{ width: Math.floor(action.progress) + '%' }"
+          :aria-valuenow="action.progress" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
     </div>
   </div>
 </template>
@@ -73,6 +77,10 @@ div.action {
     fill: #15a315;
   }
 
+  .action-main {
+    flex: 1;
+  }
+
   .action-title,
   .action-info {
     font-family: monospace;
@@ -80,7 +88,7 @@ div.action {
   }
 
   .action-info {
-    background: #000;
+    background: rgba(0, 0, 0, .3);
     border-bottom-left-radius: 5px;
     border-bottom-right-radius: 5px;
 
@@ -90,5 +98,9 @@ div.action {
     }
 
   }
+}
+
+.progress {
+  border-radius: 3px;
 }
 </style>

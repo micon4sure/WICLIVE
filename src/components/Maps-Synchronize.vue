@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import _ from 'lodash'
 
-import actionsVue from './actions.vue'
+import jobsVue from './jobs.vue'
 import axios from 'axios'
-import WIC_Cache, { WIC_Map } from '../wic-cache'
-
 
 import { invoke } from "@tauri-apps/api/tauri";
 import { onMounted, reactive, ref, watch } from 'vue';
@@ -13,183 +11,218 @@ import get_config from '../get_config'
 
 import iconDownload from '@fortawesome/fontawesome-free/svgs/solid/download.svg';
 import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg';
+import iconRefresh from '@fortawesome/fontawesome-free/svgs/solid/rotate.svg';
+
+import WIC_DownloadProgress from '../lib/wic-download-progress'
+import WIC_Cache from '../lib/wic-cache'
+
+import { WIC_Map_Backend, WIC_Map_Frontend, WIC_Map_Display, WIC_Map_Status } from '../lib/wic-map'
+
+const progress = new WIC_DownloadProgress
+let remoteData = {} as any
+
+const cache = new WIC_Cache;
 
 const state = ref({
-  actions: [],
-  missingMaps: [],
-  outdatedMaps: []
+  jobs: [],
+  maps: {} as { [key: string]: WIC_Map_Display }
 })
 
-const runAction = async (title, executor) => {
-  const action = reactive({
+const runJob = async (title, executor) => {
+  const job = reactive({
     title,
     status: 'pending',
-    info: []
+    info: [],
+    progress: null
   })
-  state.value.actions.push(action)
+  state.value.jobs.push(job)
+  let result = null;
   try {
-    await executor(action)
-    action.status = 'success'
+    result = await executor(job)
+    job.status = 'success'
   } catch (error) {
-    action.status = 'error'
-    action.info.push(error)
+    job.status = 'error'
+    job.info.push(error)
   }
+  return result
 }
 
-let _maps = ref({})
-// watch(_maps.value, () => {
-//   _maps.value = _.orderBy(_maps.value, [
-//     (map) => {
-//       if (map.status == 'missing') return 0;
-//       if (map.status == 'outdated') return 1;
-//       if (map.status == 'pending') return 2;
-//     },
-//     'name'
-//   ],
-//   )
-// })
-let remoteMapData
-
-const initialize = async () => {
-  const cache = await WIC_Cache.instance();
-
-  while (state.value.actions.length > 0) {
-    state.value.actions.pop()
-  }
+const init = async () => {
   const CONFIG: any = await get_config()
 
-  // read local map files
-  let localMapFiles
-  await runAction('read local map files', async (action) => {
-    localMapFiles = await invoke("get_map_files");
-    localMapFiles = localMapFiles;
+  const local = await invoke("get_map_files");
+  console.log('local maps are', local)
+
+  const remote = (await axios.get(CONFIG.API_URL + '/maps/data')).data
+  remoteData = remote
+
+  cache.init()
+
+  // check for maps not on remote anymore
+  _.each(cache.data, (map, name) => {
+    if (!remote[name]) {
+      console.log('MAP REMOVED ON REMOTE', name)
+      cache.remove(name)
+    }
   })
 
-  // read remote map data
-  await runAction('get remote map data', async (action) => {
-    const remote = await axios.get(CONFIG.API_URL + '/maps/data')
-    remoteMapData = remote.data
+  // check for maps removed on fs
+  _.each(cache.data, (map, name) => {
+    if (!_.includes(local, name)) {
+      console.log('MAP REMOVED LOCALLY', name)
+      cache.remove(name)
+    }
   })
 
-  const missingMaps = _.difference(Object.keys(remoteMapData), localMapFiles)
-  console.log('missingMaps', missingMaps)
-  _.each(missingMaps, (filename) => {
-    _maps.value[filename] = remoteMapData[filename]
-    _maps.value[filename].status = 'missing'
-  })
+  // add new maps to cache
+  const promises = _.map(remote, async (map: WIC_Map_Backend) => {
+    if (!cache.has(map.name)) {
+      console.log('MAP NOT IN CACHE', map.name)
 
-  // get intersection of local and remote maps
-  const intersection = _.intersection(Object.keys(remoteMapData), localMapFiles)
-  console.log({ remote: Object.keys(remoteMapData), localMapFiles, intersection })
-
-  // create map list
-  _.each(intersection, (filename) => {
-    _maps.value[filename] = remoteMapData[filename]
-    _maps.value[filename].status = '?'
-  });
-
-
-  console.log('maps', _maps.value)
-
-  // get hashes where needed
-  await runAction('complete local cache', async (action) => {
-    console.log(cache)
-
-    const promises = _.map(intersection, async (filename) => {
-      let hash;
-      if (cache.has(filename) && cache.get(filename).hash) {
-        hash = cache.get(filename).hash
-      } else {
-        action.info.push('hashing ' + filename)
-        hash = await invoke("get_map_hash", { filename })
+      if (!_.includes(local, map.name)) {
+        console.log('MAP MISSING', map.name)
+        cache.add(map, WIC_Map_Status.MISSING)
+        return;
       }
-      const map = { name: filename, hash } as WIC_Map;
-      cache.set(filename, map)
-      console.log(filename, _maps.value)
-      _maps.value[filename].status = hash == remoteMapData[filename].hash ? 'current' : 'outdated'
-    })
-    await Promise.all(promises)
 
-    action.info.push('done.')
+      const hash = await invoke("get_map_hash", { filename: map.name })
+      const status = remote[map.name].hash != hash ? WIC_Map_Status.OUTDATED : WIC_Map_Status.CURRENT;
+      console.log('MAP STATUS', map.name, status)
+      cache.add(map, status)
+    }
   })
+  await Promise.all(promises)
 }
-onMounted(async () => {
-  try {
-    await initialize()
-  } catch (error) {
-    console.error(error)
-  }
-})
 
-const downloadMap = async (filename: string) => {
-  const cache = await WIC_Cache.instance();
+const downloadMap = async name => {
+  await runJob(`download map ${name}`, async (job) => {
+    const progressKey = progress.on(name, (event) => {
+      job.progress = event.percentage
+    })
 
-  await runAction(`download map ${filename}`, async (action) => {
-    const listEntry = _.find(_maps.value, { name: filename });
-    listEntry.status = 'pending'
-    await invoke("download_map", { map: filename })
-    console.log('building hash')
-    const hash: string = await invoke("get_map_hash", { filename })
-    console.log('building hash done', hash)
-    let success = remoteMapData[filename].hash == hash
-    if (!success) {
-      listEntry.status = 'outdated'
-      console.log('hash mismatch', remoteMapData[filename], hash)
+    const map = cache.get(name)
+    map.status = WIC_Map_Status.PENDING
+
+    await invoke("download_map", { map: name })
+
+    job.info.push('building hash...')
+    const hash: string = await invoke("get_map_hash", { filename: name })
+
+    if (remoteData[name].hash != hash) {
+      map.status = WIC_Map_Status.OUTDATED
+      console.log('hash mismatch', remoteData[name].hash, hash)
       throw new Error('hash mismatch')
     }
-    action.info.push('done.')
-    listEntry.status = 'current'
-    cache.set(filename, { name: filename, hash })
+
+    progress.off(progressKey)
+    job.info.push('done.')
+    map.status = WIC_Map_Status.CURRENT
+
+    cache.save();
   })
 }
 
+// watch for action needed
+const actionNeeded = ref(false)
+watch(cache.data, () => {
+  actionNeeded.value = _.some(cache.data, (map) => map.status == 'outdated' || map.status == 'missing')
+})
+
+// watch for cache changes
+watch(cache.data, () => {
+  const maps = _.map(cache.data, (map) => {
+    const remoteMap = remoteData[map.name];
+
+    // size bytes to megabytes
+    let size = remoteMap.size / 1024 / 1024
+    size = Math.round(size * 100) / 100
+
+    const result = {
+      name: map.name,
+      size,
+      version: remoteMap.version,
+      date: remoteMap.date,
+      uploader: remoteMap.uploader,
+      status: map.status
+    } as WIC_Map_Display
+    return result
+  })
+  state.value.maps = _.orderBy(maps, [
+    (map) => {
+      if (map.status == 'missing') return 0;
+      if (map.status == 'outdated') return 1;
+      if (map.status == 'pending') return 2;
+      return 3
+    },
+    map => map.name
+  ])
+})
 const synchronize = async () => {
   if (!actionNeeded.value) return;
-  runAction('synchronizing', async (action) => {
-    const promises = []
-    for (const name in _maps.value) {
-      const map = _maps.value[name]
+  runJob('synchronizing', async (job) => {
+    const promises = _.map(cache.data, async (map) => {
       if (map.status == 'missing' || map.status == 'outdated') {
-        promises.push(downloadMap(map.name as string))
+        await downloadMap(map.name)
       }
-    }
+    })
     await Promise.all(promises)
   })
 }
 
-const actionNeeded = ref(false)
-const _mapNames = ref(Object.keys(_maps.value))
-watch(_maps.value, () => {
-  // check if any of the maps are outdated or missing
-  _mapNames.value = Object.keys(_maps.value)
-  actionNeeded.value = _.some(_maps.value, (map) => map.status == 'outdated' || map.status == 'missing')
-})
+const resetCache = async () => {
+  await runJob('reset cache', async (job) => {
+    localStorage.removeItem('wic-cache')
+    await init()
+  })
+}
 
+onMounted(async () => {
+  await runJob('init', async (job) => {
+    await init()
+  })
+})
 </script>
 
 <template>
   <h2>MAPS</h2>
   <div id="maps">
-    <div id="maps-list-container" :class="{ hidden: !Object.keys(_maps).length }">
-      <div id="maps-list-synchronize" :class="{ inactive: !actionNeeded }" @click="synchronize">
-        <span class="btn-container">
-          <button class="btn btn-secondary">
+    <div id="maps-list-container" :class="{ hidden: !state.maps.length }">
+      <div id="maps-list-actions">
+        <span class="btn-container secondary" @click="resetCache">
+          <button class="btn">
+            <iconRefresh class="icon" />
+          </button>
+          Reset cache
+        </span>
+        <span class="btn-container primary" @click="synchronize" :class="{ inactive: !actionNeeded }">
+          <button class="btn">
             <iconDownload class="icon" />
           </button>
           Download all missing/outdated
         </span>
       </div>
-      <table id="maps-list" v-if="_mapNames.length">
-        <tr v-for="map of _maps" :key="map.name">
+      <table id="maps-list" v-if="Object.keys(state.maps).length">
+        <tr v-for="map in state.maps" :key="map.name">
+          <th>
+            {{ map.name }}
+          </th>
           <td>
-            {{ map.name }} <br />
-            <small>v{{ map.version }} @ {{ map.date }} by {{ map.uploader }}</small>
+            {{ map.size }} MB
+          </td>
+          <td>
+            v{{ map.version }}
+          </td>
+          <td>
+            {{ map.date }}
+          </td>
+          <td>
+            {{ map.uploader }}
           </td>
           <td>
             <span v-if="map.status != 'current'">{{ map.status }}</span>
           </td>
           <td class="status">
-            <span class="btn-container" @click="downloadMap(map.name.toString())"
+            <span class="btn-container primary" @click="downloadMap(map.name.toString())"
               v-if="map.status == 'missing' || map.status == 'outdated'">
               <button class="btn btn-sm btn-secondary">
                 <iconDownload class="icon" />
@@ -200,12 +233,11 @@ watch(_maps.value, () => {
               <span class="sr-only">&nbsp;</span>
             </div>
             <iconCheck class="icon map-current" v-if="map.status == 'current'" />
-
           </td>
         </tr>
       </table>
     </div>
-    <actions-vue :actions="state.actions" id="maps-actions" />
+    <jobs-vue :jobs="state.jobs" id="maps-jobs" />
   </div>
 </template>
 
@@ -222,6 +254,7 @@ watch(_maps.value, () => {
   }
 
   .btn-container {
+    flex: 1;
     cursor: pointer;
     display: inline-block;
     justify-content: space-between;
@@ -229,21 +262,31 @@ watch(_maps.value, () => {
     height: 35px;
     border: none;
     border-radius: 5px;
-    background-image: url('../assets/pattern-dots.svg');
     // background: linear-gradient(0deg, #791c05 0%, #ce2e06 100%);
     height: 35px;
     line-height: 35px;
     padding: 0 10px;
     text-align: left;
+    text-wrap: nowrap;
+
+    &.primary {
+      background-image: url('../assets/pattern-dots-primary.svg');
+    }
+
+    &.secondary {
+      background-image: url('../assets/pattern-dots-secondary.svg');
+
+      color: #aaa;
+
+      svg {
+        fill: #aaa;
+      }
+    }
 
     button {
       height: 35px;
       line-height: 15px;
       border: none;
-      // border-radius: 5px;
-      // border-top-left-radius: 0px;
-      // border-bottom-left-radius: 0px;
-      // background: linear-gradient(0deg, #791c05 0%, #ce2e06 100%);
       background: transparent;
     }
   }
@@ -261,6 +304,7 @@ watch(_maps.value, () => {
     border-top-left-radius: 10px;
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 5px;
+    background: rgba(255, 255, 255, .1);
 
     button {
       margin: 0;
@@ -268,12 +312,16 @@ watch(_maps.value, () => {
 
   }
 
-  #maps-list-synchronize {
+  #maps-list-actions {
 
     height: 50px;
 
     display: flex;
     justify-content: flex-end;
+    background: #333;
+
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
 
     .btn-container {
       height: 50px;
@@ -281,19 +329,22 @@ watch(_maps.value, () => {
       height: 50px;
       line-height: 50px;
       border-radius: 0;
-      border-top-right-radius: 5px;
-    }
 
-    &.inactive span {
-      background: #222;
-    }
+      &:first-of-type {
+        border-top-left-radius: 10px;
+      }
 
-    &.inactive {
-      background: #333;
-      color: #666;
+      &:last-of-type {
+        border-top-right-radius: 5px;
+      }
 
-      svg {
-        fill: #666;
+      &.inactive {
+        background: #222;
+        color: #666;
+
+        svg {
+          fill: #666;
+        }
       }
     }
 
@@ -312,9 +363,30 @@ watch(_maps.value, () => {
 
   #maps-list {
     width: 100%;
-    background: linear-gradient(to left, rgba(255, 255, 255, .3), rgba(255, 255, 255, .1));
+    background: linear-gradient(to right, rgba(255, 255, 255, .2), rgba(255, 255, 255, .05));
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 5px;
+
+    .btn-container {
+      font-size: 14px;
+    }
+
+    tr {
+      border-bottom: 1px solid #444;
+
+      &:last-of-type {
+        border-bottom: none;
+      }
+    }
+
+    td,
+    th {
+      padding: 10px;
+    }
+
+    td {
+      font-size: 11px;
+    }
 
     td .spinner-border {
       color: rgb(0, 162, 255);
@@ -324,24 +396,6 @@ watch(_maps.value, () => {
       text-align: right;
     }
 
-    td,
-    th {
-      padding: 10px;
-    }
-
-    th {
-      border-bottom: 1px solid #333;
-    }
-
-
-    tr {
-      border-bottom: 1px solid #555;
-
-      &:last-of-type {
-        border-bottom: none;
-      }
-    }
-
     .icon.map-current {
       fill: #15a315;
       height: 1.5em;
@@ -349,7 +403,7 @@ watch(_maps.value, () => {
     }
   }
 
-  #maps-actions {
+  #maps-jobs {
     width: 35%;
     background: rgba(0, 0, 0, .4);
     padding: 10px;
@@ -381,4 +435,4 @@ ul {
 span.title {
   font-size: 1.2em;
 }
-</style>
+</style>../lib/wic-download-progress

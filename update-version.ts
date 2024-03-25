@@ -26,3 +26,15 @@ const updatedTauriConfContent = tauriConfContent.replace(/"version": "(.*?)"/, `
 fs.writeFileSync(tauriConfPath, updatedTauriConfContent, 'utf-8');
 
 console.log(`Version updated to ${version} in tauri.conf.json`);
+
+// read package.json
+const packageJsonPath = './package.json';
+const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+
+// regex replace the version line
+const updatedPackageJsonContent = packageJsonContent.replace(/"version": "(.*?)"/, `"version": "${version}"`);
+
+// write the updated content
+fs.writeFileSync(packageJsonPath, updatedPackageJsonContent, 'utf-8');
+
+console.log(`Version updated to ${version} in package.json`);

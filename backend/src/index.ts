@@ -6,11 +6,10 @@ import path, { format } from 'path';
 import https from 'https';
 import md5 from 'md5-file'
 
-import keys from './keys.json'
+import keys from '../keys.json'
 
 let mapsDirectory = './maps';
-const cacheFile = './_cache.json';
-
+const dataFile = './_data.json';
 
 const app = express();
 app.use((req, res, next) => {
@@ -18,64 +17,47 @@ app.use((req, res, next) => {
   next();
 });
 
-// read cache file
-let cache = {};
-
-const saveCache = () => {
-  console.log(saveCache, cache)
-  fs.writeFileSync(cacheFile, JSON.stringify(cache));
+interface WIC_Map_Backend {
+  name: string;
+  hash: string;
+  size: number;
+  date: string;
+  uploader: string;
+  version: number;
 }
 
-const formatDate = (date) => {
-  const pad = (num) => (num < 10 ? '0' + num : num);
+class WIC_Database_Backend {
+  private maps: { [key: string]: WIC_Map_Backend } = {};
 
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1); // getMonth() is zero-based
-  const day = pad(date.getDate());
-  const hours = pad(date.getHours());
-  const minutes = pad(date.getMinutes());
+  get data() {
+    return { maps: this.maps }
+  }
 
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
-}
+  async init() {
+    const files = fs.readdirSync(mapsDirectory);
+    try {
+      const data = JSON.parse(await fs.readFileSync(dataFile, 'utf8'));
+      this.maps = data.maps;
+    } catch (error) {
+      this.maps = {};
+      console.log('no cache file found, building')
 
-try {
-  cache = JSON.parse(await fs.readFileSync(cacheFile, 'utf8'));
-} catch (error) {
-  cache = {};
-
-  console.log('no cache file found, building')
-
-  const files = fs.readdirSync(mapsDirectory);
-  const promises = _.map(files, async (file) => {
-    if (!file.endsWith('.sdf')) return;
-    const filePath = `${mapsDirectory}/${file}`;
-    const hash = (await md5(filePath)).toUpperCase();
-    let stats = fs.statSync(filePath);
-    cache[file] = {
-      name: file,
-      hash,
-      date: formatDate(new Date(stats.mtime)),
-      uploader: 'unknown',
-      version: 1
+      const promises = _.map(files, async (file) => {
+        if (!file.endsWith('.sdf')) return;
+        await this.addMap(file, 'unknown');
+      });
+      await Promise.all(promises);
     }
-  });
-  await Promise.all(promises);
-  saveCache();
-}
 
-app.get('/maps/data')
-console.log('loaded cache', cache)
+    // check for maps removed on fs
+    const removed = _.difference(_.keys(this.maps), files);
+    _.each(removed, (map) => {
+      console.log('removing map', map)
+      delete this.maps[map];
+    });
 
-app.get('/maps/data', async (req, res) => {
-  res.json(cache);
-});
-
-
-// ### LIST MAPS
-app.get('/maps/list', async (req, res) => {
-  console.log('GET /maps/list');
-
-  const formatDate = (date) => {
+  }
+  formatDate(date) {
     const pad = (num) => (num < 10 ? '0' + num : num);
 
     const year = date.getFullYear();
@@ -83,33 +65,63 @@ app.get('/maps/list', async (req, res) => {
     const day = pad(date.getDate());
     const hours = pad(date.getHours());
     const minutes = pad(date.getMinutes());
-    const seconds = pad(date.getSeconds());
 
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
   }
 
-  fs.readdir(mapsDirectory, async (err, files) => {
-    files = files.filter(file => file.endsWith('.sdf'));
-    // get file modification dates
-    const fileStats = files.map(file => {
-      const stats = fs.statSync(`${mapsDirectory}/${file}`);
-      return {
-        name: file,
-        date: formatDate(new Date(stats.mtime))
-      }
-    });
-    // read the template file
-    const templateRaw = fs.readFileSync('maplist.html', 'utf8');
-    const template = _.template(templateRaw);
-    const content = template({ maps: fileStats });
-
-    if (err) {
-      console.error(err);
-      res.status(500).send('Internal Server Error');
-    } else {
-      res.send(content);
+  async addMap(mapName, uploader) {
+    const hash = await this.getMapHash(mapName);
+    const size = this.getMapSize(mapName);
+    if (!this.maps[mapName]) {
+      this.maps[mapName] = {
+        name: mapName,
+        size,
+        hash,
+        date: this.formatDate(new Date()),
+        uploader: uploader,
+        version: 1
+      };
     }
-  });
+  }
+
+  async uploaded(mapName, uploader) {
+    if (!this.maps[mapName]) {
+      console.log('DO ADD MAP', mapName, uploader)
+      await this.addMap(mapName, uploader);
+      this.save();
+      return;
+    }
+    const map = this.maps[mapName];
+    map.uploader = uploader;
+    map.version++;
+    map.size = this.getMapSize(mapName);
+    map.hash = await this.getMapHash(mapName);
+    this.save();
+  }
+
+  getMapSize(mapName) {
+    return fs.statSync(`${mapsDirectory}/${mapName}`).size;
+  }
+
+  async getMapHash(mapName) {
+    return (await md5(`${mapsDirectory}/${mapName}`)).toUpperCase()
+  }
+
+  async save() {
+    fs.writeFileSync(dataFile, JSON.stringify(this.data));
+  }
+}
+
+// init database
+const database = new WIC_Database_Backend();
+await database.init();
+database.save();
+
+console.log('loaded cache', database)
+
+app.get('/maps/data', async (req, res) => {
+  console.log('GET /maps/data', database.data);
+  res.json(database.data.maps);
 });
 
 // ### DOWNLOAD MAP
@@ -125,6 +137,7 @@ app.get('/maps/download/:filename', async (req, res) => {
 
   const stat = fs.statSync(filePath);
 
+  res.header('X-Filesize', stat.size);
   res.download(filePath);
 });
 
@@ -171,17 +184,15 @@ app.post('/maps/upload', async (req, res) => {
     const newPath = path.join(mapsDirectory, mapName);
 
     console.log(`Moving file from ${tmpPath} to ${newPath}`);
-
-    fs.rename(tmpPath, newPath, (err) => {
-      if (err) return res.status(500).send('Error saving file.');
+    try {
+      fs.renameSync(tmpPath, newPath);
       res.send('File uploaded and moved successfully.');
-    });
-
-    cache[mapName].version++;
-    cache[mapName].uploader = uploader;
-    cache[mapName].date = formatDate(new Date());
-
-    saveCache();
+    } catch (error) {
+      console.error(err);
+      if (err) return res.status(500).send('Error saving file.');
+      return;
+    }
+    await database.uploaded(mapName, uploader);
   });
 })
 

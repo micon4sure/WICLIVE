@@ -30,10 +30,10 @@ backend/maps
 backend/keys.json
 backend/uploads
 backend/build
-backend/get-ssl-credentials.ts
+backend/src/get-ssl-credentials.ts
 backend/publish.sh
 backend/publish.ps1
-backend/_cache.json
+backend/_data.json
 
 src-tauri/tauri-sign.key
 

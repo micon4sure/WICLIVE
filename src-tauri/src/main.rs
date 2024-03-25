@@ -86,9 +86,9 @@ async fn download_file<F: FnMut(usize, usize) + Send + 'static>(
         return Err(format!("Failed to download file: {}", response.status()));
     }
 
-    let total_size = response
-        .content_length()
-        .ok_or("Failed to get content length")?;
+    let headers = response.headers();
+    let content_length = headers.get("X-Filesize").unwrap();
+    let total_size = content_length.to_str().unwrap().parse::<u64>().unwrap();
 
     let mut file = File::create(target)
         .await
@@ -127,7 +127,6 @@ async fn get_map_files() -> Result<Vec<String>, String> {
 
         // skip directories
         if path.is_dir() {
-            println!("skipping directory {}", path.to_str().unwrap());
             continue;
         }
 
