@@ -10,22 +10,23 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-      - name: Install Bun
-        run: |
-          irm bun.sh/install.ps1 | iex
-          echo "C:\Users\runneradmin\.bun\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
-        shell: powershell
+        
+      # - name: Install Bun
+        #   run: |
+          #     irm bun.sh/install.ps1 | iex
+          #     echo "C:\Users\runneradmin\.bun\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+        #   shell: powershell
 
-      - name: Install Bun modules
-        run: bun install
-        shell: powershell
-
-      # - name: Setup Node/NPM
-      #   uses: actions/setup-node@v4      
-
-      # - name: Install node modules
-      #   run: npm install
+      # - name: Install Bun modules
+      #   run: bun install
       #   shell: powershell
+
+      - name: Setup Node/NPM
+        uses: actions/setup-node@v4      
+
+      - name: Install node modules
+        run: npm install
+        shell: powershell
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
