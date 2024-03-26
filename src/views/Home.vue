@@ -17,13 +17,8 @@ const cards = [
   {
     name: 'where',
     header: 'Where can I get WIC LIVE?',
-    body: `WIC LIVE can be downloaded directly off github. Just grab the setup.exe of <a href="https://github.com/micon4sure/WICLIVE/releases/latest">the latest release</a>.`
+    body: `WIC LIVE can be downloaded directly off github. Just grab <a href="https://github.com/micon4sure/WICLIVE/releases/latest/wiclive_x64-setup.exe">the latest release directly off github</a>.`
   },
-  // {
-  //   name: 'how',
-  //   header: 'How to use WIC LIVE?',
-  //   body: `Using WIC LIVE is really simple. Just download it, install it and run it before you play. The use is self-explanatory.`
-  // },
   {
     name: 'every-time',
     header: 'Do I have to run WIC LIVE before every game start?',
