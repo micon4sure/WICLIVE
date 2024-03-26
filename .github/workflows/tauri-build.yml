@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-        
+
       # - name: Install Bun
         #   run: |
           #     irm bun.sh/install.ps1 | iex
@@ -63,6 +63,33 @@ jobs:
           }
         shell: powershell
 
+        
+      - name: Generate version.json
+        if: steps.check_tag.outputs.tagExists == 'false'
+        run: |
+          version=${{ steps.get_version.outputs.version }}
+          url="https://github.com/${{ github.repository }}/releases/download/$version/wiclive_${version}_x64-setup.nsis.zip"
+          signaturePath="${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${version}_x64-setup.nsis.zip.sig"
+          signature=$(cat "$signaturePath")
+          
+          # Create JSON
+          json=$(jq -n \
+                  --arg version "$version" \
+                  --arg url "$url" \
+                  --arg signature "$signature" \
+                  '{
+                    version: $version,
+                    platforms: {
+                      "windows-x86_64": {
+                        signature: $signature,
+                        url: $url
+                      }
+                    }
+                  }')
+          
+          echo "$json" > version.json
+        shell: bash
+
       - name: Create GitHub Release
         if: steps.check_tag.outputs.tagExists == 'false'
         id: create_release
@@ -74,6 +101,18 @@ jobs:
           release_name: Release ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
+
+
+      - name: Upload Release Asset version.json
+        if: steps.check_tag.outputs.tagExists == 'false'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/version.json
+          asset_name: version.json
+          asset_content_type: text/json
 
       - name: Upload Release Asset EXE
         if: steps.check_tag.outputs.tagExists == 'false'
@@ -107,41 +146,3 @@ jobs:
           asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
           asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
           asset_content_type: application/octet-stream
-
-      - name: Generate version.json
-        if: steps.check_tag.outputs.tagExists == 'false'
-        run: |
-          version=${{ steps.get_version.outputs.version }}
-          url="https://github.com/${{ github.repository }}/releases/download/$version/wiclive_${version}_x64-setup.nsis.zip"
-          signaturePath="${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${version}_x64-setup.nsis.zip.sig"
-          signature=$(cat "$signaturePath")
-          
-          # Create JSON
-          json=$(jq -n \
-                  --arg version "$version" \
-                  --arg url "$url" \
-                  --arg signature "$signature" \
-                  '{
-                    version: $version,
-                    platforms: {
-                      "windows-x86_64": {
-                        signature: $signature,
-                        url: $url
-                      }
-                    }
-                  }')
-          
-          echo "$json" > version.json
-        shell: bash
-
-      - name: Upload Release Asset version.json
-        if: steps.check_tag.outputs.tagExists == 'false'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/version.json
-          asset_name: version.json
-          asset_content_type: text/json
-
