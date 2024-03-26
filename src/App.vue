@@ -57,6 +57,13 @@ h1 small {
   color: #fff;
 }
 
+h2 {
+  background: linear-gradient(to right, #055479 0%, transparentize(#ce2e06, 1) 50%);
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  padding-left: 15px;
+}
+
 .card-header {
   background: linear-gradient(to right, #055479 0%, transparentize(#ce2e06, 1) 50%);
   border: none;
