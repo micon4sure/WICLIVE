@@ -56,8 +56,18 @@ const setActive = (name: string) => {
   </div>
 </template>
 
-<style lang="scss" scoped>
+<style lang="scss">
 #home {
+
+  a {
+    color: rgb(255, 136, 0);
+    border-bottom: 1px solid rgb(255, 136, 0);
+
+    &:hover {
+      border-bottom: 2px solid rgb(255, 136, 0);
+    }
+  }
+
   .card-body {
     max-height: 0;
     overflow: hidden;
