@@ -44,7 +44,7 @@ const cards = [
 const _active = ref<string | null>(location.hash.substring(1) || 'what');
 const setActive = (name: string) => {
   location.hash = name
-  _active.value = _active.value === name ? null : name;
+  _active.value = name;
 };
 </script>
 
