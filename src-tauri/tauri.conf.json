@@ -6,8 +6,8 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "wiclive",
-    "version": "0.4.28"
+    "productName": "WIC LIVE",
+    "version": "0.4.29"
   },
   "tauri": {
     "allowlist": {

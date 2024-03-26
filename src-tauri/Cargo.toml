@@ -1,6 +1,6 @@
 [package]
-name = "WIC-LIVE"
-version = "0.4.28"
+name = "wiclive"
+version = "0.4.29"
 description = "WIC LIVE"
 authors = ["mICON"]
 edition = "2021"

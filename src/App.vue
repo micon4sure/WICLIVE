@@ -44,6 +44,10 @@ body {
   background: url("./assets/pattern-stripes.svg");
 }
 
+#app {
+  background: url("./assets/map.svg") no-repeat center center fixed;
+}
+
 h1 {
   display: flex;
   align-items: flex-end;

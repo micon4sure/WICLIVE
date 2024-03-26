@@ -82,7 +82,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.exe
+          asset_name: wiclive_x64-setup.exe
           asset_content_type: application/octet-stream
 
       - name: Upload Release Asset NSIS ZIP
@@ -132,8 +132,6 @@ jobs:
           
           echo "$json" > version.json
         shell: bash
-
-
 
       - name: Upload Release Asset version.json
         if: steps.check_tag.outputs.tagExists == 'false'
