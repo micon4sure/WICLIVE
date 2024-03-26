@@ -10,7 +10,9 @@ const home = router.resolve('/').href
 <template>
   <div id="container">
     <h1><a :href="home"><img src="./assets/wiclive.png" alt="WIC LIVE" /></a></h1>
-    <router-view />
+    <main>
+      <router-view />
+    </main>
   </div>
   <footer>
     This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with MASSIVE
@@ -46,6 +48,11 @@ body {
   padding: 20px;
   min-height: calc(100vh - 75px);
   flex: 1;
+}
+
+main {
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 h1 {
