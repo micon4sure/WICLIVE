@@ -1,30 +1,22 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
-
-import MapsSynchronize from './components/Maps-Synchronize.vue'
-import MapsUpload from './components/Maps-Upload.vue'
 import { invoke } from '@tauri-apps/api';
-
-const _showUpload = ref(false)
-const showUpload = () => {
-  _showUpload.value = true
-}
-
+import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router';
 const _version = ref('');
 onMounted(async () => {
   const config: any = await invoke('get_config')
   _version.value = config.VERSION
 })
 
+
+const router = useRouter()
+const home = router.resolve('/').href
 </script>
 
 <template>
   <div id="container">
-    <h1><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></h1>
-    <span id="showUpload" @click="showUpload" v-if="!_showUpload">Upload</span>
-
-    <maps-upload v-if="_showUpload" />
-    <maps-synchronize />
+    <h1><a :href="home"><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></a></h1>
+    <router-view />
   </div>
   <footer>
     This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with MASSIVE
@@ -49,12 +41,16 @@ body {
 }
 
 h1 {
-  display: flex;
-  align-items: flex-end;
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
   margin: 0 -20px;
   margin-bottom: 20px;
   padding: 20px;
+
+  a {
+    display: flex;
+    align-items: flex-end;
+    text-decoration: none;
+  }
 }
 
 
