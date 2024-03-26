@@ -2,7 +2,7 @@
 </script>
 
 <template>
-  <div class="container">
+  <div id="container">
     <router-view />
   </div>
   <footer>
@@ -14,34 +14,38 @@
 </template>
 
 <style lang="scss">
-.card {
-  background: none;
-  margin-bottom: 20px;
-}
-
-.card-header {
-  background: linear-gradient(180deg, transparentize(#4b0a00, .5) 0%, transparentize(#82120b, .5) 100%);
-  border: 1px solid #540a01;
-  font-size: 20px;
-}
-
-.card-body {
-  background: linear-gradient(180deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, 0));
-  border-bottom-left-radius: 5px;
-  border-bottom-right-radius: 5px;
-}
-
 @font-face {
   font-family: "eurostib";
   src: url("./assets/eurostib.ttf");
 }
 
+* {
+  font-family: "eurostib";
+}
+
+body {
+  background: linear-gradient(180deg, #082224 0%, #0d2f3f 100%);
+  min-height: 100vh;
+  background: url("./assets/pattern-stripes.svg");
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  background: url("./assets/map.svg") no-repeat center center fixed;
+}
+
+#container {
+  padding: 20px;
+  min-height: calc(100vh - 75px);
+  flex: 1;
+}
 
 h1 {
   display: flex;
   align-items: flex-end;
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
-  margin: 0 -40px;
+  margin: 0 -20px;
   margin-bottom: 20px;
   padding: 20px 40px;
 }
@@ -53,42 +57,25 @@ h1 small {
   color: #fff;
 }
 
-h2 {
-  background: linear-gradient(to right, #055479 0%, transparentize(#ce2e06, 1) 50%);
-  border-top-left-radius: 5px;
-  border-bottom-left-radius: 5px;
-  padding-left: 15px;
-}
-
 .card-header {
   background: linear-gradient(to right, #055479 0%, transparentize(#ce2e06, 1) 50%);
   border: none;
   border-top-left-radius: 5px;
   border-bottom-left-radius: 5px;
   padding-left: 15px;
+  font-size: 20px;
 }
 
-#app {
-  display: flex;
-  flex-direction: column;
-  background: url("./assets/pattern.svg");
+
+.card {
+  background: none;
+  margin-bottom: 20px;
 }
 
-* {
-  font-family: "eurostib";
-}
-
-body {
-  background: linear-gradient(180deg, #082224 0%, #0d2f3f 100%);
-  min-height: 100vh;
-}
-
-.container {
-  padding-top: 20px;
-  min-height: calc(100vh - 75px);
-  width: calc(100vw - 40px);
-  max-width: calc(100vw - 40px);
-  flex: 1;
+.card-body {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, 0.05));
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
 }
 
 
