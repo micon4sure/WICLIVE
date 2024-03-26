@@ -1,9 +1,0 @@
-﻿{
-    "version":  "0.2.12",
-    "platforms":  {
-                      "windows-x86_64":  {
-                                             "signature":  "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSL05MRmJaQWwrWFF6aDJaOFhqN0RWVk9ldEUvNnRZMVJaY2l5VERDSlZ0bm1xVUdhaGhxd2EwZ0tqVWVnOUt1T01IT0xwcUpvWGVUNGU2alR1bHBpM3FWc3o3VC8vV0FFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzExMDQyMzU2CWZpbGU6d2ljbGl2ZV8wLjIuMTJfeDY0LXNldHVwLm5zaXMuemlwCktTb2hVdUlNSlhqYjE4b0M2cFRuczNlNXRZVHhvQTg0MUhnc0FSU2tqMWhneGtXTFdQK2U5dVhpN25jY1dnb3hkNG9GMHg2cE9lc3FxbDVMaHNIa0RnPT0K",
-                                             "url":  "https://github.com/micon4sure/WICLIVE/releases/download/0.2.12/wiclive_0.2.12_x64-setup.nsis.zip"
-                                         }
-                  }
-}

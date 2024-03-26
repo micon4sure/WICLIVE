@@ -1,16 +1,12 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use serde::{Deserialize, Serialize};
-use std::{env, fs, path::PathBuf};
-use tauri::{utils::config::TauriConfig, Manager, PhysicalSize, Size};
+use serde::Serialize;
+use std::{env, path::PathBuf};
+use tauri::{Manager, PhysicalSize, Size};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
-
-use std::hash::Hasher;
-
-use std::io::{self, copy, Read};
 
 use futures_util::stream::StreamExt;
 
@@ -196,13 +192,6 @@ fn main() {
         .setup(|app| {
             #[cfg(debug_assertions)]
             app.get_window("main").unwrap().open_devtools();
-            app.get_window("main")
-                .unwrap()
-                .set_size(Size::Physical(PhysicalSize {
-                    width: 1024,
-                    height: 768,
-                }))
-                .unwrap();
             Ok(())
         })
         .run(tauri::generate_context!())

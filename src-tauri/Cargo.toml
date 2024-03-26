@@ -1,6 +1,6 @@
 [package]
 name = "wiclive"
-version = "0.4.30"
+version = "0.5.0"
 description = "WIC LIVE"
 authors = ["mICON"]
 edition = "2021"
@@ -14,7 +14,7 @@ tauri-build = { version = "1", features = [] }
 tauri = { version = "1", features = [ "updater", "shell-open"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.12", features = ["stream"] }
+reqwest = { version = "0.11.26", features = ["stream"] }
 tokio = { version = "1", features = ["full"] }
 md5 = "0.7"
 lazy_static = "1.4"

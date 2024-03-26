@@ -1,31 +1,17 @@
 name: Build and Release WIC LIVE
 
-on:
-  push:
-    branches: [ master ]
+on: workflow_dispatch
 
 jobs:
-  build-and-release:
+  build-and-release-local:
     runs-on: windows-latest
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-      - name: Install Bun
-        run: |
-          irm bun.sh/install.ps1 | iex
-          echo "C:\Users\runneradmin\.bun\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
-        shell: powershell
 
       - name: Install Bun modules
         run: bun install
         shell: powershell
-
-      # - name: Setup Node/NPM
-      #   uses: actions/setup-node@v4      
-
-      # - name: Install node modules
-      #   run: npm install
-      #   shell: powershell
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
@@ -39,7 +25,7 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ""
           WICLIVE_ENV: production
-        run: npm run tauri build
+        run: bun run tauri build
         shell: powershell
 
       - name: Get version from tauri.conf.json
@@ -62,6 +48,11 @@ jobs:
           }
         shell: powershell
 
+      - name: Generate version.json
+        if: steps.check_tag.outputs.tagExists == 'false'
+        run: bun run  ${{ github.workspace }}/.github/workflows/scripts/create-version-file.ts ${{ steps.get_version.outputs.version }} ${{ github.repository }} ${{ github.workspace }}
+        shell: powershell
+
       - name: Create GitHub Release
         if: steps.check_tag.outputs.tagExists == 'false'
         id: create_release
@@ -69,6 +60,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ steps.get_version.outputs.version }}
           release_name: Release ${{ steps.get_version.outputs.version }}
           draft: false
@@ -106,33 +98,6 @@ jobs:
           asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
           asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
           asset_content_type: application/octet-stream
-
-      - name: Generate version.json
-        if: steps.check_tag.outputs.tagExists == 'false'
-        run: |
-          version=${{ steps.get_version.outputs.version }}
-          url="https://github.com/${{ github.repository }}/releases/download/$version/wiclive_${version}_x64-setup.nsis.zip"
-          signaturePath="${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${version}_x64-setup.nsis.zip.sig"
-          signature=$(cat "$signaturePath")
-          
-          # Create JSON
-          json=$(jq -n \
-                  --arg version "$version" \
-                  --arg url "$url" \
-                  --arg signature "$signature" \
-                  '{
-                    version: $version,
-                    platforms: {
-                      "windows-x86_64": {
-                        signature: $signature,
-                        url: $url
-                      }
-                    }
-                  }')
-          
-          echo "$json" > version.json
-        shell: bash
-
       - name: Upload Release Asset version.json
         if: steps.check_tag.outputs.tagExists == 'false'
         uses: actions/upload-release-asset@v1
