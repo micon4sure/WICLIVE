@@ -37,4 +37,6 @@ backend/_data.json
 
 src-tauri/tauri-sign.key
 
+act.exe
+
 docs

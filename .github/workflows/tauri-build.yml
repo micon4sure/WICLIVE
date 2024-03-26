@@ -111,8 +111,8 @@ jobs:
         if: steps.check_tag.outputs.tagExists == 'false'
         run: |
           version=${{ steps.get_version.outputs.version }}
-          url="https://github.com/${{ github.repository }}/releases/download/$version/wiclive_${version}_x64-setup.nsis.zip"
-          signaturePath="${{ github.workspace }}/src-tauri/target/release/bundle/nsis/wiclive_${version}_x64-setup.nsis.zip.sig"
+          url="https://github.com/${{ github.repository }}/releases/download/$version/WIC LIVE_${version}_x64-setup.nsis.zip"
+          signaturePath="${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${version}_x64-setup.nsis.zip.sig"
           signature=$(cat "$signaturePath")
           
           # Create JSON
