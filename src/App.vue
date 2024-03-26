@@ -1,8 +1,15 @@
 <script setup lang="ts">
+import axios from 'axios';
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter()
+const home = router.resolve('/').href
 </script>
 
 <template>
   <div id="container">
+    <h1><a :href="home"><img src="./assets/wiclive.png" alt="WIC LIVE" /></a></h1>
     <router-view />
   </div>
   <footer>

@@ -18,7 +18,6 @@ onMounted(async () => {
 
 <template>
   <div>
-    <h1><img src="../assets/wiclive.png" alt="WIC LIVE" /></h1>
     <h2>MAPS</h2>
     <table>
       <tr>

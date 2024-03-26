@@ -50,7 +50,6 @@ const setActive = (name: string) => {
 
 <template>
   <div id="home">
-    <h1><img src="../assets/wiclive.png" alt="WIC LIVE" /></h1>
     <div v-for="card in cards" :key="card.name" :class="{ 'card': true, active: _active == card.name }"
       :name="card.name" @click="setActive(card.name)">
       <div class="card-header">{{ card.header }}</div>
