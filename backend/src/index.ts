@@ -95,6 +95,7 @@ class WIC_Database_Backend {
     map.version++;
     map.size = this.getMapSize(mapName);
     map.hash = await this.getMapHash(mapName);
+    map.date = this.formatDate(new Date());
     this.save();
   }
 
@@ -151,7 +152,7 @@ app.post('/maps/upload', async (req, res) => {
   const day = now.getDay();
   const hour = now.getHours();
   if (day < 2 || day > 4 || (day === 2 && hour < 12) || (day === 4 && hour >= 12)) {
-    // return res.status(403).send('Uploads are only allowed between Tuesday noon and Thursday noon.');
+    return res.status(403).send('Uploads are only allowed between Tuesday noon and Thursday noon.');
   }
 
   const form = formidable();
