@@ -17,7 +17,7 @@ const cards = [
   {
     name: 'where',
     header: 'Where can I get WIC LIVE?',
-    body: `WIC LIVE can be downloaded directly off github. Just grab <a href="https://github.com/micon4sure/WICLIVE/releases/latest/wiclive_x64-setup.exe">the latest release</a>.`
+    body: `WIC LIVE can be downloaded directly off github. Just grab <a href="https://github.com/micon4sure/WICLIVE/releases/latest/download/wiclive_x64-setup.exe">the latest release</a>.`
   },
   {
     name: 'every-time',
