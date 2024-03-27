@@ -40,11 +40,39 @@ lazy_static::lazy_static! {
     static ref CONFIG: Config = Config::new();
 }
 
+fn get_maps_directory() -> Result<PathBuf, String> {
+    // try standard user profile path
+    let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
+    let userprofile = PathBuf::from(userprofile);
+    let base_directory = userprofile.join("Documents\\World in Conflict");
+    if base_directory.exists() {
+        let maps_directory = base_directory.join("Downloaded\\maps");
+        if !maps_directory.exists() {
+            std::fs::create_dir_all(&maps_directory).map_err(|e| e.to_string())?;
+        }
+
+        return Ok(maps_directory);
+    }
+
+    // try OneDrive path
+    let onedrive = env::var("OneDrive").map_err(|e| e.to_string())?;
+    let onedrive = PathBuf::from(onedrive);
+    let base_directory = onedrive.join("Documents\\World in Conflict");
+    if base_directory.exists() {
+        let maps_directory = base_directory.join("Downloaded\\maps");
+        if !maps_directory.exists() {
+            std::fs::create_dir_all(&maps_directory).map_err(|e| e.to_string())?;
+        }
+
+        return Ok(maps_directory);
+    }
+
+    Err("Maps directory not found in standard or OneDrive locations.".to_string())
+}
+
 #[tauri::command]
 async fn get_map_hash(filename: &str) -> Result<String, String> {
-    let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
-    let maps_directory =
-        PathBuf::from(userprofile).join("Documents\\World in Conflict\\Downloaded\\maps");
+    let maps_directory = get_maps_directory()?;
     let path = maps_directory.join(filename);
 
     // Open the file asynchronously
@@ -107,12 +135,7 @@ async fn download_file<F: FnMut(usize, usize) + Send + 'static>(
 
 #[tauri::command]
 async fn get_map_files() -> Result<Vec<String>, String> {
-    use std::env;
-    use std::path::PathBuf;
-
-    let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
-    let maps_directory =
-        PathBuf::from(userprofile).join("Documents\\World in Conflict\\Downloaded\\maps");
+    let maps_directory = get_maps_directory()?;
 
     let mut result: Vec<String> = Vec::new();
 
@@ -145,8 +168,7 @@ async fn get_map_files() -> Result<Vec<String>, String> {
 #[tauri::command]
 async fn download_map(window: tauri::Window, map: &str) -> Result<(), String> {
     println!("downloading map {}", map);
-    let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
-    let maps_directory = userprofile.clone() + "\\Documents\\World in Conflict\\Downloaded\\maps";
+    let maps_directory = get_maps_directory()?;
 
     let map_url = format!("{}/maps/download/{}", &CONFIG.API_URL, map);
 
@@ -166,7 +188,7 @@ async fn download_map(window: tauri::Window, map: &str) -> Result<(), String> {
 
     download_file(
         map_url.as_str(),
-        format!("{}\\{}", maps_directory, map).as_str(),
+        &format!("{}\\{}", maps_directory.display(), map),
         progress_callback,
     )
     .await
