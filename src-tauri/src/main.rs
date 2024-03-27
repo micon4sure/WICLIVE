@@ -1,12 +1,23 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use windows::{
+    core::{s, PCWSTR, PWSTR},
+    Win32::Storage::FileSystem::{
+        GetFileVersionInfoA, GetFileVersionInfoSizeA, GetFileVersionInfoSizeW, GetFileVersionInfoW,
+        VerQueryValueA, VerQueryValueW, VS_FIXEDFILEINFO,
+    },
+};
+
 use serde::Serialize;
-use std::{env, path::PathBuf};
+use std::ffi::{c_void, OsStr};
+use std::{env, mem::MaybeUninit, os::windows::ffi::OsStrExt, path::PathBuf};
 use tauri::{Manager, PhysicalSize, Size};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
+use winreg::enums::HKEY_LOCAL_MACHINE;
+use winreg::RegKey;
 
 use futures_util::stream::StreamExt;
 
@@ -181,13 +192,112 @@ fn get_config() -> Result<Config, String> {
     return Ok(Config::new());
 }
 
+#[tauri::command]
+fn find_install_path() -> Result<String, String> {
+    println!("finding install path");
+
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+    println!("hklm: {:?}", hklm);
+
+    // Updated path to include WOW6432Node for 32-bit application support on 64-bit Windows
+    let subkey_path = r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict";
+    println!("subkey_path: {:?}", subkey_path);
+
+    let subkey = hklm.open_subkey(subkey_path);
+    match subkey {
+        Ok(regkey) => {
+            println!("regkey: {:?}", regkey);
+            let install_location: String =
+                regkey.get_value("InstallPath").map_err(|e| e.to_string())?;
+            return Ok(install_location);
+        }
+        Err(e) => {
+            println!("error: {:?}", e);
+            return Err("not installed".to_string());
+        }
+    }
+}
+
+fn to_wide_string(s: &str) -> Vec<u16> {
+    OsStr::new(s)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect()
+}
+#[tauri::command]
+async fn extract_game_version(install_path: &str) -> Result<String, String> {
+    unsafe {
+        let path_exe = install_path.to_string() + "\\wic.exe";
+
+        // encode to utf16 -> PCW
+        let path_exe_utf: Vec<_> = path_exe.encode_utf16().chain(std::iter::once(0)).collect();
+        let path_exe_pcw = PCWSTR::from_raw(path_exe_utf.as_ptr());
+
+        // get file version info size.
+        let data_len = GetFileVersionInfoSizeW(path_exe_pcw, None);
+        if data_len == 0 {
+            return Err(windows::core::Error::from_win32()).map_err(|e| e.to_string())?;
+        }
+
+        // convert len to usize
+        let data_len_usize: usize = data_len.try_into().unwrap();
+
+        // allocate buffer to hold the file version info
+        let mut data = vec![0u8; data_len_usize];
+
+        // fix data size
+        let data = &mut data[..];
+
+        // read file version info into data buffer
+        let result =
+            GetFileVersionInfoW(path_exe_pcw, 0, data_len, data.as_mut_ptr() as *mut c_void);
+        result.map_err(|e| e.to_string())?;
+
+        // create info pointer and len to be written into
+        let mut info_ptr: *mut VS_FIXEDFILEINFO = std::ptr::null_mut();
+        let mut info_len: u32 = 0;
+
+        // create pcwstring
+        let wide_string = to_wide_string(r"\");
+        let pcwstr = PCWSTR(wide_string.as_ptr() as *mut _);
+
+        // read value from data buffer
+        let ok = VerQueryValueW(
+            data.as_ptr() as *const c_void,
+            pcwstr,
+            (&mut info_ptr) as *mut _ as *mut *mut c_void,
+            &mut info_len,
+        );
+
+        // assert that the value was read
+        assert!(!info_ptr.is_null());
+        assert_eq!(info_len as usize, std::mem::size_of::<VS_FIXEDFILEINFO>());
+
+        // get the value from the pointer
+        let ffi = info_ptr.read_unaligned();
+
+        // extract version info
+        let major = (ffi.dwFileVersionMS >> 16) & 0xFFFF; // Extract major version
+        let minor = ffi.dwFileVersionMS & 0xFFFF; // Extract minor version
+        let build = (ffi.dwFileVersionLS >> 16) & 0xFFFF; // Extract build number
+        let revision = ffi.dwFileVersionLS & 0xFFFF; // Extract revision number
+
+        // format into version string
+        let version = format!("{}.{}.{}.{}", major, minor, build, revision);
+
+        Ok(version)
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             get_map_files,
             get_map_hash,
             download_map,
-            get_config
+            get_config,
+            find_install_path,
+            extract_game_version
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

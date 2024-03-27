@@ -3,8 +3,8 @@ import _ from 'lodash'
 
 import { ref } from 'vue'
 
-import MapsSynchronize from '../components/Maps-Synchronize.vue'
-import MapsUpload from '../components/Maps-Upload.vue'
+import MapsSynchronize from '../components/maps/synchronize.vue'
+import MapsUpload from '../components/maps/upload.vue'
 
 const _showUpload = ref(false)
 const showUpload = () => {

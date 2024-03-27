@@ -11,6 +11,12 @@ onMounted(async () => {
 
 const router = useRouter()
 const home = router.resolve('/').href
+
+console.log(router.currentRoute.value.path)
+
+if (router.currentRoute.value.path === '/') {
+  router.push('/init')
+}
 </script>
 
 <template>

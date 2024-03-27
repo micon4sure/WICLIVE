@@ -1,22 +1,24 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 // Import components
-import HomeVue from './views/Home.vue';
-import MapsVue from './views/Maps.vue';
-// import About from './views/About.vue';
 
 // Define routes
 const routes = [
   {
     path: '/',
     name: 'Home',
-    component: HomeVue,
+    component: () => import('./views/Home.vue'),
   },
-  // {
-  //   path: '/maps',
-  //   name: 'Maps',
-  //   component: MapsVue,
-  // },
+  {
+    path: '/init',
+    name: 'Init',
+    component: () => import('./views/Init.vue'),
+  },
+  {
+    path: '/install',
+    name: 'Install',
+    component: () => import('./views/Install.vue'),
+  }
 ];
 
 const router = createRouter({
