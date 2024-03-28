@@ -10,7 +10,7 @@ pub struct Config {
 impl Config {
     pub fn new() -> Self {
         // set api url
-        let env = std::env::var("WICLIVE_ENV").unwrap_or_else(|_| "development".to_string());
+        let env = std::env::var("WICLIVE_ENV").unwrap_or_else(|_| "production".to_string());
         let api_url = match env.as_str() {
             "development" => "http://localhost:3243".to_string(),
             "staging" => "https://techtile.media:3243".to_string(),

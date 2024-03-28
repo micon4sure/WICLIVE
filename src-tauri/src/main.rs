@@ -226,6 +226,7 @@ async fn download_vcredist(window: tauri::Window) -> Result<String, String> {
 
 #[tauri::command]
 fn get_install_path() -> Option<String> {
+    return None;
     match init::find_install_path() {
         Ok(path) => Some(path),
         Err(_) => None,
@@ -246,19 +247,9 @@ async fn set_file_contents(path: &str, contents: &str) -> Result<(), String> {
 
 #[tauri::command]
 fn elevate_permissions() -> Result<(), String> {
-    let resolver = |resource: &str| -> String {
-        // ! path resolver is broken, temporary fix
-        let mut path = std::env::current_exe().unwrap();
-        path.pop();
-        path.push("_up_");
-        path.push("automation");
-        path.push(resource);
-        return path.to_str().unwrap().to_string();
-    };
-
     let elevated = init::is_elevated();
     if !elevated {
-        init::elevate_permissions(resolver);
+        init::elevate_permissions();
     }
     return Ok(());
 }

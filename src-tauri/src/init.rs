@@ -68,7 +68,7 @@ pub fn is_elevated() -> bool {
 
     elevation_struct.TokenIsElevated == 1
 }
-pub fn elevate_permissions(resolver: fn(&str) -> String) {
+pub fn elevate_permissions() {
     if is_elevated() {
         return;
     }

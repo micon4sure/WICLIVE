@@ -102,7 +102,7 @@ let jobs = {
 }
 
 const goes = async () => {
-  localStorage.setItem('force-url', '/install');
+  localStorage.setItem('force-url', '/install/goes');
   await invoke('elevate_permissions')
 
   const todo: [string, Function][] = []
