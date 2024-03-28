@@ -10,12 +10,12 @@ const routes = [
     component: () => import('./views/Home.vue'),
   },
   {
-    path: '/init',
+    path: '/init/:step',
     name: 'Init',
     component: () => import('./views/Init.vue'),
   },
   {
-    path: '/install',
+    path: '/install/:step',
     name: 'Install',
     component: () => import('./views/Install.vue'),
   }

@@ -1,0 +1,15 @@
+[InstallShield Silent]
+Version=v7.00
+File=Response File
+[File Transfer]
+OverwrittenReadOnly=NoToAll
+[{399E94BB-3E87-4C47-BEDD-2722FAB3A5FD}-DlgOrder]
+Dlg0={399E94BB-3E87-4C47-BEDD-2722FAB3A5FD}-AskYesNo-0
+Count=2
+Dlg1={399E94BB-3E87-4C47-BEDD-2722FAB3A5FD}-SdFinish-0
+[{399E94BB-3E87-4C47-BEDD-2722FAB3A5FD}-AskYesNo-0]
+Result=1
+[{399E94BB-3E87-4C47-BEDD-2722FAB3A5FD}-SdFinish-0]
+Result=1
+bOpt1=0
+bOpt2=0

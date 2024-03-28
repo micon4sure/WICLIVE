@@ -14,9 +14,23 @@ const home = router.resolve('/').href
 
 console.log(router.currentRoute.value.path)
 
-if (router.currentRoute.value.path === '/') {
-  router.push('/init')
-}
+onMounted(async () => {
+  if (localStorage.getItem('force-url')) {
+    console.log('force-url', localStorage.getItem('force-url'))
+    router.push(localStorage.getItem('force-url') as string)
+    localStorage.removeItem('force-url')
+    return;
+  }
+  const installPath = await invoke('get_install_path')
+  if (!installPath) {
+    router.push('/init/game')
+  }
+  const version = await invoke('extract_game_version') as any;
+  const isPatched = version.patch == 1 && version.build == 1;
+  if (!isPatched) {
+    router.push('/init/patch')
+  }
+})
 </script>
 
 <template>
@@ -36,6 +50,11 @@ if (router.currentRoute.value.path === '/') {
 @font-face {
   font-family: "eurostib";
   src: url("./assets/eurostib.ttf");
+}
+
+@font-face {
+  font-family: "eurostext";
+  src: url("./assets/ESTEXTR.ttf");
 }
 
 body {
@@ -70,7 +89,14 @@ h2 {
   background: linear-gradient(to right, #055479 0%, transparentize(#ce2e06, 1) 50%);
   border-top-left-radius: 5px;
   border-bottom-left-radius: 5px;
-  padding-left: 15px;
+  padding: 10px 15px;
+
+  font-family: EUROSTEXT;
+  font-size: 32px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-stretch: 80%;
+
 }
 
 * {
@@ -85,6 +111,52 @@ h2 {
   flex: 1;
 }
 
+.card-header {
+  font-family: EUROSTEXT;
+  font-size: 32px;
+  padding-left: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-stretch: 80%;
+}
+
+.btn-container {
+  flex: 1;
+  cursor: pointer;
+  display: inline-block;
+  justify-content: space-between;
+  align-items: center;
+  height: 35px;
+  border: none;
+  border-radius: 5px;
+  // background: linear-gradient(0deg, #791c05 0%, #ce2e06 100%);
+  height: 35px;
+  line-height: 35px;
+  padding: 0 10px;
+  text-align: left;
+  text-wrap: nowrap;
+
+  &.primary {
+    background-image: url('./assets/pattern-dots-primary.svg');
+  }
+
+  &.secondary {
+    background: #333;
+
+    color: #aaa;
+
+    svg {
+      fill: #aaa;
+    }
+  }
+
+  button {
+    height: 35px;
+    line-height: 15px;
+    border: none;
+    background: transparent;
+  }
+}
 
 #showUpload {
   cursor: pointer;

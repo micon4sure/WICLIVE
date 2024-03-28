@@ -11,6 +11,10 @@ switch ($Action) {
         Write-Host "RUNNING in env $environment"
         $env:WICLIVE_ENV="$environment"; bun run tauri dev 
     }
+    "runRelease" {
+        Write-Host "RUNNING RELEASE in env $environment"
+        $env:WICLIVE_ENV="$environment"; bun run tauri dev --release
+    }
     "build" {
         Write-Host "BUILDING in env $environment"
         $env:WICLIVE_ENV="$environment";

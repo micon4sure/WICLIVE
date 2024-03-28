@@ -34,6 +34,8 @@ backend/src/get-ssl-credentials.ts
 backend/publish.sh
 backend/publish.ps1
 backend/_data.json
+automation/setup.log
+automation/tmp.iss
 
 src-tauri/tauri-sign.key
 

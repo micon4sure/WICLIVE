@@ -6,43 +6,51 @@ import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg';
 import iconXMark from '@fortawesome/fontawesome-free/svgs/solid/xmark.svg';
 
 const props = defineProps({
-  action: Object
+  job: Object
 })
 
-const action = props.action as any
+const job = props.job as any
 </script>
 
 <template>
-  <div :class="['action', action.status]">
-    <span class="action-status">
-      <iconCheck v-if="action.status === 'success'" />
-      <iconXMark v-if="action.status === 'error'" />
-      <div class="spinner-border" role="status" v-if="action.status == 'pending'">
+  <div :class="['job', job.status]">
+    <span class="job-status">
+      <iconCheck v-if="job.status === 'success'" />
+      <iconXMark v-if="job.status === 'error'" />
+      <div class="spinner-border" role="status" v-if="job.status == 'pending'">
         <span class="sr-only">&nbsp;</span>
       </div>
     </span>
-    <div class="action-main">
-      <div class="action-title">{{ action.title }}</div>
-      <ul class="action-info" v-if="action.info.length">
-        <li v-for="( info, idx ) in  action.info " :key="idx + info">{{ info }}</li>
+    <div class="job-main">
+      <div class="job-title">{{ job.title }}</div>
+      <ul class="job-info" v-if="job.info.length">
+        <li v-for="( info, idx ) in  job.info " :key="idx + info">{{ info }}</li>
       </ul>
-      <div class="progress" v-if="action.progress && action.progress < 100">
-        <div class="progress-bar bg-info" role="progressbar" :style="{ width: Math.floor(action.progress) + '%' }"
-          :aria-valuenow="action.progress" aria-valuemin="0" aria-valuemax="100"></div>
+      <div class="progress" v-if="job.progress && job.progress < 100">
+        <div class="progress-bar bg-info" role="progressbar" :style="{ width: Math.floor(job.progress) + '%' }"
+          :aria-valuenow="job.progress" aria-valuemin="0" aria-valuemax="100"></div>
       </div>
     </div>
   </div>
 </template>
 
 <style lang="scss">
-div.action {
+div.job {
+
+  ul,
+  li {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
   display: flex;
 
   * {
     font-family: monospace;
   }
 
-  .action.card-body {
+  .job.card-body {
     padding: 0 5px;
   }
 
@@ -66,7 +74,7 @@ div.action {
       fill: #ff0000cc;
     }
 
-    .action-title {
+    .job-title {
       background: #ff0000;
       padding: 5px;
 
@@ -77,20 +85,20 @@ div.action {
     fill: #15a315;
   }
 
-  .action-main {
+  .job-main {
     flex: 1;
   }
 
-  .action-title,
-  .action-info {
+  .job-title,
+  .job-info {
     font-family: monospace;
     font-size: 14px;
   }
 
-  .action-info {
+  .job-info {
     background: rgba(0, 0, 0, .3);
-    border-bottom-left-radius: 5px;
-    border-bottom-right-radius: 5px;
+    border-radius: 5px;
+    padding: 5px;
 
     li {
       padding: 3px 10px;

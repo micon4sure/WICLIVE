@@ -13,36 +13,19 @@ import iconDownload from '@fortawesome/fontawesome-free/svgs/solid/download.svg'
 import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg';
 import iconRefresh from '@fortawesome/fontawesome-free/svgs/solid/rotate.svg';
 
-import WIC_DownloadProgress from '../../lib/wic-download-progress'
-
 import { WIC_Map_Frontend, WIC_Map_Status } from '../../lib/wic-map'
 
-const progress = new WIC_DownloadProgress
+import wicJobs from '../../lib/wic-jobs';
+
+const manager = wicJobs.manager
+const progress = wicJobs.progress
+const _jobs = wicJobs._jobs
+
 let remoteData = {} as any
 
 const state = ref({
-  jobs: [],
   maps: [] as WIC_Map_Frontend[]
 })
-
-const runJob = async (title, executor) => {
-  const job = reactive({
-    title,
-    status: 'pending',
-    info: [],
-    progress: null
-  })
-  state.value.jobs.push(job)
-  let result = null;
-  try {
-    result = await executor(job)
-    job.status = 'success'
-  } catch (error) {
-    job.status = 'error'
-    job.info.push(error)
-  }
-  return result
-}
 
 const init = async () => {
   const CONFIG: any = await get_config()
@@ -94,9 +77,9 @@ const downloadMap = async name => {
   while (queue.length) {
     const name = queue.shift()
 
-    await runJob(`downloading ${name}`, async (job) => {
-      const progressKey = progress.on(name, (event) => {
-        job.progress = event.percentage
+    await manager.runJob(`Download ${name}`, async (job) => {
+      const progressId = progress.on({ type: 'download-map' }, (progress) => {
+        job.progress = progress.percentage
       })
 
       const map = _.find(state.value.maps, { name: name })
@@ -104,7 +87,7 @@ const downloadMap = async name => {
 
       await invoke("download_map", { map: name })
 
-      job.info.push('building hash...')
+      job.info.push('Compute hash...')
       const hash: string = await invoke("get_map_hash", { filename: name })
 
       if (remoteData[name].hash != hash) {
@@ -114,7 +97,7 @@ const downloadMap = async name => {
       }
 
       map.hash = hash
-      progress.off(progressKey)
+      progress.off(progressId)
       job.info.push('done.')
       map.status = WIC_Map_Status.CURRENT
     })
@@ -144,7 +127,7 @@ const _maps = computed(() => {
 
 const synchronize = async () => {
   if (!actionNeeded.value) return;
-  runJob('synchronizing', async (job) => {
+  manager.runJob('Synchronize', async (job) => {
     const promises = _.map(state.value.maps, async (map) => {
       if (map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED) {
         await downloadMap(map.name)
@@ -155,7 +138,7 @@ const synchronize = async () => {
 }
 
 onMounted(async () => {
-  await runJob('initializing', async (job) => {
+  manager.runJob('Initialize', async (job) => {
     await init()
   })
 })
@@ -211,7 +194,7 @@ onMounted(async () => {
         </tr>
       </table>
     </div>
-    <jobs-vue :jobs="state.jobs" id="maps-jobs" />
+    <jobs-vue :jobs="_jobs" id="maps-jobs" />
   </div>
 </template>
 
@@ -234,35 +217,6 @@ onMounted(async () => {
     justify-content: space-between;
     align-items: center;
     height: 35px;
-    border: none;
-    border-radius: 5px;
-    // background: linear-gradient(0deg, #791c05 0%, #ce2e06 100%);
-    height: 35px;
-    line-height: 35px;
-    padding: 0 10px;
-    text-align: left;
-    text-wrap: nowrap;
-
-    &.primary {
-      background-image: url('../assets/pattern-dots-primary.svg');
-    }
-
-    &.secondary {
-      background-image: url('../assets/pattern-dots-secondary.svg');
-
-      color: #aaa;
-
-      svg {
-        fill: #aaa;
-      }
-    }
-
-    button {
-      height: 35px;
-      line-height: 15px;
-      border: none;
-      background: transparent;
-    }
   }
 
   #maps-list-container {
