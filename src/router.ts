@@ -15,7 +15,7 @@ const routes = [
     component: () => import('./views/Init.vue'),
   },
   {
-    path: '/install/:step',
+    path: '/install/:step?',
     name: 'Install',
     component: () => import('./views/Install.vue'),
   }

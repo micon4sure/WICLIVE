@@ -36,7 +36,7 @@ let jobs = {
     const progressId = progress.on({ type: 'download-game' }, (progress) => {
       job.progress = progress.percentage
     })
-    // path_zipped = await invoke('download_game');
+    path_zipped = await invoke('download_game');
     progress.off(progressId)
   },
   unzip_game: async job => {
@@ -183,8 +183,8 @@ onMounted(async () => {
       <jobs-vue :jobs="_jobs" id="install-jobs" />
       <div v-if="_done">
         <div class="alert alert-primary" role="alert">
-          Installation completed. If you haven't already, Download, install and apply <a
-            href="https://www.massgate.org/" target="_blank">The World in Conflict Multiplayer fix from massgate.org</a>
+          Installation completed. If you haven't already, download, install and apply <a
+            href="https://www.massgate.org/" target="_blank">The World in Conflict Multiplayer Fix from massgate.org</a>
         </div>
       </div>
     </div>
