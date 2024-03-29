@@ -8,7 +8,7 @@ onMounted(async () => {
   const response = await axios.get('https://techtile.media:3243/maps/data')
   console.log(response.data)
 
-  _maps.value = _.orderBy(response.data, ['name'], ['asc'])
+  _maps.value = _.orderBy(response.data, ['date'], ['desc'])
 
   _.each(_maps.value, (map) => {
     map.size = (map.size / 1024 / 1024).toFixed(2) + ' MB'

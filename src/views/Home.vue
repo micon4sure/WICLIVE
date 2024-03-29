@@ -17,7 +17,7 @@ const cards = [
   {
     name: 'where',
     header: 'Where can I get WIC LIVE?',
-    body: `WIC LIVE can be downloaded directly off github. Just grab <a href="https://github.com/micon4sure/WICLIVE/releases/latest/download/wiclive_x64-setup.exe">the latest release</a>.`
+    body: `<a href="https://github.com/micon4sure/WICLIVE/releases/latest/download/wiclive_x64-setup.exe" class="cta">Download the latest release off github</a>`
   },
   {
     name: 'every-time',
@@ -58,15 +58,6 @@ const setActive = (name: string) => {
 
 <style lang="scss">
 #home {
-
-  a {
-    color: rgb(255, 136, 0);
-    border-bottom: 1px solid rgb(255, 136, 0);
-
-    &:hover {
-      border-bottom: 2px solid rgb(255, 136, 0);
-    }
-  }
 
   .card-body {
     max-height: 0;
