@@ -16,9 +16,10 @@ console.log(router.currentRoute.value.path)
 
 onMounted(async () => {
   if (localStorage.getItem('force-url')) {
-    console.log('force-url', localStorage.getItem('force-url'))
-    router.push(localStorage.getItem('force-url') as string)
+    let force = localStorage.getItem('force-url');
+    console.log('force-url', force)
     localStorage.removeItem('force-url')
+    router.push(force)
     return;
   }
   const installPath = await invoke('get_install_path')
@@ -34,8 +35,8 @@ onMounted(async () => {
 </script>
 
 <template>
+  <h1><a :href="home"><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></a></h1>
   <div id="container">
-    <h1><a :href="home"><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></a></h1>
     <router-view />
   </div>
   <footer>
@@ -67,9 +68,8 @@ body {
 
 h1 {
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
-  margin: 0 -20px;
-  margin-bottom: 20px;
-  padding: 20px;
+  margin-bottom: 15px;
+  padding: 25px;
 
   a {
     display: flex;
@@ -155,6 +155,25 @@ h2 {
     line-height: 15px;
     border: none;
     background: transparent;
+  }
+}
+
+a.cta,
+button.cta {
+  font-family: eurostext;
+  font-weight: 400;
+  font-size: 24px;
+  display: block;
+  padding: 20px;
+  border: 1px solid #333;
+  border-radius: 5px;
+  color: white;
+  text-decoration: none;
+  text-transform: uppercase;
+  background-image: url('./assets/pattern-dots-primary.svg');
+
+  &.secondary {
+    background-image: url('./assets/pattern-dots-secondary.svg');
   }
 }
 

@@ -2,12 +2,12 @@
 import _ from 'lodash'
 
 import { ref, reactive, onMounted } from 'vue'
-import EULA_game from '../assets/eula.txt?raw'
+import EULA_game from '../../assets/eula.txt?raw'
 import { useRoute } from 'vue-router';
 import { invoke } from '@tauri-apps/api';
 
-import jobsVue from '../components/jobs.vue'
-import wicJobs from '../lib/wic-jobs';
+import jobsVue from '../jobs.vue'
+import wicJobs from '../../lib/wic-jobs';
 
 const manager = wicJobs.manager
 const progress = wicJobs.progress
@@ -19,17 +19,18 @@ const _done = ref(false)
 
 const _jobs = wicJobs._jobs
 
-// let path_zipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en.zip'
-// let path_unzipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en'
-// let path_patch10 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
-// let path_patch11 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
-// let path_vcredist = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86.exe';
+// let path_zipped = '';
+// let path_unzipped = '';
+// let path_patch10 = '';
+// let path_patch11 = '';
+// let path_vcredist = '';
 
-let path_zipped = '';
-let path_unzipped = '';
-let path_patch10 = '';
-let path_patch11 = '';
-let path_vcredist = '';
+let path_zipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en.zip'
+let path_unzipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en'
+let path_patch10 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
+let path_patch11 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
+let path_vcredist = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86.exe';
+
 
 let jobs = {
   download_game: async job => {
@@ -58,6 +59,7 @@ let jobs = {
       job.progress = progress.percentage
     })
     path_patch11 = await invoke('download_patch', { patch: 11 });
+    console.log('path_patch11', path_patch11)
     progress.off(progressId)
   },
   download_vcredist: async job => {
@@ -77,7 +79,7 @@ let jobs = {
   },
   install_patch10: async job => {
     try {
-      await invoke('install_patch', { version: 10, installerDir: path_patch10 });
+      await invoke('install_patch', { installerPath: path_patch10 });
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
@@ -85,7 +87,7 @@ let jobs = {
   },
   install_patch11: async job => {
     try {
-      await invoke('install_patch', { version: 11, installerDir: path_patch11 });
+      await invoke('install_patch', { installerPath: path_patch11 });
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
@@ -103,7 +105,9 @@ let jobs = {
 
 const goes = async () => {
   localStorage.setItem('force-url', '/install/goes');
-  await invoke('elevate_permissions')
+  let elevate = await invoke('elevate_permissions')
+  if (elevate)
+    return
 
   const todo: [string, Function][] = []
 
@@ -141,7 +145,24 @@ const goes = async () => {
     todo.push(["Install Visual Studio C++ Redistributable", jobs.install_vcredist])
   }
 
+  let skip = [
+    "Download game",
+    "Unzip game",
+    "Download Patch 10",
+    "Download Patch 11",
+    "Download Visual Studio C++ Redistributable",
+    "Install Game",
+    "Install Patch 10",
+    "Install Patch 11",
+    "Install Visual Studio C++ Redistributable"
+  ]
+
+  // console.log('todo', todo)
+  todo.push(["Install Visual Studio C++ Redistributable", jobs.install_vcredist])
   for (let job of todo) {
+    if (_.includes(skip, job[0])) {
+      continue;
+    }
     await manager.runJob(job[0], job[1])
   }
 
@@ -183,9 +204,12 @@ onMounted(async () => {
       <jobs-vue :jobs="_jobs" id="install-jobs" />
       <div v-if="_done">
         <div class="alert alert-primary" role="alert">
-          Installation completed. If you haven't already, download, install and apply <a
-            href="https://www.massgate.org/" target="_blank">The World in Conflict Multiplayer Fix from massgate.org</a>
+          Installation completed. Next step: <a href="https://www.massgate.org/" target="_blank"
+            class="cta primary">Download and install the World in Conflict Multiplayer Fix
+            from
+            massgate.org</a>
         </div>
+        <router-link to="/" class="cta secondary">Back to main</router-link>
       </div>
     </div>
   </div>

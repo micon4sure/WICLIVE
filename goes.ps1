@@ -20,7 +20,12 @@ switch ($Action) {
         $env:WICLIVE_ENV="$environment";
         $env:TAURI_PRIVATE_KEY=$(cat src-tauri/tauri-sign.key);
         $env:TAURI_KEY_PASSWORD="";
-        bun run tauri build --ci
+        if($environment -eq "development" -or $environment -eq "staging") {
+            # bun run tauri build --debug --ci
+            bun run tauri build --debug -b none
+        } else {
+            bun run tauri build -b none --ci
+        }
     }
     "act" {
         $key = Get-Content src-tauri/tauri-sign.key

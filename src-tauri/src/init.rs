@@ -68,7 +68,7 @@ pub fn is_elevated() -> bool {
 
     elevation_struct.TokenIsElevated == 1
 }
-pub fn elevate_permissions() {
+pub fn elevate_permissions(handle: tauri::AppHandle) {
     if is_elevated() {
         return;
     }
@@ -102,10 +102,10 @@ pub fn elevate_permissions() {
     let output = runner.run(script.as_str()).unwrap();
     println!("output: {}", output);
     // exit the current process
-    std::process::exit(0);
+    handle.exit(0)
 }
 
-pub fn find_install_path() -> Result<String, String> {
+pub fn find_install_path() -> Option<String> {
     println!("finding install path");
 
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
@@ -119,12 +119,11 @@ pub fn find_install_path() -> Result<String, String> {
     match subkey {
         Ok(regkey) => {
             println!("regkey: {:?}", regkey);
-            let install_location: String =
-                regkey.get_value("InstallPath").map_err(|e| e.to_string())?;
-            return Ok(install_location);
+            let install_location: String = regkey.get_value("InstallPath").unwrap();
+            return Some(install_location);
         }
         Err(e) => {
-            return Err("not installed".to_string());
+            return None;
         }
     }
 }
@@ -138,8 +137,8 @@ fn to_wide_string(s: &str) -> Vec<u16> {
 
 pub async fn extract_game_version() -> Result<VersionInfo, String> {
     let install_path = match find_install_path() {
-        Ok(path) => path,
-        Err(_) => return Err("not installed".to_string()),
+        Some(path) => path,
+        None => return Err("not installed".to_string()),
     };
     unsafe {
         let path_exe = install_path.to_string() + "\\wic.exe";
@@ -226,52 +225,23 @@ pub fn install_game<F>(target_dir: &str, installer_dir: &str, resolver: F) -> Re
 where
     F: Fn(&str) -> String,
 {
-    let mut accept_eula_path = resolver("accept_eula_game.exe");
-    let mut setup_retail_iss = resolver("setup_retail.iss");
+    let automate_game_exe = resolver("automate_game.exe");
     let mut setup_exe = PathBuf::from(installer_dir);
     setup_exe.push("Installer");
     setup_exe.push("setup.exe");
 
-    // load iss file as ini
-    println!("loading setup_retail.iss: {:?}", setup_retail_iss);
-    let mut ini = ini::Ini::load_from_file(setup_retail_iss).map_err(|e| e.to_string())?;
-
-    // set install dir #1
-    ini.set_to(
-        Some("{F11ADC64-C89E-47F4-A0B3-3665FF859397}-SdAskDestPath-0"),
-        "szDir".to_string(),
-        target_dir.to_string(),
-    );
-
-    // set install dir #2
-    ini.set_to(
-        Some("{F11ADC64-C89E-47F4-A0B3-3665FF859397}-SdComponentTree-0"),
-        "szDir".to_string(),
-        target_dir.to_string(),
-    );
-
-    let modified_iss_path = resolver("tmp.iss");
-    println!("writing to tmp.iss: {:?}", modified_iss_path);
-    // write to temp iss file
-    ini.write_to_file(modified_iss_path.clone())
-        .map_err(|e| e.to_string())?;
-
-    println!("wrote to tmp.iss: {:?}", modified_iss_path);
-
-    // run accept_eula in the background
-    println!("running accept_eula: {:?}", accept_eula_path);
-    let output = std::process::Command::new(accept_eula_path)
+    // run automate in the background
+    println!("running automate: {:?}", automate_game_exe);
+    std::process::Command::new(automate_game_exe)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .expect("Failed to start process");
+        .expect("Failed to start automate game process");
 
     println!("running installer: {:?}", setup_exe.display());
     // run installer
     let output = std::process::Command::new(setup_exe)
-        .arg("/s")
-        .arg(format!("/f1{}", modified_iss_path))
         .output()
         .map_err(|e| e.to_string())?;
 
@@ -280,44 +250,21 @@ where
     return Ok(());
 }
 
-pub fn install_patch(
-    version: u8,
-    installer_dir: &str,
-    resolver: fn(&str) -> String,
-) -> Result<(), String> {
-    let mut accept_eula_path = resolver("accept_eula_patch.exe");
-    let mut setup_patch_iss = resolver("setup_patch10.iss");
-
-    let mut setup_exe = PathBuf::from(installer_dir);
-    match version {
-        10 => {
-            setup_exe.push("world_in_conflict_1.000_to_1.010_en.exe");
-        }
-        11 => {
-            setup_exe.push("world_in_conflict_1.010_to_1.011_en.exe");
-        }
-        _ => {
-            return Err("unknown patch version".to_string());
-        }
-    }
+pub fn install_patch(installer_path: &str, resolver: fn(&str) -> String) -> Result<(), String> {
+    let automate_patch_exe = resolver("automate_patch.exe");
 
     // run accept_eula in the background
-    println!("running accept_eula: {:?}", accept_eula_path);
-    std::process::Command::new(accept_eula_path)
+    println!("running automate: {:?}", automate_patch_exe);
+    std::process::Command::new(automate_patch_exe)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .expect("Failed to start process");
+        .expect("Failed to start automate patch process");
 
-    println!("accept_eula done");
-
-    println!("running installer: {:?}", setup_exe.display());
-
+    println!("running installer: {:?}", installer_path);
     // run installer
-    let output = std::process::Command::new(setup_exe)
-        .arg("/s")
-        .arg(format!("/f1{}", setup_patch_iss))
+    let output = std::process::Command::new(installer_path)
         .output()
         .map_err(|e| e.to_string())?;
 
@@ -325,7 +272,7 @@ pub fn install_patch(
 
     Ok(())
 }
-pub fn install_vcredist(installer_dir: &str, resolver: fn(&str) -> String) -> Result<(), String> {
+pub fn install_vcredist(installer_dir: &str) -> Result<(), String> {
     let mut vcredist_exe = PathBuf::from(installer_dir);
     vcredist_exe.push("vc_redist.x86.exe");
 

@@ -3,8 +3,9 @@ import _ from 'lodash'
 
 import { ref } from 'vue'
 
-import MapsSynchronize from '../components/maps/synchronize.vue'
-import MapsUpload from '../components/maps/upload.vue'
+import mapsSynchronizeVue from '../maps/synchronize.vue'
+import mapsUploadVue from '../maps/upload.vue'
+import mapsOldVue from '../maps/old.vue'
 
 const _showUpload = ref(false)
 const showUpload = () => {
@@ -15,8 +16,9 @@ const showUpload = () => {
 <template>
   <span id="showUpload" @click="showUpload" v-if="!_showUpload">Upload</span>
 
-  <maps-upload v-if="_showUpload" />
-  <maps-synchronize />
+  <maps-upload-vue v-if="_showUpload" />
+  <maps-old />
+  <maps-synchronize-vue />
 </template>
 
 <style lang="scss"></style>

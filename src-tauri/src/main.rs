@@ -12,6 +12,7 @@ use io::get_maps_directory;
 
 use config::Config;
 use tauri::Manager;
+use winapi::shared::rpcndr::boolean;
 
 lazy_static::lazy_static! {
     static ref CONFIG: Config = Config::new();
@@ -135,12 +136,12 @@ async fn download_patch(window: tauri::Window, patch: u16) -> Result<String, Str
 
     let progress_callback = io::create_progress_callback(window.clone(), "download-patch", None);
 
-    download_file(
-        patch_url.as_str(),
-        patch_path.to_str().unwrap(),
-        progress_callback,
-    )
-    .await?;
+    // download_file(
+    //     patch_url.as_str(),
+    //     patch_path.to_str().unwrap(),
+    //     progress_callback,
+    // )
+    // .await?;
     Ok(patch_path.to_str().unwrap().to_string())
 }
 
@@ -161,17 +162,11 @@ async fn install_game(
         return path.to_str().unwrap().to_string();
     };
 
-    init::install_game(target_dir, installer_dir, resolver);
-
-    Ok(())
+    return init::install_game(target_dir, installer_dir, resolver);
 }
 
 #[tauri::command]
-async fn install_patch(
-    _handle: tauri::AppHandle,
-    version: u8,
-    installer_dir: &str,
-) -> Result<(), String> {
+async fn install_patch(_handle: tauri::AppHandle, installer_path: &str) -> Result<(), String> {
     let resolver = |resource: &str| -> String {
         // ! path resolver is broken, temporary fix
         let mut path = std::env::current_exe().unwrap();
@@ -181,7 +176,7 @@ async fn install_patch(
         path.push(resource);
         return path.to_str().unwrap().to_string();
     };
-    return init::install_patch(version, installer_dir, resolver);
+    return init::install_patch(installer_path, resolver);
 }
 
 #[tauri::command]
@@ -191,18 +186,8 @@ async fn check_vcredist_installed() -> bool {
 
 #[tauri::command]
 async fn install_vcredist(_handle: tauri::AppHandle, installer_dir: &str) -> Result<(), String> {
-    let resolver = |resource: &str| -> String {
-        // ! path resolver is broken, temporary fix
-        let mut path = std::env::current_exe().unwrap();
-        path.pop();
-        path.push("_up_");
-        path.push("automation");
-        path.push(resource);
-        return path.to_str().unwrap().to_string();
-    };
     println!("installing vcredist");
-    init::install_vcredist(installer_dir, resolver);
-    Ok(())
+    return init::install_vcredist(installer_dir);
 }
 
 #[tauri::command]
@@ -226,11 +211,7 @@ async fn download_vcredist(window: tauri::Window) -> Result<String, String> {
 
 #[tauri::command]
 fn get_install_path() -> Option<String> {
-    return None;
-    match init::find_install_path() {
-        Ok(path) => Some(path),
-        Err(_) => None,
-    }
+    return init::find_install_path();
 }
 #[tauri::command]
 async fn extract_game_version() -> Result<VersionInfo, String> {
@@ -246,12 +227,13 @@ async fn set_file_contents(path: &str, contents: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn elevate_permissions() -> Result<(), String> {
+fn elevate_permissions(handle: tauri::AppHandle) -> bool {
     let elevated = init::is_elevated();
     if !elevated {
-        init::elevate_permissions();
+        init::elevate_permissions(handle);
+        return true;
     }
-    return Ok(());
+    return false;
 }
 
 fn main() {
