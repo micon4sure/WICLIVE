@@ -146,19 +146,17 @@ const goes = async () => {
   }
 
   let skip = [
-    "Download game",
-    "Unzip game",
-    "Download Patch 10",
-    "Download Patch 11",
-    "Download Visual Studio C++ Redistributable",
-    "Install Game",
-    "Install Patch 10",
-    "Install Patch 11",
-    "Install Visual Studio C++ Redistributable"
+    // "Download game",
+    // "Unzip game",
+    // "Download Patch 10",
+    // "Download Patch 11",
+    // "Download Visual Studio C++ Redistributable",
+    // "Install Game",
+    // "Install Patch 10",
+    // "Install Patch 11",
+    // "Install Visual Studio C++ Redistributable"
   ]
 
-  // console.log('todo', todo)
-  todo.push(["Install Visual Studio C++ Redistributable", jobs.install_vcredist])
   for (let job of todo) {
     if (_.includes(skip, job[0])) {
       continue;
