@@ -10,10 +10,10 @@ import jobsVue from '../jobs.vue'
 import wicJobs from '../../lib/wic-jobs';
 
 const manager = wicJobs.manager
+manager.clearJobs();
 const progress = wicJobs.progress
 
-// const _installDir = ref('C:\\Program Files (x86)\\Sierra Entertainment\\World in Conflict')
-const _installDir = ref('C:\\002_Games\\World in Conflict')
+const _installDir = ref('C:\\Program Files (x86)\\Sierra Entertainment\\World in Conflict')
 const _step = ref('eula')
 const _done = ref(false)
 
@@ -29,7 +29,8 @@ let path_zipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_ret
 let path_unzipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en'
 let path_patch10 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
 let path_patch11 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
-let path_vcredist = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86.exe';
+let path_vcredist11 = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86_11.exe';
+let path_vcredist14 = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86_14.exe';
 
 
 let jobs = {
@@ -62,16 +63,25 @@ let jobs = {
     console.log('path_patch11', path_patch11)
     progress.off(progressId)
   },
-  download_vcredist: async job => {
+  download_vcredist11: async job => {
     const progressId = progress.on({ type: 'download-vcredist' }, (progress) => {
       job.progress = progress.percentage
     })
-    path_vcredist = await invoke('download_vcredist');
+    path_vcredist11 = await invoke('download_vcredist', { version: 11 });
+    progress.off(progressId)
+  },
+  download_vcredist14: async job => {
+    const progressId = progress.on({ type: 'download-vcredist' }, (progress) => {
+      job.progress = progress.percentage
+    })
+    path_vcredist14 = await invoke('download_vcredist', { version: 14 });
     progress.off(progressId)
   },
   install_game: async job => {
     try {
       await invoke('install_game', { targetDir: _installDir.value, installerDir: path_unzipped });
+      // wait 3 seconds for the installer to wrap up
+      await new Promise(resolve => setTimeout(resolve, 3000));
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
@@ -80,6 +90,8 @@ let jobs = {
   install_patch10: async job => {
     try {
       await invoke('install_patch', { installerPath: path_patch10 });
+      // wait 3 seconds for the installer to wrap up
+      await new Promise(resolve => setTimeout(resolve, 3000));
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
@@ -88,14 +100,24 @@ let jobs = {
   install_patch11: async job => {
     try {
       await invoke('install_patch', { installerPath: path_patch11 });
+      // wait 3 seconds for the installer to wrap up
+      await new Promise(resolve => setTimeout(resolve, 3000));
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
     }
   },
-  install_vcredist: async job => {
+  install_vcredist11: async job => {
     try {
-      await invoke('install_vcredist', { installerDir: path_vcredist });
+      await invoke('install_vcredist', { vcredistExe: path_vcredist11 });
+    } catch (error) {
+      console.error("error", error);
+      job.info.push(error)
+    }
+  },
+  install_vcredist14: async job => {
+    try {
+      await invoke('install_vcredist', { vcredistExe: path_vcredist14 });
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
@@ -104,10 +126,18 @@ let jobs = {
 }
 
 const goes = async () => {
-  localStorage.setItem('force-url', '/install/goes');
-  let elevate = await invoke('elevate_permissions')
-  if (elevate)
-    return
+  let isElevated = await invoke('is_elevated')
+  if (!isElevated) {
+    console.log('not elevated, setting install dir and elevating permissions', _installDir.value)
+    localStorage.setItem('do-install', _installDir.value);
+    await invoke('elevate_permissions')
+    return;
+  }
+
+  console.log('elevated, continuing installation', localStorage.getItem('do-install'))
+  _installDir.value = localStorage.getItem('do-install') || _installDir.value
+  console.log('install dir', _installDir.value)
+  localStorage.removeItem('do-install')
 
   const todo: [string, Function][] = []
 
@@ -127,13 +157,13 @@ const goes = async () => {
     todo.push(["Download Patch 11", jobs.download_patch11])
   }
 
-  let isVCRedistInstalled = await invoke('check_vcredist_installed');
-  if (!isVCRedistInstalled) {
-    todo.push(["Download Visual Studio C++ Redistributable", jobs.download_vcredist])
-  }
+  todo.push(["Download Visual Studio C++ Redistributable 11", jobs.download_vcredist11])
+  todo.push(["Download Visual Studio C++ Redistributable 14", jobs.download_vcredist14])
+  todo.push(["Install Visual Studio C++ Redistributable 11", jobs.install_vcredist11])
+  todo.push(["Install Visual Studio C++ Redistributable 14", jobs.install_vcredist14])
 
+  todo.push(["Install Game", jobs.install_game])
   if (!isInstalled) {
-    todo.push(["Install Game", jobs.install_game])
   }
   if (!isPatched) {
     todo.push(["Install Patch 10", jobs.install_patch10])
@@ -141,20 +171,18 @@ const goes = async () => {
   }
 
 
-  if (!isVCRedistInstalled) {
-    todo.push(["Install Visual Studio C++ Redistributable", jobs.install_vcredist])
-  }
-
   let skip = [
     // "Download game",
     // "Unzip game",
     // "Download Patch 10",
     // "Download Patch 11",
-    // "Download Visual Studio C++ Redistributable",
+    // "Download Visual Studio C++ Redistributable 11",
+    // "Download Visual Studio C++ Redistributable 14",
+    // "Install Visual Studio C++ Redistributable 11",
+    // "Install Visual Studio C++ Redistributable 14"
     // "Install Game",
     // "Install Patch 10",
     // "Install Patch 11",
-    // "Install Visual Studio C++ Redistributable"
   ]
 
   for (let job of todo) {
@@ -185,29 +213,27 @@ onMounted(async () => {
       <div id="eula">
         {{ EULA_game }}
       </div>
-      <div class="btn-container primary">
-        <button @click="_step = 'location'" class="btn">Accept License Agreement</button>
-      </div>
+      <button @click="_step = 'location'" class="cta">Accept License Agreement</button>
     </div>
     <div class="card-body" v-if="_step == 'location'">
       <div class="mb-3">
         <label for="install-location" class="form-label">Select install location</label>
-        <input type="text" class="form-control" id="install-location" :value="_installDir">
+        {{ _installDir }}
+        <input type="text" class="form-control" id="install-location" v-model="_installDir">
       </div>
-      <div class="btn-container primary">
-        <button @click="_step = 'goes'; goes()" class="btn">Download and install</button>
-      </div>
+      <button @click="_step = 'goes'; goes()" class="cta">Download and install</button>
     </div>
     <div v-if="_step == 'goes'">
       <jobs-vue :jobs="_jobs" id="install-jobs" />
       <div v-if="_done">
         <div class="alert alert-primary" role="alert">
-          Installation completed. Next step: <a href="https://www.massgate.org/" target="_blank"
-            class="cta primary">Download and install the World in Conflict Multiplayer Fix
+          Installation complete. Next steps: <a href="https://www.massgate.org/" target="_blank"
+            class="cta primary">Download
+            and install the World in Conflict Multiplayer Fix
             from
             massgate.org</a>
+          <router-link to="/" class="cta secondary">Back to main</router-link>
         </div>
-        <router-link to="/" class="cta secondary">Back to main</router-link>
       </div>
     </div>
   </div>
@@ -217,6 +243,10 @@ onMounted(async () => {
 #install {
   .alert {
     border-radius: 0;
+
+    a:first-of-type {
+      margin-bottom: 15px;
+    }
   }
 }
 

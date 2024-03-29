@@ -34,6 +34,10 @@ class WIC_DownloadProgress {
 }
 class WIC_JobManager {
 
+  clearJobs() {
+    _jobs.splice(0, _jobs.length);
+  }
+
   async runJob(title, executor) {
     const job = reactive({
       title,

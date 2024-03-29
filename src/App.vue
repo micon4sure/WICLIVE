@@ -15,13 +15,15 @@ const home = router.resolve('/').href
 console.log(router.currentRoute.value.path)
 
 onMounted(async () => {
-  if (localStorage.getItem('force-url')) {
-    let force = localStorage.getItem('force-url');
-    console.log('force-url', force)
-    localStorage.removeItem('force-url')
-    router.push(force)
+  if (localStorage.getItem('do-install')) {
+    router.push('/install/goes')
     return;
   }
+
+  if (localStorage.getItem('initialized')) {
+    return;
+  }
+
   const installPath = await invoke('get_install_path')
   if (!installPath) {
     router.push('/init/game')
@@ -113,53 +115,14 @@ h2 {
 
 .card-header {
   font-family: EUROSTEXT;
-  font-size: 32px;
+  font-size: 26px;
   padding-left: 20px;
   letter-spacing: 1px;
   text-transform: uppercase;
   font-stretch: 80%;
 }
 
-.btn-container {
-  flex: 1;
-  cursor: pointer;
-  display: inline-block;
-  justify-content: space-between;
-  align-items: center;
-  height: 35px;
-  border: none;
-  border-radius: 5px;
-  // background: linear-gradient(0deg, #791c05 0%, #ce2e06 100%);
-  height: 35px;
-  line-height: 35px;
-  padding: 0 10px;
-  text-align: left;
-  text-wrap: nowrap;
-
-  &.primary {
-    background-image: url('./assets/pattern-dots-primary.svg');
-  }
-
-  &.secondary {
-    background: #333;
-
-    color: #aaa;
-
-    svg {
-      fill: #aaa;
-    }
-  }
-
-  button {
-    height: 35px;
-    line-height: 15px;
-    border: none;
-    background: transparent;
-  }
-}
-
-a.cta,
-button.cta {
+.cta {
   font-family: eurostext;
   font-weight: 400;
   font-size: 24px;
@@ -171,9 +134,30 @@ button.cta {
   text-decoration: none;
   text-transform: uppercase;
   background-image: url('./assets/pattern-dots-primary.svg');
+  border-bottom: 3px solid rgb(255, 136, 0);
+  cursor: pointer;
 
   &.secondary {
     background-image: url('./assets/pattern-dots-secondary.svg');
+    border-bottom: 3px solid rgb(0, 183, 255);
+    font-size: 17px;
+  }
+}
+
+.cta.small {
+  font-size: 16px;
+  padding: 10px;
+  border-bottom-width: 1px;
+}
+
+.cta.inactive {
+  border-color: black;
+  background: #222;
+  color: #666;
+  background: url('./assets/pattern-dots-disabled.svg');
+
+  svg {
+    fill: #666;
   }
 }
 

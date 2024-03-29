@@ -24,7 +24,7 @@ switch ($Action) {
             # bun run tauri build --debug --ci
             bun run tauri build --debug -b none
         } else {
-            bun run tauri build -b none --ci
+            bun run tauri build --ci
         }
     }
     "act" {

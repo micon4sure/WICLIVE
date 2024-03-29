@@ -211,16 +211,20 @@ pub async fn extract_game_version() -> Result<VersionInfo, String> {
     }
 }
 
-pub fn check_vcredist_installed() -> bool {
-    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let subkey_path = r"SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x86";
-    let subkey = hklm.open_subkey(subkey_path);
-    match subkey {
-        Ok(_) => true,
-        Err(_) => false,
-    }
-}
+pub fn install_vcredist(vcredist_exe: &str) -> Result<(), String> {
+    println!("installing vcredist: {:?}", vcredist_exe);
 
+    let output = std::process::Command::new(vcredist_exe)
+        .arg("/install")
+        .arg("/quiet")
+        .arg("/norestart")
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    println!("installer output: {:?}", output);
+
+    return Ok(());
+}
 pub fn install_game<F>(target_dir: &str, installer_dir: &str, resolver: F) -> Result<(), String>
 where
     F: Fn(&str) -> String,
@@ -233,6 +237,7 @@ where
     // run automate in the background
     println!("running automate: {:?}", automate_game_exe);
     std::process::Command::new(automate_game_exe)
+        .arg(target_dir)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -271,21 +276,4 @@ pub fn install_patch(installer_path: &str, resolver: fn(&str) -> String) -> Resu
     println!("installer output: {:?}", output);
 
     Ok(())
-}
-pub fn install_vcredist(installer_dir: &str) -> Result<(), String> {
-    let mut vcredist_exe = PathBuf::from(installer_dir);
-    vcredist_exe.push("vc_redist.x86.exe");
-
-    println!("running vcredist: {:?}", vcredist_exe.display());
-
-    let output = std::process::Command::new(vcredist_exe)
-        .arg("/install")
-        .arg("/quiet")
-        .arg("/norestart")
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    println!("installer output: {:?}", output);
-
-    return Ok(());
 }

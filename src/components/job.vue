@@ -47,7 +47,7 @@ div.job {
   display: flex;
 
   * {
-    font-family: monospace;
+    font-family: 'Consolas', monospace;
   }
 
   .job.card-body {
@@ -91,7 +91,6 @@ div.job {
 
   .job-title,
   .job-info {
-    font-family: monospace;
     font-size: 14px;
   }
 

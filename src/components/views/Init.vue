@@ -12,24 +12,34 @@ const state = reactive({
 
 let _step = ref("init")
 
+const route = useRoute()
+const router = useRouter()
 onMounted(async () => {
-  const route = useRoute()
   if (route.params.step == 'game') {
-    const router = useRouter()
-    router.push('/install')
+    _step.value = 'not_installed'
   }
   if (route.params.step == 'patch') {
     _step.value = 'not_patched'
   }
 })
 
+const skip = () => {
+  localStorage.setItem('initialized', 'true')
+  router.push('/')
+}
 </script>
 
 <template>
   <div id="init">
-    <div v-if="_step === 'init'">
-      <h3>Checking</h3>
-      <jobsVue :jobs="state.jobs" />
+    <div v-if="_step === 'not_installed'">
+      <div class="card">
+        <div class="card-header">World in Conflict is not installed</div>
+        <div class="card-body">
+          <p>It appears that World in Conflict is not installed</p>
+          <router-link to="/install" class="cta primary">Install World in Conflict</router-link>
+          <button class="cta secondary" @click="skip">Skip installation</button>
+        </div>
+      </div>
     </div>
     <div v-else-if="_step === 'not_patched'">
       <div class="card">
@@ -37,6 +47,7 @@ onMounted(async () => {
         <div class="card-body">
           <router-link to="/install/goes" class="cta primary">Automatically download and install the latest
             patches</router-link>
+          <button class="cta secondary" @click="skip">Skip</button>
         </div>
       </div>
     </div>
@@ -53,6 +64,10 @@ onMounted(async () => {
     border-bottom-right-radius: 5px;
     background: rgba(255, 255, 255, .1);
     margin-bottom: 20px;
+
+    a:first-of-type {
+      margin-bottom: 15px;
+    }
   }
 
   .card-header {

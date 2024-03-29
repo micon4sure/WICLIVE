@@ -1,5 +1,8 @@
 $windowTitle = "World in Conflict - InstallShield Wizard"
 
+; read install dir from CLI args
+$installDir = $CmdLine[1]
+
 ; next
 WinWait($windowTitle)
 WinActivate($windowTitle)
@@ -45,7 +48,7 @@ Sleep(500)
 WinWait("Choose Folder")
 WinActivate("Choose Folder")
 ConsoleWrite("set install location" & @CRLF)
-ControlSetText("Choose Folder", "", "[CLASS:Edit; INSTANCE:1]", "C:\002_Games\World in Conflicts")
+ControlSetText("Choose Folder", "", "[CLASS:Edit; INSTANCE:1]", $installDir)
 Sleep(100)
 ; click ok
 ControlClick("Choose Folder", "", "Button1")
@@ -74,4 +77,5 @@ ControlClick($windowTitle, "", "Button1")
 While ControlGetText($windowTitle, "", "Static4") <> "InstallShield Wizard Complete"
     Sleep(500)
 WEnd
+Sleep(300)
 ControlClick($windowTitle, "", "Button3")

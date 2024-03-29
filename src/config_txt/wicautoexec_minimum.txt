@@ -1,0 +1,33 @@
+// LIVE
+CameraFreedom 1
+CameraMaxHeight 1500
+
+bind f1 AerialRecon
+alias AerialRecon tactical_aid; select_cat_1; shortcut_1
+
+bind f2 Air2Air
+alias Air2Air tactical_aid; select_cat_2; shortcut_4; shortcut_4; shortcut_4
+
+bind f3 Tankbuster
+alias Tankbuster tactical_aid; select_cat_2; shortcut_2; shortcut_2; shortcut_2
+
+bind f4 Larty
+alias Larty tactical_aid; select_cat_3; shortcut_1; shortcut_1; shortcut_1
+
+bind f5 Harty
+alias Harty tactical_aid; select_cat_3; shortcut_3; shortcut_3; shortcut_3
+
+
+bind 7 Jeepdrops
+alias Jeepdrops tactical_aid; select_cat_1; shortcut_3; shortcut_3; shortcut_3
+
+bind 8 Tankdrops
+alias Tankdrops tactical_aid; select_cat_1; shortcut_4; shortcut_4; shortcut_4
+
+bind 9 Airbornes
+alias Airbornes tactical_aid; select_cat_1; shortcut_2; shortcut_2; shortcut_2
+
+bind 0 Cluster
+alias Cluster tactical_aid; select_cat_3; shortcut_2; shortcut_2; shortcut_2
+
+// competitive

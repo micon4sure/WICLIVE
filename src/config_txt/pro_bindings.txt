@@ -1,0 +1,470 @@
+// LIVE PRO
+bind restore_camera_1 lctrl+x
+bind restore_camera_0 lctrl+z
+bind store_camera_3 ctrl+f8
+bind store_camera_2 ctrl+f7
+bind store_camera_1 lctrl+s
+bind store_camera_0 lctrl+a
+bind select_cat_5 shift+numpad5
+bind select_cat_4 shift+numpad4
+bind select_cat_3 shift+numpad3
+bind select_cat_2 shift+numpad2
+bind select_cat_1 shift+numpad1
+bind undo_selection ctrl+z
+bind prev_ability lshift+q
+bind next_ability lshift+e
+bind close_or_skip escape
+bind attack f
+bind control_back s
+bind camera_to_lz key_0
+bind camera_swap_unitgroup key_0
+bind change_faction key_0
+bind chat backspace
+bind chat_team return
+bind create_squad_modifier ctrl
+bind cycle_behaviour t
+bind deploy_spawner enter
+bind enter_building home
+bind enter_unit v
+bind exit_units x
+bind follow i
+bind control_forward w
+bind control_left a
+bind move c
+bind open_objectives_screen o
+bind pause pause
+bind control_right d
+bind reinforcements b
+bind repair key_0
+bind grab_screenshot prtscr
+bind select_squad_0 1
+bind select_squad_1 2
+bind select_squad_2 3
+bind select_squad_3 4
+bind select_squad_4 5
+bind select_squad_5 6
+bind select_squad_6 7
+bind select_squad_7 8
+bind select_squad_8 9
+bind select_squad_9 0
+bind set_spawn_position l
+bind show_all_health_markers alt
+bind show_score tab
+bind stack shift
+bind stack_modifier shift
+bind toggle_console tilde
+bind toggle_gui_drawing f10
+bind toggle_megamap m
+bind vote_yes pageup
+bind vote_no pagedown
+bind toggle_request g
+bind offensive_rechargable q
+bind defensive_rechargable e
+bind select_type_modifier ctrl
+bind disband_unit del
+bind resupply_squad ins
+bind shortcut_1 numpad1
+bind shortcut_2 numpad2
+bind shortcut_3 numpad3
+bind shortcut_4 numpad4
+bind shortcut_5 numpad5
+bind shortcut_6 numpad6
+bind shortcut_7 numpad7
+bind shortcut_8 numpad8
+bind shortcut_9 numpad9
+bind shortcut_10 numpad0
+bind shortcut_tab numpadplus
+bind restore_camera_2 f7
+bind restore_camera_3 f8
+bind switch_mouselook mbutton
+bind cursor_left -x
+bind cursor_right +x
+bind cursor_up -y
+bind cursor_down +y
+bind cursor_button_0 lbutton
+bind cursor_button_1 rbutton
+bind control_up -wheel
+bind control_down +wheel
+bind stop_units z
+bind tactical_aid key_0
+bind voip_talkbutton key_0
+bind backwards_move_modifier r
+bind select_deployed space
+bind cycle_formation key_0
+
+mouse_sensitivity 4
+mouselook_sensitivity 10.0
+invert_mouselook 0
+invert_mousezoom 0
+
+
+// --------- Available Actions ----------
+// restore_camera_1 - Restore Camera 2
+// restore_camera_0 - Restore Camera 1
+// store_camera_3 - Store Camera 4
+// store_camera_2 - Store Camera 3
+// store_camera_1 - Store Camera 2
+// store_camera_0 - Store Camera 1
+// select_cat_5 - Select Ingame Menu Tab 5
+// select_cat_4 - Select Ingame Menu Tab 4
+// select_cat_3 - Select Ingame Menu Tab 3
+// select_cat_2 - Select Ingame Menu Tab 2
+// select_cat_1 - Select Ingame Menu Tab 1
+// undo_selection - Undo Selection Change
+// prev_ability - Prev Special Ability
+// next_ability - Next Special Ability
+// close_or_skip - 
+// attack - Attack Ground
+// control_back - Camera Backwards
+// camera_to_lz - Go to Drop Zone
+// camera_swap_unitgroup - Swap Unit Group
+// change_faction - Change Faction
+// chat - Chat to All
+// chat_team - Chat to Team
+// create_squad_modifier - 
+// cycle_behaviour - Hold Fire
+// deploy_spawner - Deploy Units
+// enter_building - Enter Nearest Building
+// enter_unit - Enter Nearest Transport
+// exit_units - Unload
+// follow - Follow
+// control_forward - Camera Forward
+// control_left - Camera Left
+// move - Move
+// open_objectives_screen - Objectives Menu
+// pause - Pause
+// control_right - Camera Right
+// reinforcements - Reinforcements Menu
+// repair - Repair
+// grab_screenshot - Take Screenshot
+// select_squad_0 - 
+// select_squad_1 - 
+// select_squad_2 - 
+// select_squad_3 - 
+// select_squad_4 - 
+// select_squad_5 - 
+// select_squad_6 - 
+// select_squad_7 - 
+// select_squad_8 - 
+// select_squad_9 - 
+// set_spawn_position - Change Drop Zone
+// show_all_health_markers - 
+// show_score - Scoreboard
+// stack - 
+// stack_modifier - 
+// toggle_console - 
+// toggle_gui_drawing - Toggle GUI Drawing
+// toggle_megamap - Mega Map
+// vote_yes - Vote YES
+// vote_no - Vote NO
+// toggle_request - Request Menu
+// offensive_rechargable - Offensive Special Ability
+// defensive_rechargable - Defensive Special Ability
+// select_type_modifier - 
+// disband_unit - Disband Selected Units
+// resupply_squad - Resupply Squad
+// shortcut_1 - Ingame Menu Shortcut 1
+// shortcut_2 - Ingame Menu Shortcut 2
+// shortcut_3 - Ingame Menu Shortcut 3
+// shortcut_4 - Ingame Menu Shortcut 4
+// shortcut_5 - Ingame Menu Shortcut 5
+// shortcut_6 - Ingame Menu Shortcut 6
+// shortcut_7 - Ingame Menu Shortcut 7
+// shortcut_8 - Ingame Menu Shortcut 8
+// shortcut_9 - Ingame Menu Shortcut 9
+// shortcut_10 - Ingame Menu Shortcut 10
+// shortcut_tab - Cycle Ingame Menu Tab
+// restore_camera_2 - Restore Camera 3
+// restore_camera_3 - Restore Camera 4
+// switch_mouselook - Mouse Look
+// cursor_left - 
+// cursor_right - 
+// cursor_up - 
+// cursor_down - 
+// cursor_button_0 - 
+// cursor_button_1 - 
+// control_up - Raise Camera Height
+// control_down - Lower Camera Height
+// stop_units - Stop
+// tactical_aid - Tactical Aid Menu
+// voip_talkbutton - VOIP Talk Button
+// backwards_move_modifier - Move Backwards
+// select_deployed - Select Last Deployed Units
+// cycle_formation - Change Formation
+
+// available bindings
+// keyboard (use <key>+<key> for binding combo keys):
+// key_0 - ???
+// escape - Esc
+// 1 - 1
+// 2 - 2
+// 3 - 3
+// 4 - 4
+// 5 - 5
+// 6 - 6
+// 7 - 7
+// 8 - 8
+// 9 - 9
+// 0 - 0
+// minus -  
+// equal - `
+// backspace - Backspace
+// tab - Tab
+// q - Q
+// w - W
+// e - E
+// r - R
+// t - T
+// y - Z
+// u - U
+// i - I
+// o - O
+// p - P
+// lbracket - /
+// rbracket - +
+// return - Enter
+// lctrl - Ctrl
+// a - A
+// s - S
+// d - D
+// f - F
+// g - G
+// h - H
+// j - J
+// k - K
+// l - L
+// semicolon - [
+// nisse - ]
+// tilde - ^
+// lshift - Shift
+// backslash - #
+// z - Y
+// x - X
+// c - C
+// v - V
+// b - B
+// n - N
+// m - M
+// comma - ,
+// dot - .
+// slash - -
+// rshift - Right Shift
+// numpadmul - Num *
+// lalt - Alt
+// space - Space
+// capslock - Caps Lock
+// f1 - F1
+// f2 - F2
+// f3 - F3
+// f4 - F4
+// f5 - F5
+// f6 - F6
+// f7 - F7
+// f8 - F8
+// f9 - F9
+// f10 - F10
+// numlock - Num Lock
+// scrolllock - Scroll Lock
+// numpad7 - Num 7
+// numpad8 - Num 8
+// numpad9 - Num 9
+// numpadminus - Num -
+// numpad4 - Num 4
+// numpad5 - Num 5
+// numpad6 - Num 6
+// numpadplus - Num +
+// numpad1 - Num 1
+// numpad2 - Num 2
+// numpad3 - Num 3
+// numpad0 - Num 0
+// numpaddot - Num Del
+// key_84 - Sys Req
+// key_85 - ???
+// key_86 - <
+// key_87 - F11
+// key_88 - F12
+// key_89 - ???
+// key_90 - ???
+// key_91 - ???
+// key_92 - ???
+// key_93 - ???
+// key_94 - ???
+// key_95 - ???
+// key_96 - ???
+// key_97 - ???
+// key_98 - ???
+// key_99 - ???
+// key_100 - ???
+// key_101 - ???
+// key_102 - ???
+// key_103 - ???
+// key_104 - ???
+// key_105 - ???
+// key_106 - ???
+// key_107 - ???
+// key_108 - ???
+// key_109 - ???
+// key_110 - ???
+// key_111 - ???
+// key_112 - ???
+// key_113 - ???
+// key_114 - ???
+// key_115 - ???
+// key_116 - ???
+// key_117 - ???
+// key_118 - ???
+// key_119 - ???
+// key_120 - ???
+// key_121 - ???
+// key_122 - ???
+// key_123 - ???
+// key_124 - F13
+// key_125 - F14
+// key_126 - F15
+// key_127 - F16
+// key_128 - ???
+// key_129 -  
+// key_130 - 1
+// key_131 - 2
+// key_132 - 3
+// key_133 - 4
+// key_134 - 5
+// key_135 - 6
+// key_136 - 7
+// key_137 - 8
+// key_138 - 9
+// key_139 - 0
+// key_140 -  
+// key_141 - `
+// key_142 -  
+// key_143 -  
+// key_144 - Q
+// key_145 - W
+// key_146 - E
+// key_147 - R
+// key_148 - T
+// key_149 - Z
+// key_150 - U
+// key_151 - I
+// key_152 - O
+// key_153 - P
+// key_154 - /
+// key_155 - +
+// enter - Num Enter
+// rctrl - Right Ctrl
+// key_158 - A
+// key_159 - S
+// key_160 - D
+// key_161 - F
+// key_162 - G
+// key_163 - H
+// key_164 - J
+// key_165 - K
+// key_166 - L
+// key_167 - [
+// key_168 - ]
+// key_169 - ^
+// key_170 - ???
+// key_171 - #
+// key_172 - Y
+// key_173 - X
+// key_174 - C
+// key_175 - V
+// key_176 - B
+// key_177 - N
+// key_178 - M
+// numpadcomma - ,
+// key_180 - .
+// numpaddiv - Num /
+// key_182 - ???
+// prtscr - Prnt Scrn
+// ralt - Right Alt
+// key_185 -  
+// key_186 - ???
+// key_187 - ???
+// key_188 - ???
+// key_189 - ???
+// key_190 - ???
+// key_191 - ???
+// key_192 - ???
+// key_193 - ???
+// key_194 - ???
+// key_195 - ???
+// key_196 - ???
+// pause - Pause
+// key_198 - Break
+// home - Home
+// up - Up
+// pageup - Page Up
+// key_202 - -
+// left - Left
+// key_204 - ???
+// right - Right
+// key_206 - +
+// end - End
+// down - Down
+// pagedown - Page Down
+// ins - Insert
+// del - Delete
+// key_212 - <00>
+// key_213 - ???
+// key_214 - Help
+// key_215 - ???
+// key_216 - ???
+// key_217 - ???
+// key_218 - ???
+// lwin - Left Windows
+// rwin - Right Windows
+// appmenu - Application
+// key_222 - Power
+// key_223 - Sleep
+// key_224 - ???
+// key_225 - ???
+// key_226 - ???
+// key_227 - Wake
+// key_228 - ???
+// key_229 - Search
+// key_230 - Favorites
+// key_231 - Refresh
+// key_232 - Web Stop
+// key_233 - Forward
+// key_234 - Back
+// key_235 - My Computer
+// key_236 - Mail
+// key_237 - Media
+// key_238 - ???
+// key_239 - ???
+// key_240 - ???
+// key_241 - ???
+// key_242 - ???
+// key_243 - ???
+// key_244 - ???
+// key_245 - ???
+// key_246 - ???
+// key_247 - ???
+// key_248 - ???
+// key_249 - ???
+// key_250 - ???
+// key_251 - ???
+// key_252 -  
+// key_253 - ???
+// key_254 - ???
+// key_255 - ???
+// shift - Shift
+// alt - Alt
+// ctrl - Ctrl
+// mouse:
+// --- axis ---
+// x - X-axis
+// y - Y-axis
+// wheel - Wheel
+// --- buttons ---
+// lbutton - Button 0
+// rbutton - Button 1
+// mbutton - Button 2
+// tbutton - Button 3
+// button_4 - Button 4
+// button_5 - Button 5
+// button_6 - Button 6
+// button_7 - Button 7
+

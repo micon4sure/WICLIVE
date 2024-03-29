@@ -32,4 +32,5 @@ While ControlGetText($windowTitle, "", "Static4") <> "The update was successfull
     Sleep(500)
 WEnd
 
+Sleep(300)
 ControlClick($windowTitle, "", "Button4")

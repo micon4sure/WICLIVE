@@ -112,13 +112,37 @@ pub fn get_base_directory() -> Result<PathBuf, String> {
     Err("Base directory not found in standard or OneDrive locations.".to_string())
 }
 
+pub fn file_exists(path: &str) -> bool {
+    let config = get_base_directory();
+    let mut file_path = PathBuf::from(config.unwrap());
+    file_path.push(path);
+    file_path.exists()
+}
+
 pub fn get_file_contents(path: String) -> Result<String, String> {
-    let contents = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let config = get_base_directory();
+    let mut file_path = PathBuf::from(config?);
+    file_path.push(path);
+    let contents = std::fs::read_to_string(file_path).map_err(|e| e.to_string())?;
     Ok(contents)
 }
 
 pub fn set_file_contents(path: &str, contents: &str) -> Result<(), String> {
-    std::fs::write(path, contents).map_err(|e| e.to_string())?;
+    let config = get_base_directory();
+    let mut file_path = PathBuf::from(config?);
+    file_path.push(path);
+
+    println!("writing to file {}", file_path.display());
+    println!("contents: {}", contents);
+    std::fs::write(file_path, contents).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn remove_file(path: &str) -> Result<(), String> {
+    let config = get_base_directory();
+    let mut file_path = PathBuf::from(config?);
+    file_path.push(path);
+    std::fs::remove_file(file_path).map_err(|e| e.to_string())?;
     Ok(())
 }
 
