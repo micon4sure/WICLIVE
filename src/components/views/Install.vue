@@ -179,7 +179,7 @@ const goes = async () => {
     // "Download Visual Studio C++ Redistributable 11",
     // "Download Visual Studio C++ Redistributable 14",
     // "Install Visual Studio C++ Redistributable 11",
-    // "Install Visual Studio C++ Redistributable 14"
+    // "Install Visual Studio C++ Redistributable 14",
     // "Install Game",
     // "Install Patch 10",
     // "Install Patch 11",
@@ -218,22 +218,22 @@ onMounted(async () => {
     <div class="card-body" v-if="_step == 'location'">
       <div class="mb-3">
         <label for="install-location" class="form-label">Select install location</label>
-        {{ _installDir }}
         <input type="text" class="form-control" id="install-location" v-model="_installDir">
       </div>
       <button @click="_step = 'goes'; goes()" class="cta">Download and install</button>
     </div>
-    <div v-if="_step == 'goes'">
+    <div v-if="_step == 'goes'" class="card-body">
+      <p style="display:block">Installing to {{ _installDir }}.</p>
+      <p>Hands free once the installation process starts. Don't touch your mouse or keyboard until install is complete
+      </p>
       <jobs-vue :jobs="_jobs" id="install-jobs" />
-      <div v-if="_done">
-        <div class="alert alert-primary" role="alert">
-          Installation complete. Next steps: <a href="https://www.massgate.org/" target="_blank"
-            class="cta primary">Download
-            and install the World in Conflict Multiplayer Fix
-            from
-            massgate.org</a>
-          <router-link to="/" class="cta secondary">Back to main</router-link>
-        </div>
+      <div v-if="_done" class="done">
+        Installation complete. Next steps: <a href="https://www.massgate.org/" target="_blank"
+          class="cta primary">Download
+          and install the World in Conflict Multiplayer Fix
+          from
+          massgate.org</a>
+        <router-link to="/" class="cta secondary">Back to main</router-link>
       </div>
     </div>
   </div>
@@ -241,7 +241,7 @@ onMounted(async () => {
 
 <style lang="scss">
 #install {
-  .alert {
+  .done {
     border-radius: 0;
 
     a:first-of-type {

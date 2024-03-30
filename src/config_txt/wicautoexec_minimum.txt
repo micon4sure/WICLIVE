@@ -30,4 +30,5 @@ alias Airbornes tactical_aid; select_cat_1; shortcut_2; shortcut_2; shortcut_2
 bind 0 Cluster
 alias Cluster tactical_aid; select_cat_3; shortcut_2; shortcut_2; shortcut_2
 
-// competitive
+// if you're gonna change anything, do it between this line and // LIVE at the top
+// competitive off

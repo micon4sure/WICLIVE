@@ -47,7 +47,7 @@ div.job {
   display: flex;
 
   * {
-    font-family: 'Consolas', monospace;
+    font-family: "DIN_1451", 'Consolas', monospace;
   }
 
   .job.card-body {
@@ -75,8 +75,10 @@ div.job {
     }
 
     .job-title {
-      background: #ff0000;
+      background: rgb(231, 6, 6);
       padding: 5px;
+      border-top-left-radius: 5px;
+      border-top-right-radius: 5px;
 
     }
   }

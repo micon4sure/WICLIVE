@@ -41,7 +41,17 @@ const liveEnabled = async () => {
 }
 const enableLive = async () => {
   initializeConfig();
-  await invoke('set_file_contents', { path: fnWicautoexec, contents: wicautoexecMinimum })
+  // set live contents if exists, otherwise set minimum contents
+  let liveAutoexecExists = await invoke('file_exists', { path: fnWicautoexec + '.live' })
+  let contents = liveAutoexecExists
+    ? await invoke('get_file_contents', { path: fnWicautoexec + '.live' })
+    : await invoke('get_file_contents', { path: wicautoexecMinimum })
+  await invoke('set_file_contents', { path: fnWicautoexec, contents })
+
+  // remove live file if exists
+  if (liveAutoexecExists) {
+    await invoke('remove_file', { path: fnWicautoexec + '.live' })
+  }
   _liveEnabled.value = true
 }
 
@@ -50,9 +60,17 @@ const _competitiveEnabled = ref(false)
 const competitiveEnabled = async () => {
   try {
     const contents: string = await invoke('get_file_contents', { path: fnWicautoexec })
+
     // check for line "// competitive on|off"
-    return contents.split('\n').find(line => line.trim().startsWith('// competitive'))?.split(' ')[2] === 'on';
+    const competitiveLine = contents.split('\n').find(line => {
+      return line.trim().startsWith('// competitive')
+    })
+    if (!competitiveLine)
+      return false
+
+    return competitiveLine.trim().split(' ')[2] === 'on'
   } catch (error) {
+    console.error(error)
     return false;
   }
 }
@@ -98,13 +116,21 @@ const disableCompetitve = async () => {
 
   _competitiveEnabled.value = false
 }
+const restoreSettings = async () => {
+  const currentContents: string = await invoke('get_file_contents', { path: fnWicautoexec })
+  const bakContents: string = await invoke('get_file_contents', { path: fnWicautoexec + '.bak' })
+  await invoke('set_file_contents', { path: fnWicautoexec + '.live', contents: currentContents })
+  await invoke('set_file_contents', { path: fnWicautoexec, contents: bakContents })
+  await invoke('remove_file', { path: fnWicautoexec + '.bak' })
+  _liveEnabled.value = false
+  _competitiveEnabled.value = false
+}
 
 // # PRO KEYBINDINGS
 const _proKeybindingsEnabled = ref(false)
 const proKeybindingsEnabled = async () => {
   try {
     const contents: string = await invoke('get_file_contents', { path: fnControllerOptions })
-    console.log('controller options:', contents)
     // check if first line is  "// LIVE PRO"
     return contents.split('\n')[0].trim() === '// LIVE PRO';
   } catch (error) {
@@ -157,12 +183,12 @@ onMounted(async () => {
           <li>0 = Cluster</li>
         </ul>
         <div class="wicautoexec-buttons">
-          <button :class="{ cta: true, small: true, inactive: _liveEnabled }" @click="enableLive">Enable LIVE
-            settings</button>
+          <button class="cta small" @click="enableLive" v-if="!_liveEnabled">Enable LIVE settings</button>
+          <button v-else class="cta small secondary" @click="restoreSettings">Restore wicautoexec</button>
           <div v-if="_liveEnabled">
-            <button class="cta small" @click="enableCompetitve" v-if="!_competitiveEnabled">Enable Competitive
+            <button class="cta small neutral" @click="enableCompetitve" v-if="!_competitiveEnabled">Enable Competitive
               settings</button>
-            <button class="cta small" @click="disableCompetitve" v-else>Disable Competitive settings</button>
+            <button class="cta small neutral" @click="disableCompetitve" v-else>Disable Competitive settings</button>
           </div>
         </div>
       </div>

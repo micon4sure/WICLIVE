@@ -344,10 +344,10 @@ onMounted(async () => {
       border-width: 0;
       border-bottom-width: 1px;
       border-radius: 0;
-      font-size: 18px;
       flex: 1;
       border-top-right-radius: 5px;
       border-top-left-radius: 10px;
+      text-align: right;
     }
 
     button {
@@ -398,6 +398,10 @@ onMounted(async () => {
 
     td.status {
       text-align: right;
+
+      .cta {
+        text-align: center;
+      }
     }
 
     .icon.map-current {

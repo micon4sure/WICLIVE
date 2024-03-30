@@ -15,6 +15,9 @@ switch ($Action) {
         Write-Host "RUNNING RELEASE in env $environment"
         $env:WICLIVE_ENV="$environment"; bun run tauri dev --release
     }
+    "version" {
+        bun run .\update-version.ts $args[1]
+    }
     "build" {
         Write-Host "BUILDING in env $environment"
         $env:WICLIVE_ENV="$environment";

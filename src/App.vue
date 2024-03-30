@@ -60,6 +60,12 @@ onMounted(async () => {
   src: url("./assets/ESTEXTR.ttf");
 }
 
+@font-face {
+  font-family: "DIN_1451";
+  src: url("./assets/bahnschrift.ttf");
+  font-weight: 100;
+}
+
 body {
   background: url("./assets/pattern-stripes.svg");
 }
@@ -93,12 +99,14 @@ h2 {
   border-bottom-left-radius: 5px;
   padding: 10px 15px;
 
-  font-family: EUROSTEXT;
-  font-size: 32px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  font-stretch: 80%;
-
+  &,
+  * {
+    font-family: EUROSTEXT;
+    font-size: 32px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-stretch: 80%;
+  }
 }
 
 * {
@@ -113,6 +121,10 @@ h2 {
   flex: 1;
 }
 
+.card {
+  background: transparentize($color: #fff, $amount: .8);
+}
+
 .card-header {
   font-family: EUROSTEXT;
   font-size: 26px;
@@ -120,12 +132,20 @@ h2 {
   letter-spacing: 1px;
   text-transform: uppercase;
   font-stretch: 80%;
+  background: transparentize($color: #000, $amount: .5);
+
+  &,
+  & * {
+    font-family: EUROSTEXT;
+  }
 }
 
 .cta {
-  font-family: eurostext;
+  font-family: "DIN_1451";
+  letter-spacing: 3px;
+  font-stretch: 110%;
   font-weight: 400;
-  font-size: 24px;
+  font-size: 18px;
   display: block;
   padding: 20px;
   border: 1px solid #333;
@@ -140,6 +160,12 @@ h2 {
   &.secondary {
     background-image: url('./assets/pattern-dots-secondary.svg');
     border-bottom: 3px solid rgb(0, 183, 255);
+    font-size: 17px;
+  }
+
+  &.neutral {
+    background-image: url('./assets/pattern-dots-neutral.svg');
+    border-bottom: 3px solid rgb(0, 255, 13);
     font-size: 17px;
   }
 }
