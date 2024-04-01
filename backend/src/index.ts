@@ -128,7 +128,7 @@ app.get('/maps/data', async (req, res) => {
 app.get('/maps/download/:filename', async (req, res) => {
   console.log(`GET /maps/download/${req.params.filename}`);
   // sanitize filename
-  if (req.params.filename.includes('..')) {
+  if (req.params.filename.includes('..') || !req.params.filename.endsWith('.sdf')) {
     res.status(400).send('Invalid filename');
     return;
   }
@@ -174,7 +174,7 @@ app.post('/maps/upload', async (req, res) => {
     const uploader = _.findKey(keys, (value) => value === key);
 
     const mapName = files.file[0].originalFilename;
-    if (mapName.includes('..')) {
+    if (mapName.includes('..') || !mapName.endsWith('.sdf')) {
       return res.status(400).send('Invalid filename');
     }
 
@@ -201,7 +201,7 @@ const port = 3243
 try {
   const server = https.createServer(ssl() as any, app);
   server.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`SSL enabled server is running on port ${port}`);
   });
 } catch (error) {
   app.listen(port, () => {
