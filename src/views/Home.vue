@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter()
 const mapsRoute = router.resolve('/maps').href
+import iconDownload from '@fortawesome/fontawesome-free/svgs/solid/download.svg';
 
 
 const cards = [
@@ -11,7 +12,7 @@ const cards = [
     name: 'what',
     header: 'What is WIC LIVE?',
     body: [`In recent times, a lot of custom made maps have come out. Active players had to manually download them and keep them up to date.`,
-      `This has resulted in a lot of effort in our dedicated map makers being wasted because a majority of players didn't have the maps or an old version.`,
+      `This has resulted in a lot of effort of our dedicated map makers being wasted because a majority of players didn't have the maps or an old version.`,
       `WIC LIVE is the solution to this problem. It automatically downloads and updates community maps.`]
   },
   {
