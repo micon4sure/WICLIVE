@@ -228,14 +228,12 @@ onMounted(async () => {
       </p>
       <jobs-vue :jobs="_jobs" id="install-jobs" />
       <div v-if="_done" class="done">
-        Installation complete. Next steps: <a href="https://www.massgate.org/" target="_blank"
-          class="cta primary">Download
-          and install the World in Conflict Multiplayer Fix
-          from
-          massgate.org</a>
-        <router-link to="/" class="cta secondary">Back to main</router-link>
+        Installation complete.<br />
+        Next steps: Download and install the World in Conflict Multiplayer Fix from massgate.org<br />
+        Reboot (for the Visual Studio C++ Redistributable installations to take effect)
       </div>
     </div>
+
   </div>
 </template>
 

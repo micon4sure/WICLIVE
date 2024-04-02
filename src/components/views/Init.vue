@@ -58,10 +58,7 @@ const skip = () => {
 #init {
   .card {
     border: 1px solid #333;
-    border-top-right-radius: 5px;
-    border-top-left-radius: 10px;
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 5px;
+    border-radius: 5px;
     background: rgba(255, 255, 255, .1);
     margin-bottom: 20px;
 

@@ -314,10 +314,7 @@ onMounted(async () => {
     padding: 0;
     margin: 0;
     border: 1px solid #333;
-    border-top-right-radius: 5px;
-    border-top-left-radius: 10px;
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 5px;
+    border-radius: 5px;
     background: rgba(255, 255, 255, .1);
 
     button {
@@ -346,7 +343,6 @@ onMounted(async () => {
       border-radius: 0;
       flex: 1;
       border-top-right-radius: 5px;
-      border-top-left-radius: 10px;
       text-align: right;
     }
 

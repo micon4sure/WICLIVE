@@ -196,6 +196,18 @@ app.post('/maps/upload', async (req, res) => {
   });
 })
 
+app.get('/wiclive/release/:version', async (req, res) => {
+  // sanitize version semver including alpha/beta
+  if (!req.params.version.match(/^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$/)) {
+    res.status(400).send('Invalid version');
+    return;
+  }
+  console.log(`GET /wiclive/release/${req.params.version}`);
+  const version = req.params.version;
+  const release = `./release/wiclive_${version}_x64-setup.exe`;
+  res.download(release);
+})
+
 import ssl from './get-ssl-credentials';
 const port = 3243
 try {
