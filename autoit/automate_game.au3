@@ -12,6 +12,7 @@ ControlClick($windowTitle, "", "Button1")
 ; accept eula
 Sleep(500)
 WinWait($windowTitle)
+WinActivate($windowTitle)
 ; send click to accept radio
 ConsoleWrite("activate radio accept" & @CRLF)
 Sleep(300)

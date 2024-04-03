@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import _ from 'lodash'
 
-import { ref, reactive, onMounted } from 'vue'
+import { open } from '@tauri-apps/api/dialog';
+import { appDir } from '@tauri-apps/api/path';
+
+import { ref, reactive, onMounted, watch } from 'vue'
 import EULA_game from '../../assets/eula.txt?raw'
 import { useRoute } from 'vue-router';
 import { invoke } from '@tauri-apps/api';
@@ -9,11 +12,16 @@ import { invoke } from '@tauri-apps/api';
 import jobsVue from '../jobs.vue'
 import wicJobs from '../../lib/wic-jobs';
 
+import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg'
+import iconTriangleExclamation from '@fortawesome/fontawesome-free/svgs/solid/triangle-exclamation.svg'
+
 const manager = wicJobs.manager
 manager.clearJobs();
 const progress = wicJobs.progress
 
-const _installDir = ref('C:\\Program Files (x86)\\Sierra Entertainment\\World in Conflict')
+const DEFAULT_INSTALL_DIR = 'C:\\Program Files (x86)\\Ubisoft\\World in Conflict'
+
+const _installDir = ref(localStorage.getItem('install-dir') || DEFAULT_INSTALL_DIR)
 const _step = ref('eula')
 const _done = ref(false)
 
@@ -135,7 +143,6 @@ const goes = async () => {
   }
 
   console.log('elevated, continuing installation', localStorage.getItem('do-install'))
-  _installDir.value = localStorage.getItem('do-install') || _installDir.value
   console.log('install dir', _installDir.value)
   localStorage.removeItem('do-install')
 
@@ -187,6 +194,7 @@ const goes = async () => {
 
   for (let job of todo) {
     if (_.includes(skip, job[0])) {
+      manager.runJob(job[0], () => { })
       continue;
     }
     await manager.runJob(job[0], job[1])
@@ -195,6 +203,11 @@ const goes = async () => {
   _done.value = true;
 }
 
+watch(_installDir, (val) => {
+  console.log('SETTING INSTALL DIR', val)
+  localStorage.setItem('install-dir', val)
+})
+
 onMounted(async () => {
   const route = useRoute()
   if (route.params.step == 'goes') {
@@ -202,6 +215,19 @@ onMounted(async () => {
     goes()
   }
 })
+
+const selectInstallDir = async () => {
+  const selected = await open({
+    multiple: false,
+    directory: true,
+    defaultPath: _installDir.value,
+  });
+  if (selected === null) {
+    // user cancelled the selection
+  } else {
+    _installDir.value = selected as string
+  }
+}
 </script>
 
 <template>
@@ -218,7 +244,7 @@ onMounted(async () => {
     <div class="card-body" v-if="_step == 'location'">
       <div class="mb-3">
         <label for="install-location" class="form-label">Select install location</label>
-        <input type="text" class="form-control" id="install-location" v-model="_installDir">
+        <input type="text" class="form-control" id="install-location" v-model="_installDir" @click="selectInstallDir">
       </div>
       <button @click="_step = 'goes'; goes()" class="cta">Download and install</button>
     </div>
@@ -227,13 +253,22 @@ onMounted(async () => {
       <p>Hands free once the installation process starts. Don't touch your mouse or keyboard until install is complete
       </p>
       <jobs-vue :jobs="_jobs" id="install-jobs" />
-      <div v-if="_done" class="done">
-        Installation complete.<br />
-        Next steps: Download and install the World in Conflict Multiplayer Fix from massgate.org<br />
-        Reboot (for the Visual Studio C++ Redistributable installations to take effect)
+    </div>
+    <div id="post-install" v-if="_done">
+      <div id="post-install-content">
+        <div class="alert alert-success done">
+          World in Conflict installed successfully
+        </div>
+        <div class="alert alert-info done">
+          Next step: install the World in Conflict multiplayer fix from massgate.org
+        </div>
+        <div class="alert alert-danger done" v-if="_done">
+          <iconTriangleExclamation class="icon" />
+          You need to reboot your computer to complete the installation!
+          <iconTriangleExclamation class="icon" />
+        </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -252,5 +287,42 @@ onMounted(async () => {
   white-space: pre-line;
   height: 350px;
   overflow-y: scroll;
+}
+
+#post-install {
+  position: absolute;
+  top: 10%;
+  left: 10%;
+  width: 80vw;
+  height: 80vh;
+  margin: 0;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.74);
+  border-radius: 10px;
+}
+
+#post-install-content {
+  position: absolute;
+  width: 80%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  text-align: center;
+
+  .alert-success {
+    background: rgb(17, 185, 101);
+  }
+
+  .alert-danger {
+    font-size: 1.5em;
+    background: rgb(199, 3, 3);
+  }
+
+  .icon {
+    height: 1em;
+    fill: white;
+    padding-bottom: 5px;
+  }
 }
 </style>

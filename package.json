@@ -1,7 +1,7 @@
 {
   "name": "wiclive",
   "private": true,
-  "version": "2.0.4-beta",
+  "version": "2.0.8-beta",
   "type": "module",
   "scripts": {
     "dev": "vite",

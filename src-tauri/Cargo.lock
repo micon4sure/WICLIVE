@@ -4009,9 +4009,8 @@ dependencies = [
 
 [[package]]
 name = "wiclive"
-version = "2.0.4-beta"
+version = "2.0.8-beta"
 dependencies = [
- "embed-resource",
  "futures",
  "futures-util",
  "lazy_static",
