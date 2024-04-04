@@ -71,14 +71,7 @@ let jobs = {
     console.log('path_patch11', path_patch11)
     progress.off(progressId)
   },
-  download_vcredist11: async job => {
-    const progressId = progress.on({ type: 'download-vcredist' }, (progress) => {
-      job.progress = progress.percentage
-    })
-    path_vcredist11 = await invoke('download_vcredist', { version: 11 });
-    progress.off(progressId)
-  },
-  download_vcredist14: async job => {
+  download_vcredist: async job => {
     const progressId = progress.on({ type: 'download-vcredist' }, (progress) => {
       job.progress = progress.percentage
     })
@@ -115,15 +108,7 @@ let jobs = {
       job.info.push(error)
     }
   },
-  install_vcredist11: async job => {
-    try {
-      await invoke('install_vcredist', { vcredistExe: path_vcredist11 });
-    } catch (error) {
-      console.error("error", error);
-      job.info.push(error)
-    }
-  },
-  install_vcredist14: async job => {
+  install_vcredist: async job => {
     try {
       await invoke('install_vcredist', { vcredistExe: path_vcredist14 });
     } catch (error) {
@@ -164,10 +149,8 @@ const goes = async () => {
     todo.push(["Download Patch 11", jobs.download_patch11])
   }
 
-  todo.push(["Download Visual Studio C++ Redistributable 11", jobs.download_vcredist11])
-  todo.push(["Download Visual Studio C++ Redistributable 14", jobs.download_vcredist14])
-  todo.push(["Install Visual Studio C++ Redistributable 11", jobs.install_vcredist11])
-  todo.push(["Install Visual Studio C++ Redistributable 14", jobs.install_vcredist14])
+  todo.push(["Download Visual Studio C++ Redistributable", jobs.download_vcredist])
+  todo.push(["Install Visual Studio C++ Redistributable", jobs.install_vcredist])
 
   todo.push(["Install Game", jobs.install_game])
   if (!isInstalled) {
@@ -183,10 +166,8 @@ const goes = async () => {
     // "Unzip game",
     // "Download Patch 10",
     // "Download Patch 11",
-    // "Download Visual Studio C++ Redistributable 11",
-    // "Download Visual Studio C++ Redistributable 14",
-    // "Install Visual Studio C++ Redistributable 11",
-    // "Install Visual Studio C++ Redistributable 14",
+    // "Download Visual Studio C++ Redistributable",
+    // "Install Visual Studio C++ Redistributable",
     // "Install Game",
     // "Install Patch 10",
     // "Install Patch 11",

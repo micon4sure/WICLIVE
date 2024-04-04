@@ -1,4 +1,5 @@
 import { $, ShellOutput } from "bun";
+import semver from 'semver'
 
 const args: string[] = Bun.argv;
 args.shift(); // remove binary name
@@ -26,14 +27,23 @@ const actions = {
     }
   },
   async build() {
+    // read version from package.json
+    const packageRaw: string = await $`cat package.json`.text()
+    const packageJson = JSON.parse(packageRaw);
+    const version = packageJson.version;
+
+    const incremented = semver.inc(version, 'prerelease');
+    await $`bun run ./update-version.ts ${incremented}`;
+
+    console.log('set version to', incremented)
     const environment: string = args.length > 1 ? args[1] : "staging";
     console.log(`BUILDING in env ${environment}`);
     process.env.WICLIVE_ENV = environment;
     const privateKey = await $`cat src-tauri/tauri-sign.key`.text();
     process.env.TAURI_PRIVATE_KEY = privateKey.toString();
     process.env.TAURI_KEY_PASSWORD = "";
-    if (environment === "development" || environment === "staging") {
-      await $`bun run tauri build --debug -b none`;
+    if (environment === "development") {
+      await $`bun run tauri build --debug`;
     } else {
       await $`bun run tauri build --ci`;
     }
@@ -45,4 +55,4 @@ const actions = {
     await $`./act.exe --action-offline-mode -P windows-latest=-self-hosted -j build-and-release-local -s TAURI_PRIVATE_KEY="${key}" -s GITHUB_TOKEN="${token}"`;
   }
 }
-actions[action]();
+await actions[action]();

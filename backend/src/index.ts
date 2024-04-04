@@ -6,6 +6,8 @@ import path, { format } from 'path';
 import https from 'https';
 import md5 from 'md5-file'
 
+import dotenv from 'dotenv';
+
 import keys from '../keys.json'
 
 let mapsDirectory = './maps';
@@ -196,15 +198,41 @@ app.post('/maps/upload', async (req, res) => {
   });
 })
 
+// ### DOWNLOAD GAME AND FILES
+const filesRegex = /\/files\/(.+)/;
+app.get(filesRegex, async (req, res) => {
+  console.log(`GET /files/${req.params[0]}`);
+
+
+  if (!dotenv.config().parsed.ENV_DEVELOPMENT) {
+    res.status(403).send('Forbidden');
+    return;
+  }
+
+  // sanitize filename
+  if (req.params[0].includes('..')) {
+    res.status(400).send('Invalid filename');
+    return;
+  }
+  const filename = req.params[0];
+  const filePath = `./files/${filename}`;
+
+  const stat = fs.statSync(filePath);
+
+  res.header('X-Filesize', stat.size);
+  res.download(filePath);
+});
+
+// ### DOWNLOAD RELEASE
 app.get('/wiclive/release/:version', async (req, res) => {
   // sanitize version semver including alpha/beta
   if (!req.params.version.match(/^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$/)) {
     res.status(400).send('Invalid version');
     return;
   }
-  console.log(`GET /wiclive/release/${req.params.version}`);
+  console.log(`GET / wiclive / release / ${req.params.version}`);
   const version = req.params.version;
-  const release = `./release/wiclive_${version}_x64-setup.exe`;
+  const release = `./ release / wiclive_${version}_x64 - setup.exe`;
   res.download(release);
 })
 

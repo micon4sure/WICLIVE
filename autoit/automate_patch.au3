@@ -22,9 +22,9 @@ WinWait($windowTitle)
 WinActivate($windowTitle)
 ; send click to accept radio
 ConsoleWrite("activate radio accept" & @CRLF)
-Sleep(300)
+Sleep(500)
 ControlClick($windowTitle, "", "Button3")
-Sleep(300)
+Sleep(500)
 ; click next
 ConsoleWrite("next" & @CRLF)
 ControlClick($windowTitle, "", "Button1")

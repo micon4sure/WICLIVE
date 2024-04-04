@@ -2,10 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod config;
-mod init;
+mod install;
 mod io;
 
-use init::VersionInfo;
+use install::VersionInfo;
 use io::download_file;
 use io::get_file_hash;
 use io::get_maps_directory;
@@ -88,7 +88,7 @@ async fn download_map_custom(window: tauri::Window, map: &str) -> Result<(), Str
     println!("downloading custom map {}", map);
     let maps_directory = get_maps_directory()?;
 
-    let map_url = format!("https://www.massgate.org/files/maps/{}", map);
+    let map_url = format!("{}/files/maps/{}", &CONFIG.MASSGATE_URL, map);
 
     let progress_callback =
         io::create_progress_callback(window.clone(), "download-map-custom", Some(map.to_string()));
@@ -107,16 +107,19 @@ async fn download_map_custom(window: tauri::Window, map: &str) -> Result<(), Str
 
 #[tauri::command]
 fn get_install_path() -> Option<String> {
-    return init::find_install_path();
+    return install::find_install_path();
 }
 #[tauri::command]
 async fn extract_game_version() -> Result<VersionInfo, String> {
-    return init::extract_game_version().await;
+    return install::extract_game_version().await;
 }
 
 #[tauri::command]
 async fn download_game(window: tauri::Window) -> Result<String, String> {
-    let game_url = "https://www.massgate.org/files/world_in_conflict_retail_1.000_en.zip";
+    let game_url = format!(
+        "{}/files/world_in_conflict_retail_1.000_en.zip",
+        &CONFIG.MASSGATE_URL
+    );
 
     // create temp directory
     let temp_dir = std::env::temp_dir();
@@ -124,7 +127,12 @@ async fn download_game(window: tauri::Window) -> Result<String, String> {
 
     let progress_callback = io::create_progress_callback(window.clone(), "download-game", None);
 
-    download_file(game_url, zip_path.to_str().unwrap(), progress_callback).await?;
+    download_file(
+        game_url.as_str(),
+        zip_path.to_str().unwrap(),
+        progress_callback,
+    )
+    .await?;
     Ok(zip_path.to_str().unwrap().to_string())
 }
 
@@ -145,7 +153,7 @@ async fn unzip_game(window: tauri::Window, zip_path: &str) -> Result<String, Str
 
 #[tauri::command]
 async fn download_patch(window: tauri::Window, patch: u16) -> Result<String, String> {
-    let base_url = "https://www.massgate.org/files/patches/";
+    let base_url = format!("{}/files/patches/", &CONFIG.MASSGATE_URL);
 
     let filename;
     match patch {
@@ -192,7 +200,7 @@ async fn install_game(
         return path.to_str().unwrap().to_string();
     };
 
-    return init::install_game(target_dir, installer_dir, resolver);
+    return install::install_game(target_dir, installer_dir, resolver);
 }
 
 #[tauri::command]
@@ -206,13 +214,13 @@ async fn install_patch(_handle: tauri::AppHandle, installer_path: &str) -> Resul
         path.push(resource);
         return path.to_str().unwrap().to_string();
     };
-    return init::install_patch(installer_path, resolver);
+    return install::install_patch(installer_path, resolver);
 }
 
 #[tauri::command]
 async fn install_vcredist(_handle: tauri::AppHandle, vcredist_exe: &str) -> Result<(), String> {
     println!("installing vcredist");
-    return init::install_vcredist(vcredist_exe);
+    return install::install_vcredist(vcredist_exe);
 }
 
 #[tauri::command]
@@ -267,14 +275,14 @@ async fn remove_file(path: &str) -> Result<(), String> {
 
 #[tauri::command]
 fn is_elevated() -> bool {
-    return init::is_elevated();
+    return install::is_elevated();
 }
 
 #[tauri::command]
 fn elevate_permissions(handle: tauri::AppHandle) {
-    let elevated = init::is_elevated();
+    let elevated = install::is_elevated();
     if !elevated {
-        init::elevate_permissions(handle);
+        install::elevate_permissions(handle);
     }
 }
 

@@ -20,7 +20,7 @@ use windows::{
 
 use serde::Serialize;
 
-use crate::{init, io};
+use crate::{install, io, CONFIG};
 
 #[derive(Serialize)]
 pub struct VersionInfo {
@@ -72,18 +72,13 @@ pub fn elevate_permissions(handle: tauri::AppHandle) {
     if is_elevated() {
         return;
     }
-    // check for debug profile
-    let debug = env::var("DEBUG").is_ok();
-
-    println!("elevating permissions, debug: {:?}", debug);
-
     let binary = std::env::current_exe().unwrap();
     let runner = powershell_script::PsScriptBuilder::new()
         .non_interactive(true)
         .build();
 
     let script;
-    if cfg!(debug_assertions) {
+    if CONFIG.DEBUG {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let home_dir = path.parent().unwrap().display();
 
@@ -232,6 +227,9 @@ where
     let automate_game_exe = resolver("automate_game.exe");
     let mut setup_exe = PathBuf::from(installer_dir);
     setup_exe.push("Installer");
+
+    let setup_path = setup_exe.clone();
+
     setup_exe.push("setup.exe");
 
     // run automate in the background
@@ -247,10 +245,33 @@ where
     println!("running installer: {:?}", setup_exe.display());
     // run installer
     let output = std::process::Command::new(setup_exe)
+        .current_dir(setup_path)
         .output()
         .map_err(|e| e.to_string())?;
 
     println!("installer output: {:?}", output);
+
+    // copy over additional DLLs
+    let mut source_dir = PathBuf::from(installer_dir);
+    source_dir.push("Installer");
+    source_dir.push("bin");
+
+    let binkw32_dll = source_dir.clone().join("binkw32.dll");
+    let mss32_dll = source_dir.clone().join("mss32.dll");
+
+    let target_dir = PathBuf::from(target_dir);
+
+    let target_binkw32_dll = target_dir.clone().join("binkw32.dll");
+    let target_mss32_dll = target_dir.clone().join("mss32.dll");
+
+    // io::copy_file(
+    //     &binkw32_dll.to_str().unwrap(),
+    //     &target_binkw32_dll.to_str().unwrap(),
+    // )?;
+    // io::copy_file(
+    //     &mss32_dll.to_str().unwrap(),
+    //     &target_mss32_dll.to_str().unwrap(),
+    // )?;
 
     return Ok(());
 }
@@ -267,9 +288,14 @@ pub fn install_patch(installer_path: &str, resolver: fn(&str) -> String) -> Resu
         .spawn()
         .expect("Failed to start automate patch process");
 
+    // get directory of installer.exe
+    let mut installer_dir = PathBuf::from(installer_path);
+    installer_dir.pop();
+
     println!("running installer: {:?}", installer_path);
     // run installer
     let output = std::process::Command::new(installer_path)
+        .current_dir(installer_dir)
         .output()
         .map_err(|e| e.to_string())?;
 

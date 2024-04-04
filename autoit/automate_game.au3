@@ -7,6 +7,7 @@ $installDir = $CmdLine[1]
 WinWait($windowTitle)
 WinActivate($windowTitle)
 ConsoleWrite("next" & @CRLF)
+Sleep(500)
 ControlClick($windowTitle, "", "Button1")
 
 ; accept eula
@@ -15,9 +16,9 @@ WinWait($windowTitle)
 WinActivate($windowTitle)
 ; send click to accept radio
 ConsoleWrite("activate radio accept" & @CRLF)
-Sleep(300)
+Sleep(500)
 ControlClick($windowTitle, "", "Button3")
-Sleep(300)
+Sleep(500)
 ; click next
 ConsoleWrite("next" & @CRLF)
 ControlClick($windowTitle, "", "Button1")
@@ -29,12 +30,12 @@ WinActivate($windowTitle)
 ;; click on list box
 ConsoleWrite("activate listbox" & @CRLF)
 ControlClick($windowTitle, "", "ListBox1")
-Sleep(100)
+Sleep(500)
 ;; send keyup
 ConsoleWrite("send up" & @CRLF)
 Send("{UP}")
 ;; click next
-Sleep(100)
+Sleep(500)
 ConsoleWrite("next" & @CRLF)
 ControlClick($windowTitle, "", "Button2")
 
@@ -51,7 +52,7 @@ WinWait("Choose Folder")
 WinActivate("Choose Folder")
 ConsoleWrite("set install location" & @CRLF)
 ControlSetText("Choose Folder", "", "[CLASS:Edit; INSTANCE:1]", $installDir)
-Sleep(100)
+Sleep(500)
 ; click ok
 ControlClick("Choose Folder", "", "Button1")
 

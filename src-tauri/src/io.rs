@@ -119,6 +119,11 @@ pub fn file_exists(path: &str) -> bool {
     file_path.exists()
 }
 
+pub fn copy_file(source: &str, target: &str) -> Result<(), String> {
+    std::fs::copy(source, target).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 pub fn get_file_contents(path: String) -> Result<String, String> {
     let config = get_base_directory();
     let mut file_path = PathBuf::from(config?);

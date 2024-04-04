@@ -4,7 +4,7 @@ import _ from 'lodash'
 import { onMounted, ref } from 'vue';
 import { invoke } from '@tauri-apps/api';
 
-import wicautoexecMinimum from '../../config_txt/wicautoexec_minimum.txt?raw'
+import wicautoexecMinimumContents from '../../config_txt/wicautoexec_minimum.txt?raw'
 import proBindings from '../../config_txt/pro_bindings.txt?raw'
 
 const fnWicautoexec = 'wicautoexec.txt'
@@ -14,8 +14,8 @@ const initializeConfig = async () => {
   // create autoexec if not exists
   let autoexecExists = await invoke('file_exists', { path: fnWicautoexec })
   if (!autoexecExists) {
-    await invoke('set_file_contents', { path: fnWicautoexec, contents: wicautoexecMinimum })
-    await invoke('set_file_contents', { path: fnWicautoexec + '.bak', contents: wicautoexecMinimum })
+    await invoke('set_file_contents', { path: fnWicautoexec, contents: wicautoexecMinimumContents })
+    await invoke('set_file_contents', { path: fnWicautoexec + '.bak', contents: wicautoexecMinimumContents })
     return;
   }
 
@@ -34,7 +34,7 @@ const liveEnabled = async () => {
   try {
     const contents: string = await invoke('get_file_contents', { path: fnWicautoexec })
     // check if first line is  "// LIVE"
-    return contents.split('\n')[0].trim() === '// LIVE';
+    return contents.split('\r\n')[0].trim() === '// LIVE';
   } catch (error) {
     return false;
   }
@@ -45,7 +45,7 @@ const enableLive = async () => {
   let liveAutoexecExists = await invoke('file_exists', { path: fnWicautoexec + '.live' })
   let contents = liveAutoexecExists
     ? await invoke('get_file_contents', { path: fnWicautoexec + '.live' })
-    : await invoke('get_file_contents', { path: wicautoexecMinimum })
+    : wicautoexecMinimumContents
   await invoke('set_file_contents', { path: fnWicautoexec, contents })
 
   // remove live file if exists
@@ -58,11 +58,14 @@ const enableLive = async () => {
 // # COMPETITIVE
 const _competitiveEnabled = ref(false)
 const competitiveEnabled = async () => {
+  if (!await invoke('file_exists', { path: fnWicautoexec }))
+    return false
+
   try {
     const contents: string = await invoke('get_file_contents', { path: fnWicautoexec })
 
     // check for line "// competitive on|off"
-    const competitiveLine = contents.split('\n').find(line => {
+    const competitiveLine = contents.split('\r\n').find(line => {
       return line.trim().startsWith('// competitive')
     })
     if (!competitiveLine)
@@ -80,7 +83,7 @@ const enableCompetitve = async () => {
   const contents: string = await invoke('get_file_contents', { path: fnWicautoexec })
 
   // change line "// competitive off"
-  const lines = contents.split('\n')
+  const lines = contents.split('\r\n')
   const newLines = lines.map(line => {
     if (line.trim().startsWith('// competitive off')) {
       const [_, __, state] = line.split(' ')
@@ -91,7 +94,7 @@ const enableCompetitve = async () => {
   newLines.push('SetFogDistances 1 1 1 1')
   newLines.push('Ex3DRenderClouds 0')
 
-  await invoke('set_file_contents', { path: fnWicautoexec, contents: newLines.join('\n') })
+  await invoke('set_file_contents', { path: fnWicautoexec, contents: newLines.join('\r\n') })
 
   _competitiveEnabled.value = true
 }
@@ -100,7 +103,7 @@ const disableCompetitve = async () => {
   const contents: string = await invoke('get_file_contents', { path: fnWicautoexec })
 
   // change line "// competitive off"
-  const lines = contents.split('\n')
+  const lines = contents.split('\r\n')
   const newLines = lines.map(line => {
     if (line.trim().startsWith('// competitive on')) {
       const [_, __, state] = line.split(' ')
@@ -112,7 +115,7 @@ const disableCompetitve = async () => {
   _.remove(newLines, line => line === 'SetFogDistances 1 1 1 1')
   _.remove(newLines, line => line === 'Ex3DRenderClouds 0')
 
-  await invoke('set_file_contents', { path: fnWicautoexec, contents: newLines.join('\n') })
+  await invoke('set_file_contents', { path: fnWicautoexec, contents: newLines.join('\r\n') })
 
   _competitiveEnabled.value = false
 }
