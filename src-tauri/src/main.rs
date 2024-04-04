@@ -12,7 +12,6 @@ use io::get_maps_directory;
 
 use config::Config;
 use tauri::Manager;
-use winapi::shared::rpcndr::boolean;
 
 lazy_static::lazy_static! {
     static ref CONFIG: Config = Config::new();
@@ -185,7 +184,6 @@ async fn download_patch(window: tauri::Window, patch: u16) -> Result<String, Str
 
 #[tauri::command]
 async fn install_game(
-    window: tauri::Window,
     _handle: tauri::AppHandle,
     target_dir: &str,
     installer_dir: &str,

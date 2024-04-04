@@ -3,9 +3,7 @@ use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 
-use futures_util::TryFutureExt;
-
-use std::io::{self, BufReader, Read};
+use std::io::{self, BufReader};
 use zip::ZipArchive;
 
 use futures_util::stream::StreamExt;
@@ -117,11 +115,6 @@ pub fn file_exists(path: &str) -> bool {
     let mut file_path = PathBuf::from(config.unwrap());
     file_path.push(path);
     file_path.exists()
-}
-
-pub fn copy_file(source: &str, target: &str) -> Result<(), String> {
-    std::fs::copy(source, target).map_err(|e| e.to_string())?;
-    Ok(())
 }
 
 pub fn get_file_contents(path: String) -> Result<String, String> {

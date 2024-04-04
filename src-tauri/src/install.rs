@@ -1,26 +1,20 @@
 use powershell_script;
-use std::borrow::BorrowMut;
 use std::ffi::{c_void, OsStr};
-use std::io::{Read, Write};
-use std::process::{Command, Stdio};
-use std::sync::mpsc;
-use std::thread::{self, sleep};
-use std::time::Duration;
-use std::{env, mem::MaybeUninit, os::windows::ffi::OsStrExt, path::PathBuf};
+use std::process::Stdio;
+use std::{env, os::windows::ffi::OsStrExt, path::PathBuf};
 use winreg::enums::HKEY_LOCAL_MACHINE;
 use winreg::RegKey;
 
 use windows::{
-    core::{s, PCWSTR, PWSTR},
+    core::PCWSTR,
     Win32::Storage::FileSystem::{
-        GetFileVersionInfoA, GetFileVersionInfoSizeA, GetFileVersionInfoSizeW, GetFileVersionInfoW,
-        VerQueryValueA, VerQueryValueW, VS_FIXEDFILEINFO,
+        GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW, VS_FIXEDFILEINFO,
     },
 };
 
 use serde::Serialize;
 
-use crate::{install, io, CONFIG};
+use crate::CONFIG;
 
 #[derive(Serialize)]
 pub struct VersionInfo {
@@ -101,23 +95,16 @@ pub fn elevate_permissions(handle: tauri::AppHandle) {
 }
 
 pub fn find_install_path() -> Option<String> {
-    println!("finding install path");
-
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-    println!("hklm: {:?}", hklm);
-
-    // Updated path to include WOW6432Node for 32-bit application support on 64-bit Windows
     let subkey_path = r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict";
-    println!("subkey_path: {:?}", subkey_path);
 
     let subkey = hklm.open_subkey(subkey_path);
     match subkey {
         Ok(regkey) => {
-            println!("regkey: {:?}", regkey);
             let install_location: String = regkey.get_value("InstallPath").unwrap();
             return Some(install_location);
         }
-        Err(e) => {
+        Err(_e) => {
             return None;
         }
     }
@@ -250,29 +237,6 @@ where
         .map_err(|e| e.to_string())?;
 
     println!("installer output: {:?}", output);
-
-    // copy over additional DLLs
-    let mut source_dir = PathBuf::from(installer_dir);
-    source_dir.push("Installer");
-    source_dir.push("bin");
-
-    let binkw32_dll = source_dir.clone().join("binkw32.dll");
-    let mss32_dll = source_dir.clone().join("mss32.dll");
-
-    let target_dir = PathBuf::from(target_dir);
-
-    let target_binkw32_dll = target_dir.clone().join("binkw32.dll");
-    let target_mss32_dll = target_dir.clone().join("mss32.dll");
-
-    // io::copy_file(
-    //     &binkw32_dll.to_str().unwrap(),
-    //     &target_binkw32_dll.to_str().unwrap(),
-    // )?;
-    // io::copy_file(
-    //     &mss32_dll.to_str().unwrap(),
-    //     &target_mss32_dll.to_str().unwrap(),
-    // )?;
-
     return Ok(());
 }
 
