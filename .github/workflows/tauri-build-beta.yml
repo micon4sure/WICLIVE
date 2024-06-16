@@ -5,7 +5,7 @@ on:
     branches: [ 2.0.0-beta ]
 
 jobs:
-  build-and-release:
+  build-and-release-beta:
     runs-on: windows-latest
     steps:
       - name: Check out code
@@ -63,11 +63,6 @@ jobs:
           }
         shell: powershell
 
-      - name: Download version.json from latest release
-        if: steps.check_tag.outputs.tagExists == 'false'
-        run: curl -L -o version.json https://github.com/micon4sure/WICLIVE/releases/latest/download/version.json
-        shell: bash
-
       - name: Create GitHub Release
         if: steps.check_tag.outputs.tagExists == 'false'
         id: create_release
@@ -79,6 +74,11 @@ jobs:
           release_name: Release ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
+
+      - name: Download version.json from latest release
+        if: steps.check_tag.outputs.tagExists == 'false'
+        run: curl -L -o version.json https://github.com/micon4sure/WICLIVE/releases/latest/download/version.json
+        shell: bash
 
       - name: Upload Release Asset version.json
         if: steps.check_tag.outputs.tagExists == 'false'
