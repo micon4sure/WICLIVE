@@ -39,8 +39,8 @@ jobs:
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ""
-          WICLIVE_ENV: production
-        run: npm run tauri build
+          WICLIVE_ENV: staging
+        run: npm run tauri build --debug
         shell: powershell
 
       - name: Get version from tauri.conf.json
