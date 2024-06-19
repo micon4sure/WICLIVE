@@ -48,6 +48,17 @@ jobs:
           echo "::set-output name=version::$version"
         shell: powershell
       
+      - name: Delete existing asset if it exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          assets=$(curl -H "Authorization: token $GITHUB_TOKEN" -s https://api.github.com/repos/${{ github.repository }}/releases/${{ steps.get_latest_release.outputs.release_id }}/assets)
+          asset_id=$(echo $assets | jq -r '.[] | select(.name == "wiclive_x64-setup-debug.exe") | .id')
+          if [ -n "$asset_id" ]; then
+            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" -s https://api.github.com/repos/${{ github.repository }}/releases/assets/$asset_id
+          fi
+        shell: bash
+
       - name: Upload debug build EXE
         uses: actions/upload-release-asset@v1
         env:
