@@ -11,16 +11,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      # - name: Install Bun
-        #   run: |
-          #     irm bun.sh/install.ps1 | iex
-          #     echo "C:\Users\runneradmin\.bun\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
-        #   shell: powershell
-
-      # - name: Install Bun modules
-      #   run: bun install
-      #   shell: powershell
-
       - name: Setup Node/NPM
         uses: actions/setup-node@v4      
 
@@ -43,83 +33,20 @@ jobs:
         run: npm run tauri build -- --debug
         shell: powershell
 
-      - name: Get version from tauri.conf.json
-        id: get_version
+      - name: Get latest release
+        id: get_latest_release
         run: |
-          $version = (Get-Content ./src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).package.version
-          echo "::set-output name=version::$version"
-        shell: powershell
-
-      - name: Check if Tag Exists
-        id: check_tag
-        run: |
-          $tagExists = git ls-remote --tags origin ${{ steps.get_version.outputs.version }}
-          if ($tagExists) {
-            echo "Tag already exists."
-            echo "::set-output name=tagExists::true"
-          } else {
-            echo "Tag does not exist yet."
-            echo "::set-output name=tagExists::false"
-          }
-        shell: powershell
-
-      - name: Create GitHub Release
-        if: steps.check_tag.outputs.tagExists == 'false'
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.get_version.outputs.version }}
-          release_name: Release ${{ steps.get_version.outputs.version }}
-          draft: false
-          prerelease: false
-
-      - name: Download version.json from latest release
-        if: steps.check_tag.outputs.tagExists == 'false'
-        run: curl -L -o version.json https://github.com/micon4sure/WICLIVE/releases/latest/download/version.json
+          latest_release=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
+          release_id=$(echo $latest_release | jq -r .id)
+          echo "::set-output name=release_id::$release_id"
         shell: bash
 
-      - name: Upload Release Asset version.json
-        if: steps.check_tag.outputs.tagExists == 'false'
+      - name: Upload debug build EXE
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/version.json
-          asset_name: version.json
-          asset_content_type: text/json
-
-      - name: Upload Release Asset EXE
-        if: steps.check_tag.outputs.tagExists == 'false'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${{ steps.get_version.outputs.version }}_x64-setup.exe
-          asset_name: wiclive_x64-setup.exe
-          asset_content_type: application/octet-stream
-
-      - name: Upload Release Asset NSIS ZIP
-        if: steps.check_tag.outputs.tagExists == 'false'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset NSIS ZIP SIG
-        if: steps.check_tag.outputs.tagExists == 'false'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
+          upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ steps.get_latest_release.outputs.release_id }}/assets?name=wiclive_x64-setup-debug.exe
+          asset_path: ${{ github.workspace }}/src-tauri/target/debug/bundle/nsis/WIC LIVE_${{ steps.get_version.outputs.version }}_x64-setup.exe
+          asset_name: wiclive_x64-setup-debug.exe
           asset_content_type: application/octet-stream

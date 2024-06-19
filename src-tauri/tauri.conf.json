@@ -1,13 +1,13 @@
 {
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "npm run build",
     "devPath": "http://localhost:1420",
     "distDir": "../dist"
   },
   "package": {
     "productName": "WIC LIVE",
-    "version": "2.0.1-beta.7"
+    "version": "2.0.1-beta.5"
   },
   "tauri": {
     "allowlist": {
