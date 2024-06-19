@@ -22,9 +22,14 @@ impl Config {
                 massgate_url = "http://localhost:3243".to_string();
                 debug = true;
             }
+            "testing" => {
+                api_url = "https://techtile.media:3243".to_string();
+                massgate_url = "https://www.massgate.org".to_string();
+                debug = false;
+            }
             "staging" => {
-                api_url = "http://10.0.0.1:3243".to_string();
-                massgate_url = "http://10.0.0.1:3243".to_string();
+                api_url = "https://techtile.media:3243".to_string();
+                massgate_url = "https://www.massgate.org".to_string();
                 debug = false;
             }
             "production" => {

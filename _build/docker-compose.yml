@@ -1,0 +1,11 @@
+services:
+  wiclive:
+    image: wiclive
+    container_name: wiclive
+    volumes:
+      - D:\0_WORKBENCH\WICLIVE:C:\WICLIVE
+    tty: true
+    working_dir: C:\WICLIVE
+    env_file:
+      - .env
+    command: bun tauri build --debug 
