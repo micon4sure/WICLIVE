@@ -45,3 +45,4 @@ act.exe
 docs
 
 _build/src
+_build/.env

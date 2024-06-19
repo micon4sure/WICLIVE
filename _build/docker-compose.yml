@@ -6,6 +6,4 @@ services:
       - D:\0_WORKBENCH\WICLIVE:C:\WICLIVE
     tty: true
     working_dir: C:\WICLIVE
-    environment:
-      WICLIVE_ENV: testing
-    command: bun tauri build --debug
+    command: bun tauri build --debug 

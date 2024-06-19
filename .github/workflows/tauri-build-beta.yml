@@ -41,6 +41,13 @@ jobs:
           echo "::set-output name=release_id::$release_id"
         shell: bash
 
+      - name: Get version from tauri.conf.json
+        id: get_version
+        run: |
+          $version = (Get-Content ./src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).package.version
+          echo "::set-output name=version::$version"
+        shell: powershell
+      
       - name: Upload debug build EXE
         uses: actions/upload-release-asset@v1
         env:

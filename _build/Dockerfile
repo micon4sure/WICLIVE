@@ -33,8 +33,3 @@ RUN powershell -Command \
     Start-Process .\rustup-init.exe -ArgumentList '-y' -NoNewWindow -Wait; \
     Remove-Item -Force rustup-init.exe; \
     [System.Environment]::SetEnvironmentVariable('Path', $env:Path + ';C:\Users\ContainerUser\.cargo\bin', [System.EnvironmentVariableTarget]::Machine)
-
-
-# instal node from node-v20.10.0-x64.msi
-COPY node.msi /
-RUN msiexec /i node.msi /quiet /norestart
