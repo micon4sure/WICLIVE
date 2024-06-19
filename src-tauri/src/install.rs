@@ -96,18 +96,33 @@ pub fn elevate_permissions(handle: tauri::AppHandle) {
 
 pub fn find_install_path() -> Option<String> {
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let subkey_path = r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict";
 
-    let subkey = hklm.open_subkey(subkey_path);
+    let primary_path = r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict";
+    let secondary_path = r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414";
+
+    // Try to open the primary subkey
+    let subkey = hklm.open_subkey(primary_path);
     match subkey {
         Ok(regkey) => {
-            let install_location: String = regkey.get_value("InstallPath").unwrap();
-            return Some(install_location);
+            if let Ok(install_location) = regkey.get_value::<String, _>("InstallPath") {
+                return Some(install_location);
+            }
         }
-        Err(_e) => {
-            return None;
-        }
+        Err(_e) => {} // Ignore error and continue to check the secondary path
     }
+
+    // Try to open the secondary subkey
+    let subkey = hklm.open_subkey(secondary_path);
+    match subkey {
+        Ok(regkey) => {
+            if let Ok(install_location) = regkey.get_value::<String, _>("WORKINGDIR") {
+                return Some(install_location);
+            }
+        }
+        Err(_e) => {} // Ignore error and return None
+    }
+
+    None
 }
 
 fn to_wide_string(s: &str) -> Vec<u16> {
