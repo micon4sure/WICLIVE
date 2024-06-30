@@ -27,13 +27,15 @@ dist-ssr
 _install
 
 backend/maps
+backend/patches
+backend/_maps.json
+backend/_patches.json
 backend/keys.json
-backend/uploads
+backend/uploads-tmp
 backend/build
 backend/src/get-ssl-credentials.ts
 backend/publish.sh
 backend/publish.ps1
-backend/_data.json
 automation/setup.log
 automation/tmp.iss
 

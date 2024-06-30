@@ -2,7 +2,7 @@ name: Build and Release WIC LIVE
 
 on:
   push:
-    branches: [ 2.0.0-beta ]
+    branches: [ 3-beta ]
 
 jobs:
   build-and-release-beta:

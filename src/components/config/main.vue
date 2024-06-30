@@ -167,7 +167,6 @@ onMounted(async () => {
 
 <template>
   <div id="config">
-    <h2>Config</h2>
     <div class="card">
       <div class="card-header">wicautoexec</div>
       <div class="card-body">

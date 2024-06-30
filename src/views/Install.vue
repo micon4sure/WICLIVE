@@ -60,14 +60,14 @@ let jobs = {
     const progressId = progress.on({ type: 'download-patch' }, (progress) => {
       job.progress = progress.percentage
     })
-    path_patch10 = await invoke('download_patch', { patch: 10 });
+    path_patch10 = await invoke('download_patch_massive', { patch: 10 });
     progress.off(progressId)
   },
   download_patch11: async job => {
     const progressId = progress.on({ type: 'download-patch' }, (progress) => {
       job.progress = progress.percentage
     })
-    path_patch11 = await invoke('download_patch', { patch: 11 });
+    path_patch11 = await invoke('download_patch_massive', { patch: 11 });
     console.log('path_patch11', path_patch11)
     progress.off(progressId)
   },

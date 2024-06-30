@@ -8,7 +8,7 @@ const action: string = args[0];
 
 const actions = {
   async run() {
-    const environment: string = args.length > 1 ? args[1] : "testing";
+    const environment: string = args.length > 1 ? args[1] : "development";
     console.log(`RUNNING in env ${environment}`);
     process.env.WICLIVE_ENV = environment;
     await $`bun run tauri dev`;

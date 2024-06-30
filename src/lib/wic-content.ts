@@ -1,4 +1,4 @@
-export enum WIC_Map_Status {
+export enum WIC_Content_Status {
   MISSING = 'missing',
   OUTDATED = 'outdated',
   PENDING = 'pending',
@@ -16,5 +16,18 @@ export interface WIC_Map_Backend {
   uploader: string;
 }
 export interface WIC_Map_Frontend extends WIC_Map_Backend {
-  status: WIC_Map_Status
+  status: WIC_Content_Status
+}
+
+export interface WIC_Patch_Backend {
+  name: string;
+  hash: string;
+  size: number;
+  date: string;
+  version: number;
+  uploader: string;
+
+}
+export interface WIC_Patch_Frontend extends WIC_Patch_Backend {
+  status: WIC_Content_Status
 }

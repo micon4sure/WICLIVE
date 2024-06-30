@@ -5,7 +5,7 @@ import jobsVue from '../jobs.vue'
 import axios from 'axios'
 
 import { invoke } from "@tauri-apps/api/tauri";
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch, emit } from 'vue';
 
 import get_config from '../../get_config'
 
@@ -14,13 +14,20 @@ import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg';
 
 import mapsUploadVue from './upload.vue'
 
-import { WIC_Map_Frontend, WIC_Map_Status } from '../../lib/wic-map'
+import { WIC_Map_Frontend, WIC_Content_Status } from '../../lib/wic-content'
 
 import wicJobs from '../../lib/wic-jobs';
+import Bus from '../../lib/Bus';
 
-const manager = wicJobs.manager
+const props = defineProps({
+  bus: Bus
+})
+
+const emit = defineEmits(['onStatus', 'onActionNeeded'])
+
+const manager = wicJobs.mapManager
 const progress = wicJobs.progress
-const _jobs = wicJobs._jobs
+const _jobs = manager.getJobs()
 manager.clearJobs();
 
 let remoteData = {} as any
@@ -31,6 +38,8 @@ const state = ref({
 })
 
 const init = async () => {
+  emit('onStatus', 'init')
+
   const CONFIG: any = await get_config()
   const local: Array<String> = await invoke("get_map_files");
 
@@ -45,11 +54,10 @@ const init = async () => {
     'virginia.sdf'
   ]
   const diff = _.difference(custom, local)
-  console.log({ custom, local, diff })
   state.value.mapsCustom = _.map(diff, (map) => {
     return reactive({
       name: map,
-      status: WIC_Map_Status.MISSING
+      status: WIC_Content_Status.MISSING
     })
   })
 
@@ -57,16 +65,18 @@ const init = async () => {
   const remote = (await axios.get(CONFIG.API_URL + '/maps/data')).data
   remoteData = remote
 
+  console.log('REMOTE DATA IS', remote, '!!!')
+
   let promises = _.map(remote, async (map) => {
-    let status: WIC_Map_Status;
+    let status: WIC_Content_Status;
     if (!_.includes(local, map.name)) {
-      status = WIC_Map_Status.MISSING
+      status = WIC_Content_Status.MISSING
     } else {
       const hash = await invoke("get_map_hash", { filename: map.name })
       if (hash != map.hash) {
-        status = WIC_Map_Status.OUTDATED
+        status = WIC_Content_Status.OUTDATED
       } else {
-        status = WIC_Map_Status.CURRENT
+        status = WIC_Content_Status.CURRENT
       }
     }
 
@@ -85,6 +95,7 @@ const init = async () => {
   })
   await Promise.all(promises)
 
+  emit('onStatus', 'initDone')
 }
 
 const queueLive = []
@@ -92,7 +103,7 @@ let busyLive = false
 const downloadLiveMap = async name => {
   if (queueLive.includes(name)) return;
   queueLive.push(name)
-  _.find(state.value.mapsLive, { name: name }).status = WIC_Map_Status.PENDING
+  _.find(state.value.mapsLive, { name: name }).status = WIC_Content_Status.PENDING
   if (busyLive) return;
   busyLive = true
 
@@ -105,7 +116,7 @@ const downloadLiveMap = async name => {
       })
 
       const map = _.find(state.value.mapsLive, { name: name })
-      map.status = WIC_Map_Status.LOADING
+      map.status = WIC_Content_Status.LOADING
 
       await invoke("download_map_live", { map: name })
 
@@ -113,7 +124,7 @@ const downloadLiveMap = async name => {
       const hash: string = await invoke("get_map_hash", { filename: name })
 
       if (remoteData[name].hash != hash) {
-        map.status = WIC_Map_Status.OUTDATED
+        map.status = WIC_Content_Status.OUTDATED
         console.log('hash mismatch', remoteData[name].hash, hash)
         throw new Error('hash mismatch')
       }
@@ -121,7 +132,7 @@ const downloadLiveMap = async name => {
       map.hash = hash
       progress.off(progressId)
       job.info.push('done.')
-      map.status = WIC_Map_Status.CURRENT
+      map.status = WIC_Content_Status.CURRENT
     })
   }
   busyLive = false
@@ -133,7 +144,7 @@ const queueCustom = []
 const downloadCustomMap = async name => {
   if (queueCustom.includes(name)) return;
   queueCustom.push(name)
-  _.find(state.value.mapsCustom, { name: name }).status = WIC_Map_Status.PENDING
+  _.find(state.value.mapsCustom, { name: name }).status = WIC_Content_Status.PENDING
   if (busyCustom) return;
   busyCustom = true
 
@@ -146,10 +157,10 @@ const downloadCustomMap = async name => {
       })
 
       const map = _.find(state.value.mapsCustom, { name: name })
-      map.status = WIC_Map_Status.LOADING
+      map.status = WIC_Content_Status.LOADING
 
       await invoke("download_map_custom", { map: name })
-      map.status = WIC_Map_Status.CURRENT
+      map.status = WIC_Content_Status.CURRENT
       progress.off(progressId)
     })
   }
@@ -157,31 +168,34 @@ const downloadCustomMap = async name => {
 }
 // watch for action needed
 const actionNeeded = computed(() => {
-  return _.some(state.value.mapsLive, (map) => map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED)
-    || _.some(state.value.mapsCustom, (map) => map.status == WIC_Map_Status.MISSING);
+  const needed = _.some(state.value.mapsLive, (map) => map.status == WIC_Content_Status.MISSING || map.status == WIC_Content_Status.OUTDATED)
+    || _.some(state.value.mapsCustom, (map) => map.status == WIC_Content_Status.MISSING);
+
+  emit('onActionNeeded', needed)
+  return needed;
 })
 
 // computed sorted maps
 const _mapsLive = computed(() => {
   return _.orderBy(state.value.mapsLive, [
     (map) => {
-      if (map.status == WIC_Map_Status.MISSING) return 0;
-      if (map.status == WIC_Map_Status.OUTDATED) return 1;
-      if (map.status == WIC_Map_Status.LOADING) return 2;
-      if (map.status == WIC_Map_Status.PENDING) return 3;
+      if (map.status == WIC_Content_Status.MISSING) return 0;
+      if (map.status == WIC_Content_Status.OUTDATED) return 1;
+      if (map.status == WIC_Content_Status.LOADING) return 2;
+      if (map.status == WIC_Content_Status.PENDING) return 3;
       return 4
     },
     map => map.name
   ])
 })
 const _mapsCustom = computed(() => {
-  let filtered = _.filter(state.value.mapsCustom, map => map.status != WIC_Map_Status.CURRENT)
+  let filtered = _.filter(state.value.mapsCustom, map => map.status != WIC_Content_Status.CURRENT)
   return _.orderBy(filtered, [
     (map) => {
-      if (map.status == WIC_Map_Status.MISSING) return 0;
-      if (map.status == WIC_Map_Status.OUTDATED) return 1;
-      if (map.status == WIC_Map_Status.LOADING) return 2;
-      if (map.status == WIC_Map_Status.PENDING) return 3;
+      if (map.status == WIC_Content_Status.MISSING) return 0;
+      if (map.status == WIC_Content_Status.OUTDATED) return 1;
+      if (map.status == WIC_Content_Status.LOADING) return 2;
+      if (map.status == WIC_Content_Status.PENDING) return 3;
       return 4
     },
     map => map.name
@@ -193,12 +207,12 @@ const synchronize = async () => {
   if (!actionNeeded.value) return;
   manager.runJob('Synchronize', async (job) => {
     const promisesCustom = _.map(state.value.mapsCustom, async (map) => {
-      if (map.status == WIC_Map_Status.MISSING) {
+      if (map.status == WIC_Content_Status.MISSING) {
         await downloadCustomMap(map.name)
       }
     })
     const promisesLive = _.map(state.value.mapsLive, async (map) => {
-      if (map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED) {
+      if (map.status == WIC_Content_Status.MISSING || map.status == WIC_Content_Status.OUTDATED) {
         await downloadLiveMap(map.name)
       }
     })
@@ -210,16 +224,18 @@ const synchronize = async () => {
 
 const _showUpload = ref(false)
 onMounted(async () => {
-  manager.runJob('Initialize', async (job) => {
+  manager.runJob('Initialize Map Data', async (job) => {
     await init()
   })
+})
+
+props.bus.on('upload-map', () => {
+  _showUpload.value = true
 })
 </script>
 
 <template>
   <div id="maps">
-    <h2><span>MAPS</span> <button class="cta small secondary" v-if="!_showUpload"
-        @click="_showUpload = true">Upload</button></h2>
     <maps-upload-vue v-if="_showUpload" />
     <div id="maps-live" class="maps-list-section">
       <div class="maps-list-container">
@@ -247,18 +263,18 @@ onMounted(async () => {
               {{ map.size }} MB
             </td>
             <td>
-              <span v-if="map.status != WIC_Map_Status.CURRENT">{{ map.status }}</span>
+              <span v-if="map.status != WIC_Content_Status.CURRENT">{{ map.status }}</span>
             </td>
             <td class="status">
               <span class="cta" @click="downloadLiveMap(map.name.toString())"
-                v-if="map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED">
+                v-if="map.status == WIC_Content_Status.MISSING || map.status == WIC_Content_Status.OUTDATED">
                 <iconDownload class="icon" />
                 Download
               </span>
-              <div class="spinner-border" role="status" v-if="map.status == WIC_Map_Status.LOADING">
+              <div class="spinner-border" role="status" v-if="map.status == WIC_Content_Status.LOADING">
                 <span class="sr-only">&nbsp;</span>
               </div>
-              <iconCheck class="icon map-current" v-if="map.status == WIC_Map_Status.CURRENT" />
+              <iconCheck class="icon map-current" v-if="map.status == WIC_Content_Status.CURRENT" />
             </td>
           </tr>
           <tr v-for="(map, idx) in _mapsCustom" :key="'custom' + idx">
@@ -266,14 +282,14 @@ onMounted(async () => {
             <td>{{ map.status }}</td>
             <td class="status">
               <span class="cta" @click="downloadCustomMap(map.name)"
-                v-if="map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED">
+                v-if="map.status == WIC_Content_Status.MISSING || map.status == WIC_Content_Status.OUTDATED">
                 <iconDownload class="icon" />
                 Download
               </span>
-              <div class="spinner-border" role="status" v-if="map.status == WIC_Map_Status.LOADING">
+              <div class="spinner-border" role="status" v-if="map.status == WIC_Content_Status.LOADING">
                 <span class="sr-only">&nbsp;</span>
               </div>
-              <iconCheck class="icon map-current" v-if="map.status == WIC_Map_Status.CURRENT" />
+              <iconCheck class="icon map-current" v-if="map.status == WIC_Content_Status.CURRENT" />
             </td>
           </tr>
         </table>
@@ -284,13 +300,9 @@ onMounted(async () => {
 </template>
 
 <style lang="scss">
-#maps h2 {
+#show-upload {
   display: flex;
-  flex-direction: row;
-
-  span {
-    flex: 1;
-  }
+  justify-content: flex-end;
 }
 
 .maps-list-section {

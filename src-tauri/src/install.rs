@@ -208,6 +208,39 @@ pub async fn extract_game_version() -> Result<VersionInfo, String> {
     }
 }
 
+pub async fn download_vcredist(window: tauri::Window, version: u8) -> Result<String, String> {
+    let vcredist_url;
+    let target;
+    match version {
+        11 => {
+            vcredist_url = "https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe";
+            target = "vcredist_x86_11.exe";
+        }
+        14 => {
+            vcredist_url = "https://aka.ms/vs/17/release/vc_redist.x86.exe";
+            target = "vcredist_x86_14.exe";
+        }
+        _ => {
+            return Err("invalid vcredist version".to_string());
+        }
+    }
+
+    // create temp directory
+    let temp_dir = std::env::temp_dir();
+    let vcredist_path = temp_dir.join(target);
+
+    let progress_callback =
+        crate::io::create_progress_callback(window.clone(), "download-vcredist", None);
+
+    crate::io::download_file(
+        vcredist_url,
+        vcredist_path.to_str().unwrap(),
+        progress_callback,
+    )
+    .await?;
+    Ok(vcredist_path.to_str().unwrap().to_string())
+}
+
 pub fn install_vcredist(vcredist_exe: &str) -> Result<(), String> {
     println!("installing vcredist: {:?}", vcredist_exe);
 
@@ -221,64 +254,4 @@ pub fn install_vcredist(vcredist_exe: &str) -> Result<(), String> {
     println!("installer output: {:?}", output);
 
     return Ok(());
-}
-pub fn install_game<F>(target_dir: &str, installer_dir: &str, resolver: F) -> Result<(), String>
-where
-    F: Fn(&str) -> String,
-{
-    let automate_game_exe = resolver("automate_game.exe");
-    let mut setup_exe = PathBuf::from(installer_dir);
-    setup_exe.push("Installer");
-
-    let setup_path = setup_exe.clone();
-
-    setup_exe.push("setup.exe");
-
-    // run automate in the background
-    println!("running automate: {:?}", automate_game_exe);
-    std::process::Command::new(automate_game_exe)
-        .arg(target_dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .expect("Failed to start automate game process");
-
-    println!("running installer: {:?}", setup_exe.display());
-    // run installer
-    let output = std::process::Command::new(setup_exe)
-        .current_dir(setup_path)
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    println!("installer output: {:?}", output);
-    return Ok(());
-}
-
-pub fn install_patch(installer_path: &str, resolver: fn(&str) -> String) -> Result<(), String> {
-    let automate_patch_exe = resolver("automate_patch.exe");
-
-    // run accept_eula in the background
-    println!("running automate: {:?}", automate_patch_exe);
-    std::process::Command::new(automate_patch_exe)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .expect("Failed to start automate patch process");
-
-    // get directory of installer.exe
-    let mut installer_dir = PathBuf::from(installer_path);
-    installer_dir.pop();
-
-    println!("running installer: {:?}", installer_path);
-    // run installer
-    let output = std::process::Command::new(installer_path)
-        .current_dir(installer_dir)
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    println!("installer output: {:?}", output);
-
-    Ok(())
 }

@@ -7,7 +7,7 @@ import config from '../../get_config'
 
 import wicJobs from '../../lib/wic-jobs';
 
-const manager = wicJobs.mapManager
+const manager = wicJobs.patchManager
 const progress = wicJobs.progress
 const _jobs = manager.getJobs()
 
@@ -23,7 +23,7 @@ if (localStorage.getItem('upload-key')) {
 
 const upload = async () => {
   const CONFIG: any = await config()
-  manager.runJob('Upload map', async (job) => {
+  manager.runJob('Upload patch', async (job) => {
     if (!_key.value) {
       job.status = 'error'
       job.info.push('No API Key')
@@ -36,6 +36,7 @@ const upload = async () => {
     }
 
     const filename = $file.value.files![0].name;
+    console.log($file.value.files![0], filename)
 
     job.info.push(`Uploading ${filename}...`)
 
@@ -44,7 +45,7 @@ const upload = async () => {
     formData.append('key', _key.value)
 
     try {
-      await axios.post(CONFIG.API_URL + '/maps/upload', formData, {
+      await axios.post(CONFIG.API_URL + '/patches/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -65,10 +66,11 @@ const upload = async () => {
 };
 </script>
 
+
 <template>
-  <div class="card" id="upload-map">
+  <div class="card" id="upload-patch">
     <div class="card-header">
-      Upload Map
+      Upload Patch
     </div>
     <div class="card-body">
       <div class="mb-3">
@@ -83,8 +85,4 @@ const upload = async () => {
   </div>
 </template>
 
-<style lang="scss">
-#upload {
-  margin-bottom: 10px;
-}
-</style>
+<style lang="scss"></style>

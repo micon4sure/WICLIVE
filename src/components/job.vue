@@ -24,7 +24,7 @@ const job = props.job as any
     <div class="job-main">
       <div class="job-title">{{ job.title }}</div>
       <ul class="job-info" v-if="job.info.length">
-        <li v-for="( info, idx ) in  job.info " :key="idx + info">{{ info }}</li>
+        <li v-for="( info, idx ) in job.info " :key="idx + info">{{ info }}</li>
       </ul>
       <div class="progress" v-if="job.progress && job.progress < 100">
         <div class="progress-bar bg-info" role="progressbar" :style="{ width: Math.floor(job.progress) + '%' }"

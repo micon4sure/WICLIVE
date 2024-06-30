@@ -12,8 +12,6 @@ onMounted(async () => {
 const router = useRouter()
 const home = router.resolve('/').href
 
-console.log(router.currentRoute.value.path)
-
 onMounted(async () => {
   if (localStorage.getItem('do-install')) {
     router.push('/install/goes')
@@ -79,6 +77,8 @@ h1 {
   margin-bottom: 15px;
   padding: 25px;
 
+  height: 125px;
+
   a {
     display: flex;
     align-items: flex-end;
@@ -117,7 +117,7 @@ h2 {
   padding: 20px;
   margin: 0px;
   width: calc(100vw - 20px);
-  min-height: calc(100vh - 75px);
+  min-height: calc(100vh - 225px);
   flex: 1;
 }
 

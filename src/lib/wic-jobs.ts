@@ -3,9 +3,6 @@ import { reactive } from 'vue';
 import { listen } from '@tauri-apps/api/event';
 import _ from 'lodash'
 
-const _jobs = reactive([]);
-
-
 class WIC_DownloadProgress {
 
   private callbacks: { [key: number]: { callback: Function, filter: any } } = {}
@@ -34,8 +31,14 @@ class WIC_DownloadProgress {
 }
 class WIC_JobManager {
 
+  private _jobs = reactive([])
+
+  getJobs() {
+    return this._jobs;
+  }
+
   clearJobs() {
-    _jobs.splice(0, _jobs.length);
+    this._jobs.splice(0, this._jobs.length);
   }
 
   async runJob(title, executor) {
@@ -45,7 +48,7 @@ class WIC_JobManager {
       info: [],
       progress: null
     });
-    _jobs.push(job);
+    this._jobs.push(job);
     let result = null;
     try {
       console.log('running job', title);
@@ -59,12 +62,13 @@ class WIC_JobManager {
   }
 }
 
-const manager = new WIC_JobManager();
+const mapManager = new WIC_JobManager();
+const patchManager = new WIC_JobManager();
 const progress = new WIC_DownloadProgress();
 
 
 export default {
-  _jobs,
-  manager,
+  mapManager,
+  patchManager,
   progress
 }
