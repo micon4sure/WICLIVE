@@ -40,6 +40,7 @@ const onMapActionNeeded = (action: string) => {
 const _environment = ref('live');
 const onSetEnvironment = (env: string) => {
   _environment.value = env;
+  bus.emit('set-environment', env);
 };
 
 const _patchStatus = ref(null);

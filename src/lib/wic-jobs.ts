@@ -64,11 +64,13 @@ class WIC_JobManager {
 
 const mapManager = new WIC_JobManager();
 const patchManager = new WIC_JobManager();
+const installManager = new WIC_JobManager();
 const progress = new WIC_DownloadProgress();
 
 
 export default {
   mapManager,
   patchManager,
+  installManager,
   progress
 }

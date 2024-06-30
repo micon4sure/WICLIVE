@@ -34,8 +34,8 @@ if (localStorage.getItem('patches-enabled') == 'true') {
 emit('onChange', _patchesEnabled.value)
 
 
-const toggleEnablePatches = () => {
-  _patchesEnabled.value = !_patchesEnabled.value
+const changeEnablePatches = (changeTo) => {
+  _patchesEnabled.value = changeTo
   localStorage.setItem('patches-enabled', _patchesEnabled.value.toString())
   if (_patchesEnabled.value) {
     invoke('disable_patches')
@@ -187,14 +187,20 @@ props.bus.on('upload-patch', () => {
   console.log('UPLOAD PATCH')
   _showUpload.value = true
 })
+props.bus.on('set-environment', (env: string) => {
+  if (env == 'live')
+    changeEnablePatches(false)
+  else
+    changeEnablePatches(true)
+})
 </script>
 
 <template>
   <div id="patches">
     <patch-upload-vue v-if="_showUpload" />
-    <button class="btn cta small m-3" @click="toggleEnablePatches" v-if="!_patchesEnabled">Enable
+    <button class="btn cta small m-3" @click="changeEnablePatches" v-if="!_patchesEnabled">Enable
       Patches</button>
-    <button class="btn cta small secondary m-3" @click="toggleEnablePatches" v-else>Disable Patches</button>
+    <button class="btn cta small secondary m-3" @click="changeEnablePatches" v-else>Disable Patches</button>
     <div id="patches-live" class="patches-list-section">
       <div class="patches-list-container">
         <div class="patches-list-actions">

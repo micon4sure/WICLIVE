@@ -5,17 +5,17 @@ import { open } from '@tauri-apps/api/dialog';
 import { appDir } from '@tauri-apps/api/path';
 
 import { ref, reactive, onMounted, watch } from 'vue'
-import EULA_game from '../../assets/eula.txt?raw'
+import EULA_game from '../assets/eula.txt?raw'
 import { useRoute } from 'vue-router';
 import { invoke } from '@tauri-apps/api';
 
-import jobsVue from '../jobs.vue'
-import wicJobs from '../../lib/wic-jobs';
+import jobsVue from '../components/jobs.vue'
+import wicJobs from '../lib/wic-jobs';
 
 import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg'
 import iconTriangleExclamation from '@fortawesome/fontawesome-free/svgs/solid/triangle-exclamation.svg'
 
-const manager = wicJobs.manager
+const manager = wicJobs.installManager
 manager.clearJobs();
 const progress = wicJobs.progress
 
@@ -25,7 +25,7 @@ const _installDir = ref(localStorage.getItem('install-dir') || DEFAULT_INSTALL_D
 const _step = ref('eula')
 const _done = ref(false)
 
-const _jobs = wicJobs._jobs
+const _jobs = manager.getJobs()
 
 // let path_zipped = '';
 // let path_unzipped = '';
