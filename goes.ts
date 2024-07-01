@@ -32,7 +32,7 @@ const actions = {
     const packageJson = JSON.parse(packageRaw);
     const version = packageJson.version;
 
-    const incremented = semver.inc(version, 'prerelease');
+    const incremented = semver.inc(version, 'patch');
     await $`bun run ./update-version.ts ${incremented}`;
 
     console.log('set version to', incremented)

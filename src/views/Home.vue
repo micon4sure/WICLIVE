@@ -5,10 +5,8 @@ import configMainVue from '../components/config/main.vue';
 import environmentMainVue from '../components/environment/main.vue';
 import patchMainVue from '../components/patches/main.vue';
 
+import iconWarning from '@fortawesome/fontawesome-free/svgs/solid/circle-exclamation.svg';
 import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg';
-import iconXMark from '@fortawesome/fontawesome-free/svgs/solid/xmark.svg';
-import iconCircle from '@fortawesome/fontawesome-free/svgs/solid/circle.svg';
-import iconCircleEmpty from '@fortawesome/fontawesome-free/svgs/regular/circle.svg';
 
 import Bus from '../lib/Bus';
 
@@ -96,11 +94,11 @@ const onPatchChange = (status) => {
           <span v-if="_mapStatus == 'initDone'">
             <span v-if="_mapActionNeeded">
               YES
-              <iconCircle class="warning" />
+              <iconWarning class="warning" />
             </span>
             <span v-else>
               no
-              <iconCircleEmpty class="success" />
+              <iconCheck class="success" />
             </span>
           </span>
         </small>
@@ -130,11 +128,11 @@ const onPatchChange = (status) => {
           <span v-if="_patchStatus == 'initDone'">
             <span v-if="_patchActionNeeded">
               YES
-              <iconCircle class="warning" />
+              <iconWarning class="warning" />
             </span>
             <span v-else>
               no
-              <iconCircleEmpty class="success" />
+              <iconCheck class="success" />
             </span>
           </span>
           <span class="m-2">/
