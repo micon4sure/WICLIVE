@@ -32,8 +32,17 @@ const actions = {
     const packageJson = JSON.parse(packageRaw);
     const version = packageJson.version;
 
-    const incremented = semver.inc(version, 'patch');
-    await $`bun run ./update-version.ts ${incremented}`;
+    // if is prerelease
+    let incremented
+    if (semver.prerelease(version)) {
+      console.log('version is prerelease');
+      incremented = semver.inc(version, 'prerelease', 'beta');
+      await $`bun run ./update-version.ts ${incremented}`;
+      console.log('set version to', incremented)
+    } else {
+      incremented = semver.inc(version, 'patch');
+      await $`bun run ./update-version.ts ${incremented}`;
+    }
 
     console.log('set version to', incremented)
     const environment: string = args.length > 1 ? args[1] : "testing";
