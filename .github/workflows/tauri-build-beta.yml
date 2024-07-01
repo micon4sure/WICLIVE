@@ -16,7 +16,11 @@ jobs:
         shell: powershell
       
       - name: Add Bun bin directory to PATH
-        run: echo "::add-path::C:\Users\runneradmin\.bun\bin"
+        run: |
+          $newPath = "$env:USERPROFILE\.bun\bin"
+          [System.Environment]::SetEnvironmentVariable('PATH', $env:PATH + ';' + $newPath, [System.EnvironmentVariableTarget]::Process)
+          echo "PATH=$env:PATH" | Out-File -FilePath $Env:GITHUB_ENV -Append
+
         shell: powershell
 
       - name: Install Bun modules
