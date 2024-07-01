@@ -1,13 +1,12 @@
 {
   "build": {
     "beforeDevCommand": "bun run dev",
-    "beforeBuildCommand": "bun run build",
     "devPath": "http://localhost:1420",
     "distDir": "../dist"
   },
   "package": {
     "productName": "WIC LIVE",
-    "version": "3.0.0-beta.6"
+    "version": "3.0.0-beta.17"
   },
   "tauri": {
     "allowlist": {
@@ -58,7 +57,6 @@
         }
       },
       "resources": [
-        "../automation/*",
         "../dlls/*"
       ]
     },

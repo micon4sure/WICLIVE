@@ -1,6 +1,6 @@
 use powershell_script;
 use std::ffi::{c_void, OsStr};
-use std::process::Stdio;
+// use std::process::Stdio;
 use std::{env, os::windows::ffi::OsStrExt, path::PathBuf};
 use winreg::enums::HKEY_LOCAL_MACHINE;
 use winreg::RegKey;

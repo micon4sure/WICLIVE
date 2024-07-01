@@ -27,6 +27,13 @@ jobs:
         run: bun install
         shell: powershell
 
+      - name: Verify TypeScript and Bun setup
+        run: |
+          bun -v
+          bunx tsc -v
+          bunx vue-tsc --version
+
+
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
