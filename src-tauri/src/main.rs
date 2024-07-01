@@ -97,7 +97,7 @@ fn environment_set(handle: tauri::AppHandle, environment: &str) {
     path.push("_up_");
     path.push("dlls");
     path.push(environment);
-    environment::set(handle, path.to_str().unwrap());
+    let _ = environment::set(handle, path.to_str().unwrap());
 }
 
 #[tauri::command]

@@ -171,7 +171,8 @@ onMounted(async () => {
       <div class="card-header">wicautoexec</div>
       <div class="card-body">
         <p>
-          Enabling live settings will enable hotkeys for TA usage. Competitive settings remove fog and clouds.
+          Enabling live settings will enable `CameraFreedom`, `CameraMaxHeight` and hotkeys for TA usage. Competitive
+          settings remove fog and clouds.
         </p>
         <ul>
           <li>F1 = Aerial Recon</li>

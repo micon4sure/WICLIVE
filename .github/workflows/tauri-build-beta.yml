@@ -11,11 +11,12 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Setup Node/NPM
-        uses: actions/setup-node@v4      
+      - name: Install Bun
+        run: powershell -c "irm bun.sh/install.ps1|iex"
+        shell: powershell
 
-      - name: Install node modules
-        run: npm install
+      - name: Install Bun modules
+        run: bun install
         shell: powershell
 
       - name: Setup Rust
@@ -30,7 +31,7 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ""
           WICLIVE_ENV: testing
-        run: npm run tauri build -- --debug
+        run: bun run tauri build -- --debug
         shell: powershell
 
       - name: Get latest release

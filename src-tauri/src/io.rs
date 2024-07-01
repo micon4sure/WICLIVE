@@ -3,8 +3,8 @@ use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 
-use std::io::{self, BufReader};
-use zip::ZipArchive;
+// use std::io::{self, BufReader};
+// use zip::ZipArchive;
 
 use futures_util::stream::StreamExt;
 
@@ -169,7 +169,7 @@ pub fn create_progress_callback(
     }
 }
 
-pub async fn extract_zip<F>(
+/* pub async fn extract_zip<F>(
     zip_path: &str,
     target_path: PathBuf,
     mut progress_callback: F,
@@ -218,4 +218,4 @@ where
     })
     .await
     .map_err(|e| e.to_string())?
-}
+} */
