@@ -14,6 +14,10 @@ jobs:
       - name: Install Bun
         run: powershell -c "irm bun.sh/install.ps1|iex"
         shell: powershell
+      
+      - name: Add Bun bin directory to PATH
+        run: echo "::add-path::C:\Users\runneradmin\.bun\bin"
+        shell: powershell
 
       - name: Install Bun modules
         run: bun install
