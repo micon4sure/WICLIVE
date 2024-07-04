@@ -6,17 +6,17 @@ import { createRouter, createWebHistory } from 'vue-router';
 const routes = [
   {
     path: '/',
-    name: 'Home',
+    name: 'home',
     component: () => import('./views/Home.vue'),
   },
   {
     path: '/init/:step',
-    name: 'Init',
+    name: 'init',
     component: () => import('./views/Init.vue'),
   },
   {
     path: '/install/:step?',
-    name: 'Install',
+    name: 'install',
     component: () => import('./views/Install.vue'),
   }
 ];

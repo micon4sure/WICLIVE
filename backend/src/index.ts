@@ -302,7 +302,18 @@ app.post('/maps/upload', async (req, res) => {
   });
 })
 
-// ### DOWNLOAD GAME AND FILES
+// ### DOWNLOAD GAME
+app.get('/game', async (req, res) => {
+  console.log('GET /game');
+
+  const filePath = './files/wic.zip'
+
+  const stat = fs.statSync(filePath);
+  res.header('X-Filesize', stat.size);
+  res.download(filePath);
+});
+
+// ### DOWNLOAD GAME AND FILES (deprecated)
 const filesRegex = /\/files\/(.+)/;
 app.get(filesRegex, async (req, res) => {
   console.log(`GET /files/${req.params[0]}`);

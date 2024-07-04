@@ -56,8 +56,8 @@ async fn install_vcredist(_handle: tauri::AppHandle, vcredist_exe: &str) -> Resu
 }
 
 #[tauri::command]
-async fn download_vcredist(window: tauri::Window, version: u8) -> Result<String, String> {
-    return install::download_vcredist(window, version).await;
+async fn download_vcredist(window: tauri::Window) -> Result<String, String> {
+    return install::download_vcredist(window).await;
 }
 
 #[tauri::command]
@@ -122,6 +122,26 @@ async fn disable_patches() -> Result<(), String> {
     return patch::disable_patches().await;
 }
 
+#[tauri::command]
+async fn download_game(window: tauri::Window) -> Result<String, String> {
+    return install::download_game(window).await;
+}
+
+#[tauri::command]
+async fn install_game(window: tauri::Window, zip: &str, target: &str) -> Result<(), String> {
+    return install::install_game(window, zip, target).await;
+}
+
+#[tauri::command]
+async fn write_registry_keys(install_path: &str) -> Result<(), String> {
+    return install::write_registry_keys(install_path).await;
+}
+
+#[tauri::command]
+fn create_document_directory() -> Result<(), String> {
+    return install::create_document_directory();
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -140,6 +160,10 @@ fn main() {
             extract_game_version,
             download_vcredist,
             install_vcredist,
+            download_game,
+            install_game,
+            create_document_directory,
+            write_registry_keys,
             environment_set,
             download_patch,
             get_patch_files,

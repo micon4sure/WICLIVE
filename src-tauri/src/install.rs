@@ -77,16 +77,24 @@ pub fn elevate_permissions(handle: tauri::AppHandle) {
         let home_dir = path.parent().unwrap().display();
 
         println!("manifest_dir: {:?}", home_dir);
+        println!(
+            "WICLIVE_ENV: {:?}",
+            std::env::var("WICLIVE_ENV").unwrap_or_else(|_| "Not set".to_string())
+        );
+
         script = format!(
-            "Start-Process -FilePath \"powershell\" -ArgumentList \"-NoExit\", \"cd {}; bun run tauri dev\" -Verb RunAs",
-            home_dir,
+            "Start-Process -FilePath 'powershell' -ArgumentList '-NoExit', '$env:WICLIVE_ENV=''{}''; cd {}; bun run tauri dev' -Verb RunAs",
+            env!("WICLIVE_ENV"),
+            home_dir
         );
     } else {
         script = format!(
-            "Start-Process -FilePath \"{}\" -Verb RunAs",
+            "Start-Process -FilePath \"$env:WICLIVE_ENV=''{}''; {}\" -Verb RunAs",
+            env!("WICLIVE_ENV"),
             binary.to_str().unwrap()
         );
     }
+
     println!("script: {}", script);
     let output = runner.run(script.as_str()).unwrap();
     println!("output: {}", output);
@@ -137,9 +145,14 @@ pub async fn extract_game_version() -> Result<VersionInfo, String> {
         Some(path) => path,
         None => return Err("not installed".to_string()),
     };
-    unsafe {
-        let path_exe = install_path.to_string() + "\\wic.exe";
+    let path_exe = install_path.to_string() + "\\wic.exe";
 
+    if !std::path::Path::new(&path_exe).exists() {
+        let error = format!("wic.exe not found in install path ({:?})", path_exe);
+        return Err(error);
+    }
+
+    unsafe {
         // encode to utf16 -> PCW
         let path_exe_utf: Vec<_> = path_exe.encode_utf16().chain(std::iter::once(0)).collect();
         let path_exe_pcw = PCWSTR::from_raw(path_exe_utf.as_ptr());
@@ -208,22 +221,9 @@ pub async fn extract_game_version() -> Result<VersionInfo, String> {
     }
 }
 
-pub async fn download_vcredist(window: tauri::Window, version: u8) -> Result<String, String> {
-    let vcredist_url;
-    let target;
-    match version {
-        11 => {
-            vcredist_url = "https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe";
-            target = "vcredist_x86_11.exe";
-        }
-        14 => {
-            vcredist_url = "https://aka.ms/vs/17/release/vc_redist.x86.exe";
-            target = "vcredist_x86_14.exe";
-        }
-        _ => {
-            return Err("invalid vcredist version".to_string());
-        }
-    }
+pub async fn download_vcredist(window: tauri::Window) -> Result<String, String> {
+    let vcredist_url = "https://aka.ms/vs/17/release/vc_redist.x86.exe";
+    let target = "vcredist_x86_14.exe";
 
     // create temp directory
     let temp_dir = std::env::temp_dir();
@@ -239,6 +239,77 @@ pub async fn download_vcredist(window: tauri::Window, version: u8) -> Result<Str
     )
     .await?;
     Ok(vcredist_path.to_str().unwrap().to_string())
+}
+
+pub async fn download_game(window: tauri::Window) -> Result<String, String> {
+    let game_url = format!("{}/game", &CONFIG.API_URL);
+
+    // create temp directory
+    let temp_dir = std::env::temp_dir();
+    let zip_path = temp_dir.join("wic.zip");
+
+    let progress_callback =
+        crate::io::create_progress_callback(window.clone(), "download-game", None);
+
+    crate::io::download_file(
+        game_url.as_str(),
+        zip_path.to_str().unwrap(),
+        progress_callback,
+    )
+    .await?;
+    Ok(zip_path.to_str().unwrap().to_string())
+}
+
+pub async fn install_game(window: tauri::Window, zip: &str, target: &str) -> Result<(), String> {
+    println!("installing game: {:?} -> {:?}", zip, target);
+    println!("creating progress callback");
+    let progress_callback =
+        crate::io::create_progress_callback(window.clone(), "install-game", None);
+
+    println!("starting extraction");
+    crate::io::extract_zip(zip, PathBuf::from(target.clone()), progress_callback).await;
+    println!("extraction complete");
+
+    return Ok(());
+}
+
+pub async fn write_registry_keys(install_path: &str) -> Result<(), String> {
+    // create registry keys
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+
+    let create_result =
+        hklm.create_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict");
+
+    if let Err(e) = create_result {
+        println!("Error creating registry key: {:?}", e);
+        return Err(e.to_string());
+    }
+
+    let (key, disp) = create_result.unwrap();
+
+    match disp {
+        winreg::enums::REG_CREATED_NEW_KEY => {
+            println!("Key created");
+            key.set_value("InstallPath", &install_path).unwrap();
+            println!("InstallPath set to {:?}", install_path);
+            key.set_value("CDKEY", &"3EXO-ELED-MXGY-FP5M-286R").unwrap();
+            println!("CDKEY set to {:?}", "3EXO-ELED-MXGY-FP5M-286R");
+        }
+        winreg::enums::REG_OPENED_EXISTING_KEY => println!("Key already existed"),
+    }
+
+    return Ok(());
+}
+
+pub fn create_document_directory() -> Result<(), String> {
+    let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
+    let userprofile = PathBuf::from(userprofile);
+    let base_directory = userprofile.join("Documents\\World in Conflict");
+    if !base_directory.exists() {
+        std::fs::create_dir_all(base_directory).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
 }
 
 pub fn install_vcredist(vcredist_exe: &str) -> Result<(), String> {

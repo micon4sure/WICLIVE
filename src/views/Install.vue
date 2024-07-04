@@ -2,11 +2,10 @@
 import _ from 'lodash'
 
 import { open } from '@tauri-apps/api/dialog';
-import { appDir } from '@tauri-apps/api/path';
 
 import { ref, reactive, onMounted, watch } from 'vue'
 import EULA_game from '../assets/eula.txt?raw'
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { invoke } from '@tauri-apps/api';
 
 import jobsVue from '../components/jobs.vue'
@@ -33,15 +32,28 @@ const _jobs = manager.getJobs()
 // let path_patch11 = '';
 // let path_vcredist = '';
 
-let path_zipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en.zip'
-let path_unzipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en'
-let path_patch10 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
-let path_patch11 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
-let path_vcredist11 = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86_11.exe';
-let path_vcredist14 = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86_14.exe';
+let path_vcredist = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86_14.exe';
+
+let path_zipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\wic.zip'
 
 
 let jobs = {
+  download_vcredist: async job => {
+    const progressId = progress.on({ type: 'download-vcredist' }, (progress) => {
+      job.progress = progress.percentage
+    })
+    path_vcredist = await invoke('download_vcredist');
+    progress.off(progressId)
+  },
+  install_vcredist: async job => {
+    try {
+      await invoke('install_vcredist', { vcredistExe: path_vcredist });
+    } catch (error) {
+      console.error("error", error);
+      job.info.push(error)
+    }
+  },
+
   download_game: async job => {
     const progressId = progress.on({ type: 'download-game' }, (progress) => {
       job.progress = progress.percentage
@@ -49,73 +61,46 @@ let jobs = {
     path_zipped = await invoke('download_game');
     progress.off(progressId)
   },
-  unzip_game: async job => {
-    const progressId = progress.on({ type: 'extract-game' }, (progress) => {
-      job.progress = progress.percentage
-    })
-    path_unzipped = await invoke('unzip_game', { zipPath: path_zipped });
-    progress.off(progressId)
-  },
-  download_patch10: async job => {
-    const progressId = progress.on({ type: 'download-patch' }, (progress) => {
-      job.progress = progress.percentage
-    })
-    path_patch10 = await invoke('download_patch_massive', { patch: 10 });
-    progress.off(progressId)
-  },
-  download_patch11: async job => {
-    const progressId = progress.on({ type: 'download-patch' }, (progress) => {
-      job.progress = progress.percentage
-    })
-    path_patch11 = await invoke('download_patch_massive', { patch: 11 });
-    console.log('path_patch11', path_patch11)
-    progress.off(progressId)
-  },
-  download_vcredist: async job => {
-    const progressId = progress.on({ type: 'download-vcredist' }, (progress) => {
-      job.progress = progress.percentage
-    })
-    path_vcredist14 = await invoke('download_vcredist', { version: 14 });
-    progress.off(progressId)
-  },
   install_game: async job => {
     try {
-      await invoke('install_game', { targetDir: _installDir.value, installerDir: path_unzipped });
-      // wait 3 seconds for the installer to wrap up
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const progressId = progress.on({ type: 'install-game' }, (progress) => {
+        job.progress = progress.percentage
+      })
+      await invoke('install_game', { target: _installDir.value, zip: path_zipped });
+      progress.off(progressId)
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
     }
   },
-  install_patch10: async job => {
+  create_document_directory: async job => {
     try {
-      await invoke('install_patch', { installerPath: path_patch10 });
-      // wait 3 seconds for the installer to wrap up
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await invoke('create_document_directory');
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
     }
   },
-  install_patch11: async job => {
+  write_registry_keys: async job => {
     try {
-      await invoke('install_patch', { installerPath: path_patch11 });
-      // wait 3 seconds for the installer to wrap up
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await invoke('write_registry_keys', { installPath: _installDir.value });
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
     }
   },
-  install_vcredist: async job => {
+
+  enable_environment: async job => {
     try {
-      await invoke('install_vcredist', { vcredistExe: path_vcredist14 });
+      invoke('environment_set', { environment: "testing" });
+      localStorage.setItem('environment', "testing");
+      invoke('disable_patches')
+      localStorage.setItem('patches-enabled', "false")
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
     }
-  },
+  }
 }
 
 const goes = async () => {
@@ -134,50 +119,18 @@ const goes = async () => {
   const todo: [string, Function][] = []
 
   const isInstalled = await invoke('get_install_path')
-  let isPatched = false;
+  console.log("INSTALLED", isInstalled)
   if (!isInstalled) {
+    todo.push(["Download Visual Studio C++ Redistributable", jobs.download_vcredist])
+    todo.push(["Install Visual Studio C++ Redistributable", jobs.install_vcredist])
     todo.push(["Download game", jobs.download_game])
-    todo.push(["Unzip game", jobs.unzip_game])
-  } else {
-    let version = await invoke('extract_game_version') as any;
-    console.log(version)
-    isPatched = version.patch == 1 && version.build == 1;
+    todo.push(["Install Game", jobs.install_game])
+    todo.push(["Create Document Directory", jobs.create_document_directory])
+    todo.push(["Write registry keys", jobs.write_registry_keys])
+    todo.push(["Enable testing environment", jobs.enable_environment])
   }
-
-  if (!isPatched) {
-    todo.push(["Download Patch 10", jobs.download_patch10])
-    todo.push(["Download Patch 11", jobs.download_patch11])
-  }
-
-  todo.push(["Download Visual Studio C++ Redistributable", jobs.download_vcredist])
-  todo.push(["Install Visual Studio C++ Redistributable", jobs.install_vcredist])
-
-  todo.push(["Install Game", jobs.install_game])
-  if (!isInstalled) {
-  }
-  if (!isPatched) {
-    todo.push(["Install Patch 10", jobs.install_patch10])
-    todo.push(["Install Patch 11", jobs.install_patch11])
-  }
-
-
-  let skip = [
-    // "Download game",
-    // "Unzip game",
-    // "Download Patch 10",
-    // "Download Patch 11",
-    // "Download Visual Studio C++ Redistributable",
-    // "Install Visual Studio C++ Redistributable",
-    // "Install Game",
-    // "Install Patch 10",
-    // "Install Patch 11",
-  ]
 
   for (let job of todo) {
-    if (_.includes(skip, job[0])) {
-      manager.runJob(job[0], () => { })
-      continue;
-    }
     await manager.runJob(job[0], job[1])
   }
 
@@ -231,8 +184,6 @@ const selectInstallDir = async () => {
     </div>
     <div v-if="_step == 'goes'" class="card-body">
       <p style="display:block">Installing to {{ _installDir }}.</p>
-      <p>Hands free once the installation process starts. Don't touch your mouse or keyboard until install is complete
-      </p>
       <jobs-vue :jobs="_jobs" id="install-jobs" />
     </div>
     <div id="post-install" v-if="_done">
@@ -240,14 +191,12 @@ const selectInstallDir = async () => {
         <div class="alert alert-success done">
           World in Conflict installed successfully
         </div>
-        <div class="alert alert-info done">
-          Next step: install the World in Conflict multiplayer fix from massgate.org
-        </div>
         <div class="alert alert-danger done" v-if="_done">
           <iconTriangleExclamation class="icon" />
-          You need to reboot your computer to complete the installation!
+          If you're getting any errors when starting World in Conflict, reboot and try again!
           <iconTriangleExclamation class="icon" />
         </div>
+        <router-link to="/" class="cta secondary">Configure World in Conflict</router-link>
       </div>
     </div>
   </div>

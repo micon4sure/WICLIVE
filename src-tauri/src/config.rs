@@ -27,11 +27,6 @@ impl Config {
                 massgate_url = "https://www.massgate.org".to_string();
                 debug = false;
             }
-            "staging" => {
-                api_url = "https://techtile.media:3243".to_string();
-                massgate_url = "https://www.massgate.org".to_string();
-                debug = false;
-            }
             "production" => {
                 api_url = "https://techtile.media:3243".to_string();
                 massgate_url = "https://www.massgate.org".to_string();

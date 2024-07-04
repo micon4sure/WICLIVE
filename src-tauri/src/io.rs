@@ -1,10 +1,11 @@
-use std::{env, path::PathBuf};
+use std::env;
+use std::path::{Path, PathBuf};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
+use tokio::task;
 
-// use std::io::{self, BufReader};
-// use zip::ZipArchive;
+use zip::ZipArchive;
 
 use futures_util::stream::StreamExt;
 
@@ -169,7 +170,7 @@ pub fn create_progress_callback(
     }
 }
 
-/* pub async fn extract_zip<F>(
+pub async fn extract_zip<F>(
     zip_path: &str,
     target_path: PathBuf,
     mut progress_callback: F,
@@ -177,39 +178,77 @@ pub fn create_progress_callback(
 where
     F: FnMut(usize, usize) + Send + 'static,
 {
-    // delete target directory if it exists
+    // Delete target directory if it exists
     if target_path.exists() {
+        println!(
+            "extract: deleting existing directory {}",
+            target_path.display()
+        );
         std::fs::remove_dir_all(&target_path).map_err(|e| e.to_string())?;
     }
 
-    println!("extracting to {}", target_path.display());
+    // Create target directory
+    std::fs::create_dir_all(&target_path).map_err(|e| e.to_string())?;
+
+    // Check if zip file exists
+    if !std::path::Path::new(zip_path).exists() {
+        return Err(format!("Zip file {} does not exist", zip_path));
+    }
+
+    println!("extract: extracting to {}", target_path.display());
     let zip_path = zip_path.to_owned();
-    tokio::task::spawn_blocking(move || {
+    task::spawn_blocking(move || {
         let file = std::fs::File::open(zip_path).map_err(|e| e.to_string())?;
-        let reader = BufReader::new(file);
+        let reader = std::io::BufReader::new(file);
         let mut archive = ZipArchive::new(reader).map_err(|e| e.to_string())?;
 
+        // Find the top-level directory inside the zip file
+        let mut top_level_dir: Option<PathBuf> = None;
+        for i in 0..archive.len() {
+            let file = archive.by_index(i).map_err(|e| e.to_string())?;
+            if let Some(path) = file.enclosed_name() {
+                let path_components: Vec<&Path> =
+                    path.components().map(|c| c.as_os_str().as_ref()).collect();
+                if path_components.len() > 1 {
+                    top_level_dir = Some(path_components[0].to_path_buf());
+                    break;
+                }
+            }
+        }
+
         let total_files = archive.len();
+        println!("extract: total files: {}", total_files);
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
             let outpath = match file.enclosed_name() {
-                Some(path) => target_path.join(path),
+                Some(path) => {
+                    if let Some(ref top_dir) = top_level_dir {
+                        if path.starts_with(top_dir) {
+                            // Remove the top-level directory from the path
+                            target_path.join(path.strip_prefix(top_dir).unwrap())
+                        } else {
+                            target_path.join(path)
+                        }
+                    } else {
+                        target_path.join(path)
+                    }
+                }
                 None => continue,
             };
 
             if (*file.name()).ends_with('/') {
-                println!("creating directory {}", outpath.display());
+                println!("extract: creating directory {}", outpath.display());
                 std::fs::create_dir_all(&outpath).map_err(|e| e.to_string())?;
             } else {
                 if let Some(p) = outpath.parent() {
                     if !p.exists() {
-                        println!("creating parent directory {}", p.display());
+                        println!("extract: creating parent directory {}", p.display());
                         std::fs::create_dir_all(&p).map_err(|e| e.to_string())?;
                     }
                 }
                 let mut outfile = std::fs::File::create(&outpath).map_err(|e| e.to_string())?;
-                println!("copying file {}", outpath.display());
-                io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
+                println!("extract: copying file {}", outpath.display());
+                std::io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
             }
 
             progress_callback(i + 1, total_files);
@@ -218,4 +257,4 @@ where
     })
     .await
     .map_err(|e| e.to_string())?
-} */
+}
