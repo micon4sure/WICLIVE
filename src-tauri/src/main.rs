@@ -144,10 +144,14 @@ async fn unzip_game(window: tauri::Window, zip_path: &str) -> Result<String, Str
     let progress_callback = io::create_progress_callback(window.clone(), "extract-game", None);
 
     let result = io::extract_zip(zip_path, target_path, progress_callback).await;
-    match result {
-        Ok(_) => Ok(target_path_clone.to_str().unwrap().to_string()),
-        Err(e) => Err(e.to_string()),
+
+    if !result.is_ok() {
+        return Err(result.err().unwrap().to_string());
     }
+
+    // delete zip
+    std::fs::remove_file(zip_path).unwrap();
+    Ok(target_path_clone.to_str().unwrap().to_string())
 }
 
 #[tauri::command]
@@ -252,6 +256,25 @@ async fn download_vcredist(window: tauri::Window, version: u8) -> Result<String,
     )
     .await?;
     Ok(vcredist_path.to_str().unwrap().to_string())
+}
+
+#[tauri::command]
+fn cleanup_install() {
+    let paths = vec![
+        "world_in_conflict_retail_1.000_en.zip",
+        "world_in_conflict_retail_1.000_en",
+        "world_in_conflict_1.000_to_1.010_en.exe",
+        "world_in_conflict_1.010_to_1.011_en.exe",
+        "vcredist_x86_11.exe",
+        "vcredist_x86_14.exe",
+    ];
+    for path in paths {
+        let temp_dir = std::env::temp_dir();
+        let path = temp_dir.join(path);
+        if path.exists() {
+            std::fs::remove_file(path).unwrap();
+        }
+    }
 }
 
 #[tauri::command]

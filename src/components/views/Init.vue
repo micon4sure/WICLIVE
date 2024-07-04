@@ -4,12 +4,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { invoke } from '@tauri-apps/api';
 import { onMounted, reactive, ref } from 'vue'
 
-import jobsVue from '../jobs.vue'
-
-const state = reactive({
-  jobs: []
-})
-
 let _step = ref("init")
 
 const route = useRoute()
@@ -21,12 +15,16 @@ onMounted(async () => {
   if (route.params.step == 'patch') {
     _step.value = 'not_patched'
   }
+  if (route.params.step == 'broken') {
+    _step.value = 'broken'
+  }
 })
 
 const skip = () => {
   localStorage.setItem('initialized', 'true')
   router.push('/')
 }
+
 </script>
 
 <template>
@@ -38,6 +36,16 @@ const skip = () => {
           <p>It appears that World in Conflict is not installed</p>
           <router-link to="/install" class="cta primary">Install World in Conflict</router-link>
           <button class="cta secondary" @click="skip">Skip installation</button>
+        </div>
+      </div>
+    </div>
+    <div v-if="_step === 'broken'">
+      <div class="card">
+        <div class="card-header">Your World in Conflict installation is broken!</div>
+        <div class="card-body">
+          <p>World in Conflict appears to be installed on your system but either the path is wrong or does not exist.
+          </p>
+          <p>You need to properly uninstall World in Conflict and then re-run WIC LIVE</p>
         </div>
       </div>
     </div>

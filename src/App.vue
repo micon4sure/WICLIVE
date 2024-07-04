@@ -28,7 +28,15 @@ onMounted(async () => {
   if (!installPath) {
     router.push('/init/game')
   }
-  const version = await invoke('extract_game_version') as any;
+
+  let version;
+  try {
+    version = await invoke('extract_game_version') as any;
+  } catch (error) {
+    console.log('forwarding to broken')
+    router.push('/init/broken')
+    return
+  }
   const isPatched = version.patch == 1 && version.build == 1;
   if (!isPatched) {
     router.push('/init/patch')

@@ -135,11 +135,15 @@ fn to_wide_string(s: &str) -> Vec<u16> {
 pub async fn extract_game_version() -> Result<VersionInfo, String> {
     let install_path = match find_install_path() {
         Some(path) => path,
-        None => return Err("not installed".to_string()),
+        None => return Err("install path not found".to_string()),
     };
-    unsafe {
-        let path_exe = install_path.to_string() + "\\wic.exe";
+    let path_exe = install_path.to_string() + "\\wic.exe";
 
+    if !PathBuf::from(&path_exe).exists() {
+        return Err("install path found but exe not present".to_string());
+    }
+
+    unsafe {
         // encode to utf16 -> PCW
         let path_exe_utf: Vec<_> = path_exe.encode_utf16().chain(std::iter::once(0)).collect();
         let path_exe_pcw = PCWSTR::from_raw(path_exe_utf.as_ptr());
@@ -220,6 +224,9 @@ pub fn install_vcredist(vcredist_exe: &str) -> Result<(), String> {
 
     println!("installer output: {:?}", output);
 
+    // delete install file
+    std::fs::remove_file(vcredist_exe).map_err(|e| e.to_string())?;
+
     return Ok(());
 }
 pub fn install_game<F>(target_dir: &str, installer_dir: &str, resolver: F) -> Result<(), String>
@@ -252,6 +259,9 @@ where
         .map_err(|e| e.to_string())?;
 
     println!("installer output: {:?}", output);
+
+    // delete install file
+    std::fs::remove_dir_all(installer_dir).map_err(|e| e.to_string())?;
     return Ok(());
 }
 
@@ -279,6 +289,9 @@ pub fn install_patch(installer_path: &str, resolver: fn(&str) -> String) -> Resu
         .map_err(|e| e.to_string())?;
 
     println!("installer output: {:?}", output);
+
+    // delete install file
+    std::fs::remove_dir_all(installer_dir).map_err(|e| e.to_string())?;
 
     Ok(())
 }
