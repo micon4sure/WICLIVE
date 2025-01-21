@@ -12,7 +12,8 @@ pub struct Config {
 impl Config {
     pub fn new() -> Self {
         // set api url
-        let env = env!("WICLIVE_ENV");
+        let env = option_env!("WICLIVE_ENV").unwrap_or("development");
+
         let api_url;
         let massgate_url;
         let debug;

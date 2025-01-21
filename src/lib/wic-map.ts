@@ -14,6 +14,7 @@ export interface WIC_Map_Backend {
   date: string;
   version: number;
   uploader: string;
+  beta: boolean;
 }
 export interface WIC_Map_Frontend extends WIC_Map_Backend {
   status: WIC_Map_Status

@@ -7,6 +7,9 @@ import { invoke } from '@tauri-apps/api';
 import wicautoexecMinimumContents from '../../config_txt/wicautoexec_minimum.txt?raw'
 import proBindings from '../../config_txt/pro_bindings.txt?raw'
 
+const VANILLA_KEY = '3EXO-ELED-MXGY-FP5M-286R'
+const SOVIET_KEY = 'LABG-U3MF-RG9G-95GB-AYTH'
+
 const fnWicautoexec = 'wicautoexec.txt'
 const fnControllerOptions = 'Controller Options.txt'
 
@@ -26,7 +29,6 @@ const initializeConfig = async () => {
     await invoke('set_file_contents', { path: fnWicautoexec + '.bak', contents: autoexecContents })
   }
 }
-
 
 // # LIVE
 const _liveEnabled = ref(false)
@@ -158,11 +160,35 @@ const restoreKeybindings = async () => {
   _proKeybindingsEnabled.value = false
 }
 
+
+const _cdKey = ref('')
+const _errorSetCDKey = ref(null)
+
+const setCDKey = async (key: string) => {
+  await invoke('set_cd_key', { key })
+
+  try {
+    const confirmKey = await invoke('get_cd_key')
+    if (confirmKey !== key)
+      throw new Error('CD Key not set correctly')
+    _cdKey.value = key
+
+    _isInConfirmModeVanilla.value = false
+    _isInConfirmModeSoviet.value = false
+  } catch (error) {
+    _errorSetCDKey.value = error
+  }
+}
+
+const _isInConfirmModeVanilla = ref(false)
+const _isInConfirmModeSoviet = ref(false)
 onMounted(async () => {
   _competitiveEnabled.value = await competitiveEnabled()
   _liveEnabled.value = await liveEnabled()
   _proKeybindingsEnabled.value = await proKeybindingsEnabled()
-})
+
+  _cdKey.value = await invoke('get_cd_key')
+});
 </script>
 
 <template>
@@ -193,6 +219,26 @@ onMounted(async () => {
               settings</button>
             <button class="cta small neutral" @click="disableCompetitve" v-else>Disable Competitive settings</button>
           </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">CD Key [current: {{ _cdKey }}]</div>
+      <div class="card-body" id="set-cdkey">
+        <div id="set-cdkey-options">
+          <div class="set-cdkey-option">
+            <div>Vanilla Edition<br />{{ VANILLA_KEY }}</div>
+            <button class="cta small secondary" @click="_isInConfirmModeVanilla = true"
+              v-if="_isInConfirmModeVanilla == false">Write to registry</button>
+            <button class="cta small primary" @click="setCDKey(VANILLA_KEY)" v-else>Confirm Write to registry</button>
+          </div>
+          <div class="set-cdkey-option">
+            <div>Soviet Assault<br />{{ SOVIET_KEY }}</div>
+            <button class="cta small secondary" @click="_isInConfirmModeSoviet = true"
+              v-if="_isInConfirmModeSoviet == false">Write to registry</button>
+            <button class="cta small primary" @click="setCDKey(SOVIET_KEY)" v-else>Confirm Write to registry</button>
+          </div>
+          <div class="bg-danger p-3" v-if="_errorSetCDKey">{{ _errorSetCDKey }}</div>
         </div>
       </div>
     </div>
@@ -233,5 +279,23 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
+}
+
+#set-cdkey {
+  display: flex;
+  gap: 1rem;
+}
+
+.set-cdkey-option {
+  margin-right: 1rem;
+  display: flex;
+
+  div {
+    flex: 1;
+    margin-right: 20px;
+  }
+
+  padding: 10px;
+  border-bottom: 1px solid #333;
 }
 </style>

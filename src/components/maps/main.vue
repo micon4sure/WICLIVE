@@ -78,7 +78,8 @@ const init = async () => {
       date: map.date,
       uploader: map.uploader,
       version: map.version,
-      size
+      size,
+      beta: map.beta
     } as WIC_Map_Frontend
 
     state.value.mapsLive.push(data)
@@ -157,8 +158,8 @@ const downloadCustomMap = async name => {
 }
 // watch for action needed
 const actionNeeded = computed(() => {
-  return _.some(state.value.mapsLive, (map) => map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED)
-    || _.some(state.value.mapsCustom, (map) => map.status == WIC_Map_Status.MISSING);
+  return _.some(state.value.mapsLive, (map) => !map.beta && map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED)
+    || _.some(state.value.mapsCustom, (map) => !map.beta && map.status == WIC_Map_Status.MISSING);
 })
 
 // computed sorted maps
@@ -198,6 +199,7 @@ const synchronize = async () => {
       }
     })
     const promisesLive = _.map(state.value.mapsLive, async (map) => {
+      if (map.beta) return
       if (map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED) {
         await downloadLiveMap(map.name)
       }
@@ -217,7 +219,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div id="maps">
+  <div id="maps" class="mb-5">
     <h2><span>MAPS</span> <button class="cta small secondary" v-if="!_showUpload"
         @click="_showUpload = true">Upload</button></h2>
     <maps-upload-vue v-if="_showUpload" />
@@ -253,7 +255,7 @@ onMounted(async () => {
               <span class="cta" @click="downloadLiveMap(map.name.toString())"
                 v-if="map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED">
                 <iconDownload class="icon" />
-                Download
+                Download<small v-if="map.beta"> (beta)</small>
               </span>
               <div class="spinner-border" role="status" v-if="map.status == WIC_Map_Status.LOADING">
                 <span class="sr-only">&nbsp;</span>

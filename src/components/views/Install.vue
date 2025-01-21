@@ -27,18 +27,18 @@ const _done = ref(false)
 
 const _jobs = wicJobs._jobs
 
-// let path_zipped = '';
-// let path_unzipped = '';
-// let path_patch10 = '';
-// let path_patch11 = '';
-// let path_vcredist = '';
+let path_zipped = '';
+let path_unzipped = '';
+let path_patch10 = '';
+let path_patch11 = '';
+let path_vcredist = '';
 
-let path_zipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en.zip'
-let path_unzipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en'
-let path_patch10 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
-let path_patch11 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
-let path_vcredist11 = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86_11.exe';
-let path_vcredist14 = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86_14.exe';
+// let path_zipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en.zip'
+// let path_unzipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en'
+// let path_patch10 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
+// let path_patch11 = 'C:\\Users\\micon\\AppData\\Local\\Temp';
+// let path_vcredist11 = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86_11.exe';
+// let path_vcredist14 = 'C:\\Users\\micon\\AppData\\Local\\Temp\\vcredist_x86_14.exe';
 
 
 let jobs = {
@@ -75,7 +75,7 @@ let jobs = {
     const progressId = progress.on({ type: 'download-vcredist' }, (progress) => {
       job.progress = progress.percentage
     })
-    path_vcredist14 = await invoke('download_vcredist', { version: 14 });
+    path_vcredist = await invoke('download_vcredist');
     progress.off(progressId)
   },
   install_game: async job => {
@@ -110,12 +110,44 @@ let jobs = {
   },
   install_vcredist: async job => {
     try {
-      await invoke('install_vcredist', { vcredistExe: path_vcredist14 });
+      await invoke('install_vcredist', { vcredistExe: path_vcredist });
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
     }
   },
+  add_hosts_entries: async job => {
+    try {
+      await invoke('add_hosts_entries');
+    } catch (error) {
+      console.error("error", error);
+      job.info.push(error)
+    }
+  },
+  apply_multicore_fix: async job => {
+    try {
+      await invoke('apply_multicore_fix');
+    } catch (error) {
+      console.error("error", error);
+      job.info.push(error)
+    }
+  },
+  set_cd_key: async job => {
+    try {
+      await invoke('set_cd_key');
+    } catch (error) {
+      console.error("error", error);
+      job.info.push(error)
+    }
+  },
+  clean_install_directory: async job => {
+    try {
+      await invoke('clean_install_directory');
+    } catch (error) {
+      console.error("error", error);
+      job.info.push(error)
+    }
+  }
 }
 
 const goes = async () => {
@@ -152,13 +184,18 @@ const goes = async () => {
   todo.push(["Download Visual Studio C++ Redistributable", jobs.download_vcredist])
   todo.push(["Install Visual Studio C++ Redistributable", jobs.install_vcredist])
 
-  todo.push(["Install Game", jobs.install_game])
   if (!isInstalled) {
+    todo.push(["Install Game", jobs.install_game])
   }
   if (!isPatched) {
     todo.push(["Install Patch 10", jobs.install_patch10])
     todo.push(["Install Patch 11", jobs.install_patch11])
   }
+
+  todo.push(["Add hosts entries", jobs.add_hosts_entries])
+  todo.push(["Apply multicore fix", jobs.apply_multicore_fix])
+  todo.push(["Set CD key", jobs.set_cd_key])
+  todo.push(["Clean install directory", jobs.clean_install_directory])
 
 
   let skip = [
@@ -239,9 +276,6 @@ const selectInstallDir = async () => {
       <div id="post-install-content">
         <div class="alert alert-success done">
           World in Conflict installed successfully
-        </div>
-        <div class="alert alert-info done">
-          Next step: install the World in Conflict multiplayer fix from massgate.org
         </div>
         <div class="alert alert-danger done" v-if="_done">
           <iconTriangleExclamation class="icon" />

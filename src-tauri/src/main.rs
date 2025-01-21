@@ -192,31 +192,12 @@ async fn install_game(
     target_dir: &str,
     installer_dir: &str,
 ) -> Result<(), String> {
-    let resolver = |resource: &str| -> String {
-        // ! path resolver is broken, temporary fix
-        let mut path = std::env::current_exe().unwrap();
-        path.pop();
-        path.push("_up_");
-        path.push("automation");
-        path.push(resource);
-        return path.to_str().unwrap().to_string();
-    };
-
-    return install::install_game(target_dir, installer_dir, resolver);
+    return install::install_game(target_dir, installer_dir);
 }
 
 #[tauri::command]
 async fn install_patch(_handle: tauri::AppHandle, installer_path: &str) -> Result<(), String> {
-    let resolver = |resource: &str| -> String {
-        // ! path resolver is broken, temporary fix
-        let mut path = std::env::current_exe().unwrap();
-        path.pop();
-        path.push("_up_");
-        path.push("automation");
-        path.push(resource);
-        return path.to_str().unwrap().to_string();
-    };
-    return install::install_patch(installer_path, resolver);
+    return install::install_patch(installer_path);
 }
 
 #[tauri::command]
@@ -226,22 +207,9 @@ async fn install_vcredist(_handle: tauri::AppHandle, vcredist_exe: &str) -> Resu
 }
 
 #[tauri::command]
-async fn download_vcredist(window: tauri::Window, version: u8) -> Result<String, String> {
-    let vcredist_url;
-    let target;
-    match version {
-        11 => {
-            vcredist_url = "https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe";
-            target = "vcredist_x86_11.exe";
-        }
-        14 => {
-            vcredist_url = "https://aka.ms/vs/17/release/vc_redist.x86.exe";
-            target = "vcredist_x86_14.exe";
-        }
-        _ => {
-            return Err("invalid vcredist version".to_string());
-        }
-    }
+async fn download_vcredist(window: tauri::Window) -> Result<String, String> {
+    let vcredist_url = "https://aka.ms/vs/17/release/vc_redist.x86.exe";
+    let target = "vcredist_x86_14.exe";
 
     // create temp directory
     let temp_dir = std::env::temp_dir();
@@ -259,7 +227,7 @@ async fn download_vcredist(window: tauri::Window, version: u8) -> Result<String,
 }
 
 #[tauri::command]
-fn cleanup_install() {
+fn clean_install_directory() {
     let paths = vec![
         "world_in_conflict_retail_1.000_en.zip",
         "world_in_conflict_retail_1.000_en",
@@ -307,6 +275,57 @@ fn elevate_permissions(handle: tauri::AppHandle) {
     }
 }
 
+#[tauri::command]
+fn needs_hosts_entries() -> Result<bool, String> {
+    return Ok(install::needs_hosts_entries());
+}
+#[tauri::command]
+fn add_hosts_entries() -> Result<(), String> {
+    return install::add_hosts_entries();
+}
+
+#[tauri::command]
+fn needs_multicore_fix() -> Result<bool, String> {
+    return install::needs_multicore_fix();
+}
+#[tauri::command]
+fn apply_multicore_fix() -> Result<(), String> {
+    return install::apply_multicore_fix();
+}
+
+#[tauri::command]
+fn has_hook_files() -> Result<bool, String> {
+    return Ok(install::has_hook_files());
+}
+#[tauri::command]
+fn remove_hook_files() -> Result<(), String> {
+    return install::remove_hook_files();
+}
+
+#[tauri::command]
+fn needs_massgate_fix() -> Result<bool, String> {
+    return install::needs_massgate_fix();
+}
+
+#[tauri::command]
+fn apply_massgate_fix() -> Result<(), String> {
+    return install::apply_massgate_fix();
+}
+
+#[tauri::command]
+fn get_cd_key() -> Result<String, String> {
+    return install::get_cd_key();
+}
+#[tauri::command]
+fn set_cd_key(key: Option<&str>) -> Result<(), String> {
+    return install::set_cd_key(key);
+}
+
+#[tauri::command]
+fn needs_vc_redist() -> Result<bool, String> {
+    return install::needs_vc_redist();
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -329,7 +348,19 @@ fn main() {
             download_patch,
             install_game,
             install_patch,
-            install_vcredist
+            install_vcredist,
+            clean_install_directory,
+            needs_hosts_entries,
+            add_hosts_entries,
+            needs_multicore_fix,
+            apply_multicore_fix,
+            has_hook_files,
+            remove_hook_files,
+            needs_massgate_fix,
+            apply_massgate_fix,
+            get_cd_key,
+            set_cd_key,
+            needs_vc_redist
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

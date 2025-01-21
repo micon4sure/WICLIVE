@@ -4,19 +4,17 @@ import _ from 'lodash'
 import { ref } from 'vue'
 
 import mapsMainVue from '../maps/main.vue'
-
 import configMainVue from '../config/main.vue'
-
-const _showUpload = ref(false)
-const showUpload = () => {
-  _showUpload.value = true
-}
+import setupVue from '../setup/main.vue'
 </script>
 
 <template>
-  <maps-upload-vue v-if="_showUpload" />
-  <maps-main-vue />
-  <config-main-vue />
+  <div>
+    <setup-vue />
+    <maps-upload-vue />
+    <maps-main-vue />
+    <config-main-vue />
+  </div>
 </template>
 
 <style lang="scss"></style>

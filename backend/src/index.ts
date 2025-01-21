@@ -26,6 +26,7 @@ interface WIC_Map_Backend {
   date: string;
   uploader: string;
   version: number;
+  beta: boolean;
 }
 
 class WIC_Database_Backend {
@@ -46,7 +47,7 @@ class WIC_Database_Backend {
 
       const promises = _.map(files, async (file) => {
         if (!file.endsWith('.sdf')) return;
-        await this.addMap(file, 'unknown');
+        await this.addMap(file, 'unknown', false);
       });
       await Promise.all(promises);
     }
@@ -71,7 +72,7 @@ class WIC_Database_Backend {
     return `${year}-${month}-${day} ${hours}:${minutes}`;
   }
 
-  async addMap(mapName, uploader) {
+  async addMap(mapName, uploader, beta) {
     const hash = await this.getMapHash(mapName);
     const size = this.getMapSize(mapName);
     if (!this.maps[mapName]) {
@@ -81,14 +82,15 @@ class WIC_Database_Backend {
         hash,
         date: this.formatDate(new Date()),
         uploader: uploader,
-        version: 1
+        version: 1,
+        beta
       };
     }
   }
 
-  async uploaded(mapName, uploader) {
+  async uploaded(mapName, uploader, beta) {
     if (!this.maps[mapName]) {
-      await this.addMap(mapName, uploader);
+      await this.addMap(mapName, uploader, beta);
       this.save();
       return;
     }
@@ -98,6 +100,7 @@ class WIC_Database_Backend {
     map.size = this.getMapSize(mapName);
     map.hash = await this.getMapHash(mapName);
     map.date = this.formatDate(new Date());
+    map.beta = beta;
     this.save();
   }
 
@@ -119,7 +122,7 @@ const database = new WIC_Database_Backend();
 await database.init();
 database.save();
 
-console.log('loaded cache', database)
+console.log('loaded cache')
 
 app.get('/maps/data', async (req, res) => {
   console.log('GET /maps/data');
@@ -148,7 +151,6 @@ const mapTempUploadDir = 'uploads';
 fs.existsSync(mapTempUploadDir) || fs.mkdirSync(mapTempUploadDir, { recursive: true });
 app.post('/maps/upload', async (req, res) => {
   console.log('POST /maps/upload');
-
   // limit time to upload between tuesday noon and thursday noon
   const now = new Date();
   const day = now.getDay();
@@ -168,6 +170,7 @@ app.post('/maps/upload', async (req, res) => {
     }
 
     const key = fields.key[0]
+    const beta = fields.beta[0] === 'true';
 
     if (!_.includes(Object.values(keys), key)) {
       return res.status(401).send('Invalid API key');
@@ -194,7 +197,7 @@ app.post('/maps/upload', async (req, res) => {
       if (err) return res.status(500).send('Error saving file.');
       return;
     }
-    await database.uploaded(mapName, uploader);
+    await database.uploaded(mapName, uploader, beta);
   });
 })
 

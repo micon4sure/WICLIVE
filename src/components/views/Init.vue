@@ -24,7 +24,6 @@ const skip = () => {
   localStorage.setItem('initialized', 'true')
   router.push('/')
 }
-
 </script>
 
 <template>

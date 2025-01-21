@@ -13,7 +13,6 @@ const router = useRouter()
 const home = router.resolve('/').href
 
 console.log(router.currentRoute.value.path)
-
 onMounted(async () => {
   if (localStorage.getItem('do-install')) {
     router.push('/install/goes')
@@ -27,6 +26,7 @@ onMounted(async () => {
   const installPath = await invoke('get_install_path')
   if (!installPath) {
     router.push('/init/game')
+    return;
   }
 
   let version;

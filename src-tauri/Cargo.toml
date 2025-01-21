@@ -1,6 +1,6 @@
 [package]
 name = "wiclive"
-version = "2.1.0"
+version = "3.0.2"
 description = "WIC LIVE"
 authors = ["mICON"]
 edition = "2021"
@@ -27,6 +27,7 @@ zip = "0.6.6"
 libc = "0.2.101"
 rust-ini = "0.21.0"
 powershell_script = "1.1.0"
+num_cpus = "1.13.0"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
