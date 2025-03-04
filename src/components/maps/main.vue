@@ -78,8 +78,7 @@ const init = async () => {
       date: map.date,
       uploader: map.uploader,
       version: map.version,
-      size,
-      beta: map.beta
+      size
     } as WIC_Map_Frontend
 
     state.value.mapsLive.push(data)
@@ -158,8 +157,7 @@ const downloadCustomMap = async name => {
 }
 // watch for action needed
 const actionNeeded = computed(() => {
-  return _.some(state.value.mapsLive, (map) => !map.beta && map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED)
-    || _.some(state.value.mapsCustom, (map) => !map.beta && map.status == WIC_Map_Status.MISSING);
+  return _.some(state.value.mapsLive, (map) => map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED);
 })
 
 // computed sorted maps
@@ -199,7 +197,6 @@ const synchronize = async () => {
       }
     })
     const promisesLive = _.map(state.value.mapsLive, async (map) => {
-      if (map.beta) return
       if (map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED) {
         await downloadLiveMap(map.name)
       }
@@ -255,7 +252,7 @@ onMounted(async () => {
               <span class="cta" @click="downloadLiveMap(map.name.toString())"
                 v-if="map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED">
                 <iconDownload class="icon" />
-                Download<small v-if="map.beta"> (beta)</small>
+                Download
               </span>
               <div class="spinner-border" role="status" v-if="map.status == WIC_Map_Status.LOADING">
                 <span class="sr-only">&nbsp;</span>
@@ -407,15 +404,6 @@ onMounted(async () => {
       height: 1.5em;
 
     }
-  }
-
-  #maps-jobs {
-    width: 35%;
-    background: rgba(0, 0, 0, .4);
-    padding: 10px;
-    border-radius: 10px;
-    border-top-left-radius: 5px;
-    border-bottom-left-radius: 5px;
   }
 }
 

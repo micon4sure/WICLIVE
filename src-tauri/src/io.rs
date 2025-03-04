@@ -33,7 +33,11 @@ pub async fn download_file<F: FnMut(usize, usize) + Send + 'static>(
     mut progress_callback: F,
 ) -> Result<(), String> {
     println!("downloading file {} to {}", url, target);
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        // .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36")
+        .build()
+        .map_err(|e| format!("Failed to build client: {}", e))?;
+
     let response = client
         .get(url)
         .send()
@@ -58,6 +62,13 @@ pub async fn download_file<F: FnMut(usize, usize) + Send + 'static>(
             return Err("Failed to get content length".to_string());
         }
         content_length = header_content_length.unwrap();
+    }
+
+    // check if file already exists and is the correct size
+    if let Ok(metadata) = std::fs::metadata(target) {
+        if metadata.len() == content_length.to_str().unwrap().parse::<u64>().unwrap() {
+            return Ok(());
+        }
     }
 
     let total_size = content_length.to_str().unwrap().parse::<u64>().unwrap();

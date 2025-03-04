@@ -9,6 +9,9 @@ import proBindings from '../../config_txt/pro_bindings.txt?raw'
 
 const VANILLA_KEY = '3EXO-ELED-MXGY-FP5M-286R'
 const SOVIET_KEY = 'LABG-U3MF-RG9G-95GB-AYTH'
+const CLAN_KEY = ref(null)
+const STEAM_KEY = ref(null)
+
 
 const fnWicautoexec = 'wicautoexec.txt'
 const fnControllerOptions = 'Controller Options.txt'
@@ -188,6 +191,10 @@ onMounted(async () => {
   _proKeybindingsEnabled.value = await proKeybindingsEnabled()
 
   _cdKey.value = await invoke('get_cd_key')
+
+  CLAN_KEY.value = await invoke('get_secret', { secret: 'SECRET_CLAN_KEY' })
+  STEAM_KEY.value = await invoke('get_secret', { secret: 'SECRET_STEAM_KEY' })
+
 });
 </script>
 
@@ -233,11 +240,17 @@ onMounted(async () => {
             <button class="cta small primary" @click="setCDKey(VANILLA_KEY)" v-else>Confirm Write to registry</button>
           </div>
           <div class="set-cdkey-option">
-            <div>Soviet Assault<br />{{ SOVIET_KEY }}</div>
+            <div>Soviet Assault / Complete Edition<br />{{ SOVIET_KEY }}</div>
             <button class="cta small secondary" @click="_isInConfirmModeSoviet = true"
               v-if="_isInConfirmModeSoviet == false">Write to registry</button>
             <button class="cta small primary" @click="setCDKey(SOVIET_KEY)" v-else>Confirm Write to registry</button>
           </div>
+          <div class="set-cdkey-option" v-if="CLAN_KEY">
+            <div>Clan Edition<br />{{ CLAN_KEY }}</div>
+            <button class="cta small primary" @click="setCDKey(CLAN_KEY)">Confirm Write to
+              registry</button>
+          </div>
+
           <div class="bg-danger p-3" v-if="_errorSetCDKey">{{ _errorSetCDKey }}</div>
         </div>
       </div>

@@ -22,16 +22,19 @@ const progress = wicJobs.progress
 const DEFAULT_INSTALL_DIR = 'C:\\Program Files (x86)\\Ubisoft\\World in Conflict'
 
 const _installDir = ref(localStorage.getItem('install-dir') || DEFAULT_INSTALL_DIR)
+const createShortcut = localStorage.getItem('create-shortcut')
+const _createShortcut = ref(createShortcut !== null ? createShortcut === 'true' : true)
 const _step = ref('eula')
 const _done = ref(false)
 
 const _jobs = wicJobs._jobs
 
-let path_zipped = '';
-let path_unzipped = '';
+let path_zipped_game = '';
+let path_unzipped_game = '';
 let path_patch10 = '';
 let path_patch11 = '';
 let path_vcredist = '';
+let path_zipped_hooks = '';
 
 // let path_zipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en.zip'
 // let path_unzipped = 'C:\\Users\\micon\\AppData\\Local\\Temp\\world_in_conflict_retail_1.000_en'
@@ -46,15 +49,17 @@ let jobs = {
     const progressId = progress.on({ type: 'download-game' }, (progress) => {
       job.progress = progress.percentage
     })
-    path_zipped = await invoke('download_game');
+    path_zipped_game = await invoke('download_game');
     progress.off(progressId)
+    return true;
   },
   unzip_game: async job => {
     const progressId = progress.on({ type: 'extract-game' }, (progress) => {
       job.progress = progress.percentage
     })
-    path_unzipped = await invoke('unzip_game', { zipPath: path_zipped });
+    path_unzipped_game = await invoke('unzip_game', { zipPath: path_zipped_game });
     progress.off(progressId)
+    return true;
   },
   download_patch10: async job => {
     const progressId = progress.on({ type: 'download-patch' }, (progress) => {
@@ -62,6 +67,7 @@ let jobs = {
     })
     path_patch10 = await invoke('download_patch', { patch: 10 });
     progress.off(progressId)
+    return true;
   },
   download_patch11: async job => {
     const progressId = progress.on({ type: 'download-patch' }, (progress) => {
@@ -70,6 +76,7 @@ let jobs = {
     path_patch11 = await invoke('download_patch', { patch: 11 });
     console.log('path_patch11', path_patch11)
     progress.off(progressId)
+    return true;
   },
   download_vcredist: async job => {
     const progressId = progress.on({ type: 'download-vcredist' }, (progress) => {
@@ -77,16 +84,19 @@ let jobs = {
     })
     path_vcredist = await invoke('download_vcredist');
     progress.off(progressId)
+    return true;
   },
   install_game: async job => {
     try {
-      await invoke('install_game', { targetDir: _installDir.value, installerDir: path_unzipped });
+      await invoke('install_game', { targetDir: _installDir.value, installerDir: path_unzipped_game });
       // wait 3 seconds for the installer to wrap up
       await new Promise(resolve => setTimeout(resolve, 3000));
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
+      return false;
     }
+    return true;
   },
   install_patch10: async job => {
     try {
@@ -96,7 +106,9 @@ let jobs = {
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
+      return false;
     }
+    return true;
   },
   install_patch11: async job => {
     try {
@@ -106,7 +118,9 @@ let jobs = {
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
+      return false;
     }
+    return true;
   },
   install_vcredist: async job => {
     try {
@@ -114,23 +128,9 @@ let jobs = {
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
+      return false;
     }
-  },
-  add_hosts_entries: async job => {
-    try {
-      await invoke('add_hosts_entries');
-    } catch (error) {
-      console.error("error", error);
-      job.info.push(error)
-    }
-  },
-  apply_multicore_fix: async job => {
-    try {
-      await invoke('apply_multicore_fix');
-    } catch (error) {
-      console.error("error", error);
-      job.info.push(error)
-    }
+    return true;
   },
   set_cd_key: async job => {
     try {
@@ -138,7 +138,46 @@ let jobs = {
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
+      return false;
     }
+    return true;
+  },
+  download_hooks: async job => {
+    const progressId = progress.on({ type: 'download-hooks' }, (progress) => {
+      job.progress = progress.percentage
+    })
+
+    try {
+      path_zipped_hooks = await invoke('download_hooks');
+    } catch (error) {
+      console.error("error", error);
+      job.info.push(error)
+      return false;
+    }
+    return true;
+  },
+  unzip_hooks: async job => {
+    const progressId = progress.on({ type: 'extract-hooks' }, (progress) => {
+      job.progress = progress.percentage
+    })
+    try {
+      await invoke('unzip_hooks', { zipPath: path_zipped_hooks, installDir: _installDir.value });
+    } catch (error) {
+      console.error("error", error);
+      job.info.push(error)
+      return false;
+    }
+    return true;
+  },
+  create_desktop_shortcut: async job => {
+    try {
+      await invoke('create_desktop_shortcut')
+    } catch (error) {
+      console.error("error", error);
+      job.info.push(error)
+      return false;
+    }
+    return true;
   },
   clean_install_directory: async job => {
     try {
@@ -146,7 +185,9 @@ let jobs = {
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
+      return false;
     }
+    return true;
   }
 }
 
@@ -155,6 +196,7 @@ const goes = async () => {
   if (!isElevated) {
     console.log('not elevated, setting install dir and elevating permissions', _installDir.value)
     localStorage.setItem('do-install', _installDir.value);
+    localStorage.setItem('create-shortcut', _createShortcut.value ? 'true' : 'false');
     await invoke('elevate_permissions')
     return;
   }
@@ -162,6 +204,7 @@ const goes = async () => {
   console.log('elevated, continuing installation', localStorage.getItem('do-install'))
   console.log('install dir', _installDir.value)
   localStorage.removeItem('do-install')
+  localStorage.removeItem('create-shortcut')
 
   const todo: [string, Function][] = []
 
@@ -192,9 +235,12 @@ const goes = async () => {
     todo.push(["Install Patch 11", jobs.install_patch11])
   }
 
-  todo.push(["Add hosts entries", jobs.add_hosts_entries])
-  todo.push(["Apply multicore fix", jobs.apply_multicore_fix])
+  todo.push(["Download update", jobs.download_hooks])
+  todo.push(["Install update", jobs.unzip_hooks])
   todo.push(["Set CD key", jobs.set_cd_key])
+  if (_createShortcut.value) {
+    todo.push(["Create desktop shortcut", jobs.create_desktop_shortcut])
+  }
   todo.push(["Clean install directory", jobs.clean_install_directory])
 
 
@@ -215,7 +261,11 @@ const goes = async () => {
       manager.runJob(job[0], () => { })
       continue;
     }
-    await manager.runJob(job[0], job[1])
+    const result = await manager.runJob(job[0], job[1])
+    if (!result) {
+      console.error('Job failed, aborting!')
+      return;
+    }
   }
 
   _done.value = true;
@@ -264,6 +314,10 @@ const selectInstallDir = async () => {
         <label for="install-location" class="form-label">Select install location</label>
         <input type="text" class="form-control" id="install-location" v-model="_installDir" @click="selectInstallDir">
       </div>
+      <div class="mb-3">
+        <input type="checkbox" class="form-check-input m-1" id="create-shortcut" v-model="_createShortcut">
+        <label for="install-location" class="form-label">Create desktop shortcut</label>
+      </div>
       <button @click="_step = 'goes'; goes()" class="cta">Download and install</button>
     </div>
     <div v-if="_step == 'goes'" class="card-body">
@@ -279,7 +333,7 @@ const selectInstallDir = async () => {
         </div>
         <div class="alert alert-danger done" v-if="_done">
           <iconTriangleExclamation class="icon" />
-          You need to reboot your computer to complete the installation!
+          You might need to reboot your computer to complete the installation!
           <iconTriangleExclamation class="icon" />
         </div>
       </div>
@@ -305,26 +359,11 @@ const selectInstallDir = async () => {
 }
 
 #post-install {
-  position: absolute;
-  top: 10%;
-  left: 10%;
-  width: 80vw;
-  height: 80vh;
-  margin: 0;
-  padding: 0;
+  padding: 25px;
   background: rgba(0, 0, 0, 0.74);
-  border-radius: 10px;
 }
 
 #post-install-content {
-  position: absolute;
-  width: 80%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  text-align: center;
-
   .alert-success {
     background: rgb(17, 185, 101);
   }

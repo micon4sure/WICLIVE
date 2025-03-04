@@ -1,9 +1,6 @@
 use powershell_script;
 use std::ffi::{c_void, OsStr};
-use std::fs::{self, File, OpenOptions};
-use std::io::{BufRead, BufReader, Write};
-use std::process::Stdio;
-use std::time::{Duration, SystemTime};
+use std::fs;
 use std::{env, os::windows::ffi::OsStrExt, path::PathBuf};
 use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
 use winreg::RegKey;
@@ -75,7 +72,7 @@ pub fn elevate_permissions(handle: tauri::AppHandle) {
         .build();
 
     let script;
-    if CONFIG.DEBUG {
+    if CONFIG.ENV == "development" {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let home_dir = path.parent().unwrap().display();
 
@@ -215,306 +212,10 @@ pub async fn extract_game_version() -> Result<VersionInfo, String> {
     }
 }
 
-pub fn install_vcredist(vcredist_exe: &str) -> Result<(), String> {
-    println!("installing vcredist: {:?}", vcredist_exe);
-
-    let output = std::process::Command::new(vcredist_exe)
-        .arg("/install")
-        .arg("/quiet")
-        .arg("/norestart")
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    println!("installer output: {:?}", output);
-
-    // delete install file
-    std::fs::remove_file(vcredist_exe).map_err(|e| e.to_string())?;
-
-    return Ok(());
-}
-pub fn install_game(target_dir: &str, installer_dir: &str) -> Result<(), String> {
-    let automate_game_exe = resolve_path("automation", "automate_game.exe");
-    let mut setup_exe = PathBuf::from(installer_dir);
-    setup_exe.push("Installer");
-
-    let setup_path = setup_exe.clone();
-
-    setup_exe.push("setup.exe");
-
-    // run automate in the background
-    println!("running automate: {:?}", automate_game_exe);
-    std::process::Command::new(automate_game_exe)
-        .arg(target_dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .expect("Failed to start automate game process");
-
-    println!("running installer: {:?}", setup_exe.display());
-    // run installer
-    let output = std::process::Command::new(setup_exe)
-        .current_dir(setup_path)
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    println!("installer output: {:?}", output);
-
-    // delete install file
-    std::fs::remove_dir_all(installer_dir).map_err(|e| e.to_string())?;
-    return Ok(());
-}
-
-pub fn install_patch(installer_path: &str) -> Result<(), String> {
-    let automate_patch_exe = resolve_path("automation", "automate_patch.exe");
-
-    // run accept_eula in the background
-    println!("running automate: {:?}", automate_patch_exe);
-    std::process::Command::new(automate_patch_exe)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .expect("Failed to start automate patch process");
-
-    // get directory of installer.exe
-    let mut installer_dir = PathBuf::from(installer_path);
-    installer_dir.pop();
-
-    println!("running installer: {:?}", installer_path);
-    // run installer
-    let output = std::process::Command::new(installer_path)
-        .current_dir(installer_dir.clone())
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    println!("installer output: {:?}", output);
-
-    // delete install file
-    std::fs::remove_dir_all(installer_dir).map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-pub fn needs_hosts_entries() -> bool {
-    let hosts_path = r"C:\Windows\System32\drivers\etc\hosts";
-    let file = File::open(hosts_path).unwrap();
-    let reader = BufReader::new(file);
-    let existing_lines: Vec<String> = reader.lines().map(|l| l.unwrap_or_default()).collect();
-
-    // check if redirects exist for these domains
-    let desired_entries = [
-        "massgate.net",
-        "liveaccount.massgate.net",
-        "liveaccountbackup.massgate.net",
-        "stats.massgate.net",
-        "www.massgate.net",
-    ];
-
-    let missing_entries: Vec<&str> = desired_entries
-        .iter()
-        .filter(|entry| !existing_lines.iter().any(|line| line.contains(*entry)))
-        .copied()
-        .collect();
-
-    println!("missing entries: {:?}", missing_entries);
-
-    !missing_entries.is_empty()
-}
-pub fn add_hosts_entries() -> Result<(), String> {
-    let hosts_path = r"C:\Windows\System32\drivers\etc\hosts";
-
-    // The block of host entries you want to add
-    let desired_entries = [
-        "89.163.230.140 massgate.net",
-        "89.163.230.140 liveaccount.massgate.net",
-        "89.163.230.140 liveaccountbackup.massgate.net",
-        "89.163.230.140 stats.massgate.net",
-        "89.163.230.140 www.massgate.net",
-    ];
-
-    // 1. Read the existing hosts file and collect lines
-    let file = File::open(hosts_path).map_err(|e| format!("Could not open hosts file: {}", e))?;
-    let reader = BufReader::new(file);
-    let existing_lines: Vec<String> = reader.lines().map(|l| l.unwrap_or_default()).collect();
-
-    // 2. Filter desired entries to only those that are *not* already in hosts
-    let missing_entries: Vec<&str> = desired_entries
-        .iter()
-        .filter(|entry| !existing_lines.iter().any(|line| line == *entry))
-        .copied()
-        .collect();
-
-    // If all entries exist, nothing to do
-    if missing_entries.is_empty() {
-        return Ok(());
-    }
-
-    // 3. Create the text we want to append, ensuring we start with a new line and use \r\n
-    // so that each entry is on its own line in Windows style.
-    let to_append = format!("\r\n{}", missing_entries.join("\r\n"));
-
-    // 4. Append to the hosts file
-    let mut file = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(hosts_path)
-        .map_err(|e| format!("Failed to open hosts file for append: {}", e))?;
-
-    file.write_all(to_append.as_bytes())
-        .map_err(|e| format!("Failed to write to hosts file: {}", e))?;
-
-    Ok(())
-}
-
-pub fn needs_multicore_fix() -> Result<bool, String> {
-    // Check CPU core count
-    let thread_count = num_cpus::get();
-    if thread_count <= 12 {
-        return Ok(false); // No fix needed if 12 or fewer threads
-    }
-
-    // log
-    println!(
-        "Detected {} CPU threads, multicore fix needed.",
-        thread_count
-    );
-
-    // Get the installation path
-    let install_path = find_install_path().unwrap();
-    let mut target_path = PathBuf::from(install_path);
-    target_path.push("dbghelp.dll");
-
-    // Check if the file exists and was modified before 2017
-    if let Ok(metadata) = fs::metadata(&target_path) {
-        if let Ok(modified_time) = metadata.modified() {
-            let cutoff_date = SystemTime::UNIX_EPOCH + Duration::from_secs(1483228800); // January 1, 2017
-            println!(
-                "File modified time: {:?}, cutoff date: {:?}, fix needed: {}",
-                modified_time,
-                cutoff_date,
-                modified_time < cutoff_date
-            );
-            return Ok(modified_time < cutoff_date);
-        }
-    }
-
-    Ok(true) // Default to fix if file metadata can't be checked
-}
-pub fn apply_multicore_fix() -> Result<(), String> {
-    let dll_path = resolve_path("dlls", "dbghelp.dll");
-
-    if !PathBuf::from(&dll_path).exists() {
-        return Err("DLL file not found".to_string());
-    }
-
-    // Find the install path using the `find_install_path` function
-    let install_path = find_install_path().ok_or("Install path not found")?;
-
-    // Construct the target path for the DLL
-    let mut target_path = PathBuf::from(install_path);
-    target_path.push("dbghelp.dll");
-
-    // Print paths for debugging
-    println!("Source DLL path: {:?}", dll_path);
-    println!("Target DLL path: {:?}", target_path);
-
-    // Copy the DLL file to the target directory, overwriting if it already exists
-    std::fs::copy(&dll_path, &target_path).map_err(|e| format!("Failed to copy DLL: {}", e))?;
-
-    println!("Successfully applied the multicore fix by copying the DLL.");
-
-    Ok(())
-}
-
-pub fn has_hook_files() -> bool {
-    let install_path = find_install_path().unwrap();
-    let mut target_path = PathBuf::from(install_path.clone());
-    target_path.push("wic_cl_hook.dll");
-    println!("checking for hook file {:?}", target_path);
-    if target_path.exists() {
-        println!("wic_cl_hook.dll exists");
-        return true;
-    }
-
-    let mut target_path = PathBuf::from(install_path.clone());
-    target_path.push("wic_ds_hook.dll");
-
-    println!("checking for hook file {:?}", target_path);
-    if target_path.exists() {
-        println!("wic_ds_hook.dll exists");
-        return true;
-    }
-
-    println!("hook files not found in {}", install_path);
-    false
-}
-
-pub fn remove_hook_files() -> Result<(), String> {
-    let install_path = find_install_path().unwrap();
-    let mut target_path = PathBuf::from(install_path.clone());
-    target_path.push("wic_cl_hook.dll");
-    if target_path.exists() {
-        fs::remove_file(&target_path).map_err(|e| e.to_string())?;
-        println!("removed wic_cl_hook.dll");
-    }
-
-    let mut target_path = PathBuf::from(install_path.clone());
-    target_path.push("wic_ds_hook.dll");
-    if target_path.exists() {
-        fs::remove_file(&target_path).map_err(|e| e.to_string())?;
-        println!("removed wic_ds_hook.dll");
-    }
-
-    Ok(())
-}
-
-pub fn needs_massgate_fix() -> Result<bool, String> {
-    println!("checking for massgate fix");
-    if has_hook_files() {
-        println!("hook files found");
-        return Ok(true);
-    }
-
-    if needs_hosts_entries() {
-        println!("hosts entries missing");
-        return Ok(true);
-    }
-
-    println!("no massgate fix needed");
-    return Ok(false);
-}
-
-pub fn apply_massgate_fix() -> Result<(), String> {
-    if has_hook_files() {
-        // remove the hook files if they exist
-        let install_path = find_install_path().unwrap();
-        let mut target_path = PathBuf::from(install_path.clone());
-        target_path.push("wic_cl_hook.dll");
-        if target_path.exists() {
-            fs::remove_file(&target_path).map_err(|e| e.to_string())?;
-            println!("removed wic_cl_hook.dll");
-        }
-
-        let mut target_path = PathBuf::from(install_path.clone());
-        target_path.push("wic_ds_hook.dll");
-        if target_path.exists() {
-            fs::remove_file(&target_path).map_err(|e| e.to_string())?;
-            println!("removed wic_ds_hook.dll");
-        }
-    }
-
-    // Apply the multicore fix
-    apply_multicore_fix()?;
-
-    if needs_hosts_entries() {
-        add_hosts_entries()?;
-    }
-
-    Ok(())
-}
-
 pub fn get_cd_key() -> Result<String, String> {
+    let tmpdir = std::env::temp_dir();
+    println!("tmpdir: {:?}", tmpdir);
+
     // Define the registry key path
     let reg_path = r"Software\Massive Entertainment AB\World In Conflict";
     println!("reg_path: {}", reg_path);
@@ -577,7 +278,7 @@ pub fn set_cd_key(cd_key: Option<&str>) -> Result<(), String> {
 pub fn needs_vc_redist() -> Result<bool, String> {
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
     let subkey =
-        hklm.open_subkey(r"SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x64");
+        hklm.open_subkey(r"SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\X86");
     match subkey {
         Ok(_) => {
             println!("VC Redist already installed");
@@ -590,7 +291,64 @@ pub fn needs_vc_redist() -> Result<bool, String> {
     }
 }
 
-fn resolve_path(dir: &str, resource: &str) -> String {
+pub fn needs_hooks() -> bool {
+    let install_dir = find_install_path();
+    let mut hooks_version = PathBuf::from(install_dir.unwrap());
+    hooks_version.push("wic_cl_hook-version.txt");
+
+    !hooks_version.exists()
+}
+
+pub fn get_hooks_version() -> Option<String> {
+    let hook_version = resolve_path("dlls", "wic_cl_hook-version.txt");
+    let hook_version = PathBuf::from(hook_version);
+
+    println!("trying to get hooks version from: {:?}", hook_version);
+
+    if hook_version.exists() {
+        fs::read_to_string(hook_version).ok()
+    } else {
+        None
+    }
+}
+
+pub fn needs_hooks_update() -> bool {
+    // Read contents of hooks_version.txt
+    let install_dir = find_install_path();
+    let mut hooks_version_file_installed = PathBuf::from(install_dir.unwrap());
+    hooks_version_file_installed.push("wic_cl_hook-version.txt");
+
+    let installed_version = fs::read_to_string(hooks_version_file_installed).unwrap_or_default();
+
+    // Compare with current version
+    let hooks_version_file_current = resolve_path("dlls", "wic_cl_hook-version.txt");
+    let current_version = fs::read_to_string(hooks_version_file_current).unwrap_or_default();
+
+    println!("installed_version: {}", installed_version);
+    println!("current_version: {}", current_version);
+
+    installed_version != current_version
+}
+
+pub fn create_desktop_shortcut() -> Result<(), String> {
+    let install_dir = find_install_path().unwrap();
+    let exe_path = PathBuf::from(install_dir).join("wic.exe");
+
+    let script_path = resolve_path("automation", "create_shortcut.ps1");
+
+    std::process::Command::new("powershell")
+        .arg("-ExecutionPolicy")
+        .arg("Bypass")
+        .arg("-File")
+        .arg(script_path)
+        .arg(exe_path)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+pub fn resolve_path(dir: &str, resource: &str) -> String {
     let mut path = std::env::current_exe().unwrap();
     path.pop();
     path.push("_up_");

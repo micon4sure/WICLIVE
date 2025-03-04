@@ -21,7 +21,7 @@ watch(jobs, (newVal) => {
 
 <template>
   <ul class="jobs">
-    <li v-for="(job, idx) in  jobs " :key="idx + job.title" :class="['action', job.status]">
+    <li v-for="(job, idx) in jobs " :key="idx + job.title" :class="['action', job.status]">
       <job-vue :job="job" />
     </li>
   </ul>
@@ -30,6 +30,13 @@ watch(jobs, (newVal) => {
 <style lang="scss">
 .jobs {
   padding: 10px;
+
+  width: 35%;
+  background: rgba(0, 0, 0, .4);
+  padding: 10px;
+  border-radius: 10px;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
 
   ul,
   li {

@@ -26,7 +26,6 @@ interface WIC_Map_Backend {
   date: string;
   uploader: string;
   version: number;
-  beta: boolean;
 }
 
 class WIC_Database_Backend {
@@ -72,7 +71,7 @@ class WIC_Database_Backend {
     return `${year}-${month}-${day} ${hours}:${minutes}`;
   }
 
-  async addMap(mapName, uploader, beta) {
+  async addMap(mapName, uploader) {
     const hash = await this.getMapHash(mapName);
     const size = this.getMapSize(mapName);
     if (!this.maps[mapName]) {
@@ -82,15 +81,14 @@ class WIC_Database_Backend {
         hash,
         date: this.formatDate(new Date()),
         uploader: uploader,
-        version: 1,
-        beta
+        version: 1
       };
     }
   }
 
-  async uploaded(mapName, uploader, beta) {
+  async uploaded(mapName, uploader) {
     if (!this.maps[mapName]) {
-      await this.addMap(mapName, uploader, beta);
+      await this.addMap(mapName, uploader);
       this.save();
       return;
     }
@@ -100,7 +98,6 @@ class WIC_Database_Backend {
     map.size = this.getMapSize(mapName);
     map.hash = await this.getMapHash(mapName);
     map.date = this.formatDate(new Date());
-    map.beta = beta;
     this.save();
   }
 
@@ -170,9 +167,9 @@ app.post('/maps/upload', async (req, res) => {
     }
 
     const key = fields.key[0]
-    const beta = fields.beta[0] === 'true';
 
     if (!_.includes(Object.values(keys), key)) {
+      console.log('Invalid API key "' + key + '"')
       return res.status(401).send('Invalid API key');
     }
     console.log(key, key)
@@ -197,7 +194,7 @@ app.post('/maps/upload', async (req, res) => {
       if (err) return res.status(500).send('Error saving file.');
       return;
     }
-    await database.uploaded(mapName, uploader, beta);
+    await database.uploaded(mapName, uploader);
   });
 })
 

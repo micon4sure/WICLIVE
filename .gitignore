@@ -42,6 +42,7 @@ automation/setup.log
 automation/tmp.iss
 
 src-tauri/tauri-sign.key
+src-tauri/.env
 
 .github/token
 

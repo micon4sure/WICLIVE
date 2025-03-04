@@ -16,7 +16,6 @@ const $file = ref(null)
 
 // check for key in local storage
 const _key = ref(null)
-const _isBeta = ref(false)
 if (localStorage.getItem('upload-key')) {
   console.log('upload-key', localStorage.getItem('upload-key'))
   _key.value = localStorage.getItem('upload-key')
@@ -43,7 +42,6 @@ const upload = async () => {
     const formData = new FormData()
     formData.append('file', $file.value.files![0])
     formData.append('key', _key.value)
-    formData.append('beta', "" + _isBeta.value)
 
     try {
       await axios.post(CONFIG.API_URL + '/maps/upload', formData, {
@@ -79,10 +77,6 @@ const upload = async () => {
       <div class="mb-3">
         <label for="key" class="form-label">API KEY</label>
         <input type="text" id="key" class="form-control" placeholder="API KEY" v-model="_key">
-      </div>
-      <div class="mb-3">
-        <label for="key" class="form-label">Is beta version</label>
-        <input type="checkbox" id="isBeta" class="form-check form-switch" v-model="_isBeta">
       </div>
       <button type="button" id="upload" @click="upload" class="cta small">Upload</button>
     </div>
