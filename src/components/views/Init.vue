@@ -21,7 +21,7 @@ onMounted(async () => {
   }
   if (route.params.step == 'broken') {
     const installPath = await invoke('get_install_path')
-    _installPath.value = installPath
+    _installPath.value = installPath as string
 
     _step.value = 'broken'
   }
