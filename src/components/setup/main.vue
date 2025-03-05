@@ -309,13 +309,17 @@ const installHooks = async () => {
     <div id="setup-container">
       <div class="card mb-3">
         <div class="card-header">Setup state</div>
-        <div class="card-body">
+        <div class="card-body" v-if="_installDir && _hooksVersion">
           <p>
             WIC LIVE is using this install directory: {{ _installDir }}
           </p>
           <p>
             The version of your update is {{ _hooksVersion }}
           </p>
+        </div>
+        <div class="card-body" v-else>
+          World in Conflict is not installed.
+          <router-link to="/install" class="cta">Install</router-link>
         </div>
       </div>
     </div>

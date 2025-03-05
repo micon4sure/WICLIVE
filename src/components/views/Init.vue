@@ -8,6 +8,10 @@ let _step = ref("init")
 
 const route = useRoute()
 const router = useRouter()
+const _installPath = ref('')
+
+
+
 onMounted(async () => {
   if (route.params.step == 'game') {
     _step.value = 'not_installed'
@@ -16,6 +20,9 @@ onMounted(async () => {
     _step.value = 'not_patched'
   }
   if (route.params.step == 'broken') {
+    const installPath = await invoke('get_install_path')
+    _installPath.value = installPath
+
     _step.value = 'broken'
   }
 })
@@ -44,6 +51,8 @@ const skip = () => {
         <div class="card-body">
           <p>World in Conflict appears to be installed on your system but either the path is wrong or does not exist.
           </p>
+          <p v-if="_installPath">There is an install path reigstered at {{ _installPath }} but the wic.exe could not be
+            read.</p>
           <p>You need to properly uninstall World in Conflict and then re-run WIC LIVE</p>
         </div>
       </div>

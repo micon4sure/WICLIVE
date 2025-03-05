@@ -293,6 +293,9 @@ pub fn needs_vc_redist() -> Result<bool, String> {
 
 pub fn needs_hooks() -> bool {
     let install_dir = find_install_path();
+    if install_dir.is_none() {
+        return false;
+    }
     let mut hooks_version = PathBuf::from(install_dir.unwrap());
     hooks_version.push("wic_cl_hook-version.txt");
 
@@ -315,6 +318,10 @@ pub fn get_hooks_version() -> Option<String> {
 pub fn needs_hooks_update() -> bool {
     // Read contents of hooks_version.txt
     let install_dir = find_install_path();
+    if install_dir.is_none() {
+        return false;
+    }
+
     let mut hooks_version_file_installed = PathBuf::from(install_dir.unwrap());
     hooks_version_file_installed.push("wic_cl_hook-version.txt");
 
