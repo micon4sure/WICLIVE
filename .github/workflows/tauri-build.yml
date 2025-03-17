@@ -81,6 +81,7 @@ jobs:
                     version: $version,
                     platforms: {
                       "windows-x86_64": {
+                        installMode: "passive",
                         signature: $signature,
                         url: $url
                       }

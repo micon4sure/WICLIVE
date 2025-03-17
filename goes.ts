@@ -137,6 +137,11 @@ const actions = {
     `.json();
     console.log("Production asset uploaded – available at", productionUpload.browser_download_url);
   }
+}
 
+if (!actions[action]) {
+  console.log(`Invalid action: ${action}`);
+  console.log(`Available actions: ${Object.keys(actions).join(", ")}`);
+  process.exit(1);
 }
 await actions[action](args.length > 1 ? args[1] : undefined);
