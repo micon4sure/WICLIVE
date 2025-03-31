@@ -302,7 +302,7 @@ pub fn needs_hooks() -> bool {
     !hooks_version.exists()
 }
 
-pub fn needs_hooks_update() -> bool {
+pub fn needs_hooks_update(version: String) -> bool {
     // Read contents of hooks_version.txt
     let install_dir = find_install_path();
     if install_dir.is_none() {
@@ -314,14 +314,10 @@ pub fn needs_hooks_update() -> bool {
 
     let installed_version = fs::read_to_string(hooks_version_file_installed).unwrap_or_default();
 
-    // Compare with current version
-    let hooks_version_file_current = resolve_path("dlls", "wic_cl_hook-version.txt");
-    let current_version = fs::read_to_string(hooks_version_file_current).unwrap_or_default();
-
     println!("installed_version: {}", installed_version);
-    println!("current_version: {}", current_version);
+    println!("current_version: {}", version);
 
-    installed_version != current_version
+    installed_version != version
 }
 
 pub fn create_desktop_shortcut() -> Result<(), String> {

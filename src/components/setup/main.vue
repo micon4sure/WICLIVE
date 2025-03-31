@@ -28,7 +28,10 @@ const _needsAction = ref(false)
 
 const initSetupState = async () => {
   _needsHooks.value = await invoke('needs_hooks')
-  _needsHooksUpdate.value = !_needsHooks.value && await invoke('needs_hooks_update')
+
+  _hooksVersion.value = (await axios.get('https://www.wicgate.com/wic_cl_hook-version.txt')).data
+
+  _needsHooksUpdate.value = !_needsHooks.value && await invoke('needs_hooks_update', { version: _hooksVersion.value })
   console.log('needs hooks', _needsHooks.value, _needsHooksUpdate.value)
 
   const key = _cdKey.value = await invoke('get_cd_key')
@@ -48,7 +51,6 @@ const initSetupState = async () => {
   }
 
   _installDir.value = await invoke('get_install_path')
-  _hooksVersion.value = (await axios.get('https://www.wicgate.com/wic_cl_hook-version.txt')).data
 }
 
 onMounted(async () => {

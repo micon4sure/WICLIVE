@@ -378,8 +378,8 @@ fn needs_hooks() -> bool {
 }
 
 #[tauri::command]
-fn needs_hooks_update() -> bool {
-    return install::needs_hooks_update();
+fn needs_hooks_update(version: String) -> bool {
+    return install::needs_hooks_update(version);
 }
 
 #[tauri::command]
