@@ -14,6 +14,7 @@ import wicJobs from '../../lib/wic-jobs';
 
 import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg'
 import iconTriangleExclamation from '@fortawesome/fontawesome-free/svgs/solid/triangle-exclamation.svg'
+import axios from 'axios';
 
 const manager = wicJobs.manager
 manager.clearJobs();
@@ -148,7 +149,9 @@ let jobs = {
     })
 
     try {
-      path_zipped_hooks = await invoke('download_hooks');
+      const latestHooks = await axios.get('https://www.wicgate.com/wic_cl_hook-version.txt')
+
+      path_zipped_hooks = await invoke('download_hooks', { version: latestHooks.data });
     } catch (error) {
       console.error("error", error);
       job.info.push(error)

@@ -302,19 +302,6 @@ pub fn needs_hooks() -> bool {
     !hooks_version.exists()
 }
 
-pub fn get_hooks_version() -> Option<String> {
-    let hook_version = resolve_path("dlls", "wic_cl_hook-version.txt");
-    let hook_version = PathBuf::from(hook_version);
-
-    println!("trying to get hooks version from: {:?}", hook_version);
-
-    if hook_version.exists() {
-        fs::read_to_string(hook_version).ok()
-    } else {
-        None
-    }
-}
-
 pub fn needs_hooks_update() -> bool {
     // Read contents of hooks_version.txt
     let install_dir = find_install_path();

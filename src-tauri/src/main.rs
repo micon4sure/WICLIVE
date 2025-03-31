@@ -383,20 +383,8 @@ fn needs_hooks_update() -> bool {
 }
 
 #[tauri::command]
-fn get_hooks_version() -> Option<String> {
-    return install::get_hooks_version();
-}
-
-#[tauri::command]
-async fn download_hooks(window: tauri::Window) -> Result<String, String> {
-    let version = install::get_hooks_version();
-    if version.is_none() {
-        return Err("failed to get hooks version".to_string());
-    }
-    let hooks_url = format!(
-        "https://www.wicgate.com/wicgate_update_{}.zip",
-        version.unwrap()
-    );
+async fn download_hooks(window: tauri::Window, version: String) -> Result<String, String> {
+    let hooks_url = format!("https://www.wicgate.com/wicgate_update_{}.zip", version);
 
     println!("downloading hooks from {}", hooks_url);
 
@@ -494,7 +482,6 @@ fn main() {
             needs_vc_redist,
             needs_hooks,
             needs_hooks_update,
-            get_hooks_version,
             download_hooks,
             unzip_hooks,
             create_desktop_shortcut,

@@ -60,8 +60,7 @@
         }
       },
       "resources": [
-        "../automation/*",
-        "../dlls/*"
+        "../automation/*"
       ]
     },
     "updater": {

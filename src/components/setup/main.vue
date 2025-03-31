@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api';
 import { computed, onMounted, reactive, ref, nextTick } from 'vue';
 
 import jobsVue from '../jobs.vue'
+import axios from 'axios';
 
 const VANILLA_KEY = '3EXO-ELED-MXGY-FP5M-286R'
 const SOVIET_KEY = 'LABG-U3MF-RG9G-95GB-AYTH'
@@ -47,7 +48,7 @@ const initSetupState = async () => {
   }
 
   _installDir.value = await invoke('get_install_path')
-  _hooksVersion.value = await invoke('get_hooks_version')
+  _hooksVersion.value = (await axios.get('https://www.wicgate.com/wic_cl_hook-version.txt')).data
 }
 
 onMounted(async () => {
@@ -150,7 +151,9 @@ const installHooks = async () => {
       if (payload.type != 'download-hooks') return
       jobDownload.progress = payload.percentage
     })
-    hooksZipPath = await invoke('download_hooks')
+
+    const latestHooksVersion = (await axios.get('https://www.wicgate.com/wic_cl_hook-version.txt')).data
+    hooksZipPath = await invoke('download_hooks', { version: latestHooksVersion })
     jobDownload.status = 'success'
   } catch (e) {
     jobDownload.status = 'error'
