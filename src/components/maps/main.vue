@@ -55,9 +55,9 @@ const init = async () => {
 
   // init LIVE maps
   const remote = (await axios.get(CONFIG.API_URL + '/maps/data')).data
-  remoteData = remote
+  remoteData = _.pickBy(remote, (map) => !map.final)
 
-  let promises = _.map(remote, async (map) => {
+  let promises = _.map(remoteData, async (map) => {
     let status: WIC_Map_Status;
     if (!_.includes(local, map.name)) {
       status = WIC_Map_Status.MISSING
@@ -78,7 +78,8 @@ const init = async () => {
       date: map.date,
       uploader: map.uploader,
       version: map.version,
-      size
+      size,
+      final: map.final
     } as WIC_Map_Frontend
 
     state.value.mapsLive.push(data)

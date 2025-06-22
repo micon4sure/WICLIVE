@@ -26,6 +26,7 @@ interface WIC_Map_Backend {
   date: string;
   uploader: string;
   version: number;
+  final: boolean;
 }
 
 class WIC_Database_Backend {
@@ -40,6 +41,11 @@ class WIC_Database_Backend {
     try {
       const data = JSON.parse(await fs.readFileSync(dataFile, 'utf8'));
       this.maps = data.maps;
+      for (const name in this.maps) {
+        if (this.maps[name].final === undefined) {
+          this.maps[name].final = false;
+        }
+      }
     } catch (error) {
       this.maps = {};
       console.log('no cache file found, building')
@@ -81,7 +87,8 @@ class WIC_Database_Backend {
         hash,
         date: this.formatDate(new Date()),
         uploader: uploader,
-        version: 1
+        version: 1,
+        final: false
       };
     }
   }
