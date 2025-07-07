@@ -74,6 +74,18 @@ onMounted(async () => {
   font-weight: 100;
 }
 
+@font-face {
+  font-family: "Roboto";
+  src: url("./assets/Roboto.ttf");
+  font-weight: 200;
+}
+
+@font-face {
+  font-family: "Orbitron";
+  src: url("./assets/Orbitron.ttf");
+  font-weight: 100;
+}
+
 body {
   background: url("./assets/pattern-stripes.svg");
 }
@@ -109,7 +121,7 @@ h2 {
 
   &,
   * {
-    font-family: EUROSTEXT;
+    font-family: Orbitron;
     font-size: 32px;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -118,7 +130,7 @@ h2 {
 }
 
 * {
-  font-family: "eurostib";
+  font-family: "Roboto";
 }
 
 #container {
@@ -134,7 +146,7 @@ h2 {
 }
 
 .card-header {
-  font-family: EUROSTEXT;
+  font-family: Orbitron;
   font-size: 26px;
   padding-left: 20px;
   letter-spacing: 1px;
@@ -144,7 +156,7 @@ h2 {
 
   &,
   & * {
-    font-family: EUROSTEXT;
+    font-family: Orbitron;
   }
 }
 
