@@ -88,27 +88,6 @@ async fn download_map_live(window: tauri::Window, map: &str) -> Result<(), Strin
     Ok(())
 }
 
-#[tauri::command]
-async fn download_map_custom(window: tauri::Window, map: &str) -> Result<(), String> {
-    println!("downloading custom map {}", map);
-    let maps_directory = get_maps_directory()?;
-
-    let map_url = format!("{}/files/maps/{}", &CONFIG.MASSGATE_URL, map);
-
-    let progress_callback =
-        io::create_progress_callback(window.clone(), "download-map-custom", Some(map.to_string()));
-
-    download_file(
-        map_url.as_str(),
-        &format!("{}\\{}", maps_directory.display(), map),
-        progress_callback,
-    )
-    .await
-    .map_err(|e| e.to_string())?;
-    println!("done downloading custom map {}", map);
-
-    Ok(())
-}
 
 #[tauri::command]
 fn get_install_path() -> Option<String> {
@@ -459,7 +438,6 @@ fn main() {
             get_map_files,
             get_map_hash,
             download_map_live,
-            download_map_custom,
             get_config,
             get_install_path,
             file_exists,

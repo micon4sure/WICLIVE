@@ -26,32 +26,12 @@ manager.clearJobs();
 let remoteData = {} as any
 
 const state = ref({
-  mapsCustom: [],
   mapsLive: [] as WIC_Map_Frontend[]
 })
 
 const init = async () => {
   const CONFIG: any = await get_config()
   const local: Array<String> = await invoke("get_map_files");
-
-  // init custom maps
-  let custom = [
-    'do_Airport.sdf',
-    'tw_Arizona.sdf',
-    'tw_bocage.sdf',
-    'as_Ozzault.sdf',
-    'do_Paradise.sdf',
-    'do_Valley.sdf',
-    'virginia.sdf'
-  ]
-  const diff = _.difference(custom, local)
-  console.log({ custom, local, diff })
-  state.value.mapsCustom = _.map(diff, (map) => {
-    return reactive({
-      name: map,
-      status: WIC_Map_Status.MISSING
-    })
-  })
 
   // init LIVE maps
   const remote = (await axios.get(CONFIG.API_URL + '/maps/data')).data
@@ -129,33 +109,6 @@ const downloadLiveMap = async name => {
 
 }
 
-let busyCustom = false;
-const queueCustom = []
-const downloadCustomMap = async name => {
-  if (queueCustom.includes(name)) return;
-  queueCustom.push(name)
-  _.find(state.value.mapsCustom, { name: name }).status = WIC_Map_Status.PENDING
-  if (busyCustom) return;
-  busyCustom = true
-
-  while (queueCustom.length) {
-    const name = queueCustom.shift()
-
-    await manager.runJob(`Download ${name}`, async (job) => {
-      const progressId = progress.on({ type: 'download-map-custom' }, (progress) => {
-        job.progress = progress.percentage
-      })
-
-      const map = _.find(state.value.mapsCustom, { name: name })
-      map.status = WIC_Map_Status.LOADING
-
-      await invoke("download_map_custom", { map: name })
-      map.status = WIC_Map_Status.CURRENT
-      progress.off(progressId)
-    })
-  }
-  busyCustom = false
-}
 // watch for action needed
 const actionNeeded = computed(() => {
   return _.some(state.value.mapsLive, (map) => map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED);
@@ -174,37 +127,16 @@ const _mapsLive = computed(() => {
     map => map.name
   ])
 })
-const _mapsCustom = computed(() => {
-  let filtered = _.filter(state.value.mapsCustom, map => map.status != WIC_Map_Status.CURRENT)
-  return _.orderBy(filtered, [
-    (map) => {
-      if (map.status == WIC_Map_Status.MISSING) return 0;
-      if (map.status == WIC_Map_Status.OUTDATED) return 1;
-      if (map.status == WIC_Map_Status.LOADING) return 2;
-      if (map.status == WIC_Map_Status.PENDING) return 3;
-      return 4
-    },
-    map => map.name
-  ])
-
-})
 
 const synchronize = async () => {
   if (!actionNeeded.value) return;
   manager.runJob('Synchronize', async (job) => {
-    const promisesCustom = _.map(state.value.mapsCustom, async (map) => {
-      if (map.status == WIC_Map_Status.MISSING) {
-        await downloadCustomMap(map.name)
-      }
-    })
     const promisesLive = _.map(state.value.mapsLive, async (map) => {
       if (map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED) {
         await downloadLiveMap(map.name)
       }
     })
-    // combine arrays
-    const promises = promisesCustom.concat(promisesLive)
-    await Promise.all(promises)
+    await Promise.all(promisesLive)
   })
 }
 
@@ -229,7 +161,7 @@ onMounted(async () => {
             Download all missing/outdated
           </span>
         </div>
-        <table class="maps-list" v-if="_mapsLive.length || _mapsCustom.length">
+        <table class="maps-list" v-if="_mapsLive.length">
           <tr v-for="map in _mapsLive" :key="map.name">
             <th>
               {{ map.name }}
@@ -251,21 +183,6 @@ onMounted(async () => {
             </td>
             <td class="status">
               <span class="cta" @click="downloadLiveMap(map.name.toString())"
-                v-if="map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED">
-                <iconDownload class="icon" />
-                Download
-              </span>
-              <div class="spinner-border" role="status" v-if="map.status == WIC_Map_Status.LOADING">
-                <span class="sr-only">&nbsp;</span>
-              </div>
-              <iconCheck class="icon map-current" v-if="map.status == WIC_Map_Status.CURRENT" />
-            </td>
-          </tr>
-          <tr v-for="(map, idx) in _mapsCustom" :key="'custom' + idx">
-            <td colspan="5">{{ map.name }}</td>
-            <td>{{ map.status }}</td>
-            <td class="status">
-              <span class="cta" @click="downloadCustomMap(map.name)"
                 v-if="map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED">
                 <iconDownload class="icon" />
                 Download
