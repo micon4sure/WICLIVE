@@ -246,7 +246,7 @@ const installHooks = async () => {
           <div class="card-header">CD Key [current: {{ _cdKey }}]</div>
           <div class="card-body">
             <p>
-              Your CD key is not valid for play on the MASSGATE service. You need to set a valid CD key to play
+              Your CD key is not valid for play on WICGATE service. You need to set a valid CD key to play
               online.
             </p>
             <p>
