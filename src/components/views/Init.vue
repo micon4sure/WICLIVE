@@ -40,8 +40,17 @@ const skip = () => {
         <div class="card-header">World in Conflict is not installed</div>
         <div class="card-body">
           <p>It appears that World in Conflict is not installed</p>
-          <router-link to="/install" class="cta primary">Install World in Conflict</router-link>
-          <button class="cta secondary" @click="skip">Skip installation</button>
+          <p>
+            If you have the game on Steam, GOG or even on CD, install it from there and then re-run WIC LIVE.
+          </p>
+          <p>
+            If not, click here:
+            <a href="https://www.gog.com/game/world_in_conflict_complete_edition" class="cta" target="_blank">Buy and
+              install World in
+              Conflict on
+              GOG</a>
+          </p>
+          <button class="cta secondary small" @click="skip">Skip installation (server edition only)</button>
         </div>
       </div>
     </div>

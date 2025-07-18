@@ -29,6 +29,7 @@ rust-ini = "0.21.0"
 powershell_script = "1.1.0"
 num_cpus = "1.13.0"
 dotenv = "0.15.0"
+dirs = "6.0.0"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

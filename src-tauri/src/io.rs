@@ -1,3 +1,4 @@
+use std::fs;
 use std::{env, path::PathBuf};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
@@ -102,6 +103,7 @@ pub fn get_maps_directory() -> Result<PathBuf, String> {
 }
 
 pub fn get_base_directory() -> Result<PathBuf, String> {
+
     // try standard user profile path
     let userprofile = env::var("USERPROFILE").map_err(|e| e.to_string())?;
     let userprofile = PathBuf::from(userprofile);
@@ -118,7 +120,18 @@ pub fn get_base_directory() -> Result<PathBuf, String> {
         return Ok(base_directory);
     }
 
-    Err("Base directory not found in standard or OneDrive locations. Start World in Conflict once and then come restart this app.".to_string())
+    // try from dirs
+    let docs = dirs::document_dir()
+        .ok_or_else(|| "Could not locate the user's Documents folder".to_string())?;
+
+    let base = docs.join("World in Conflict");
+    if !base.exists() {
+        fs::create_dir_all(&base)
+            .map_err(|e| format!("Failed to create base directory {}: {}", base.display(), e))?;
+    }
+
+    Ok(base)
+    // Err("Base directory not found in standard or OneDrive locations. Start World in Conflict once and then come restart this app.".to_string())
 }
 
 pub fn file_exists(path: &str) -> bool {

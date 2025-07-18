@@ -215,7 +215,7 @@ const installHooks = async () => {
       <div id="setup-container" v-if="_needsAction">
 
         <div class="card mb-3" v-if="_needsHooks">
-          <div class="card-header">Multiplayer fix</div>
+          <div class="card-header">Enable online multiplayer</div>
           <div class="card-body">
             <p>
               Your World in Conflict installation is not correctly configured to play multiplayer. You need to install
