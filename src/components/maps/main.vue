@@ -34,8 +34,8 @@ const init = async () => {
   const local: Array<String> = await invoke("get_map_files");
 
   // init LIVE maps
-  const remote = (await axios.get(CONFIG.API_URL + '/maps/data')).data
-  remoteData = _.pickBy(remote, (map) => !map.final)
+  const remoteData = (await axios.get(CONFIG.API_URL + '/maps/data')).data
+  // remoteData = _.pickBy(remote, (map) => !map.final)
 
   let promises = _.map(remoteData, async (map) => {
     let status: WIC_Map_Status;
