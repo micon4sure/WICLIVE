@@ -150,13 +150,13 @@ onMounted(async () => {
 
 <template>
   <div id="maps" class="mb-5">
-    <h2><span>MAPS</span> <button class="cta small secondary" v-if="!_showUpload"
+    <h2><span>MAPS</span> <button class="btn cta small secondary" v-if="!_showUpload"
         @click="_showUpload = true">Upload</button></h2>
     <maps-upload-vue v-if="_showUpload" />
     <div id="maps-live" class="maps-list-section">
       <div class="maps-list-container">
         <div class="maps-list-actions">
-          <span class="cta" @click="synchronize" :class="{ inactive: !actionNeeded }">
+          <span class="btn cta" @click="synchronize" :class="{ inactive: !actionNeeded }">
             <iconDownload class="icon" />
             Download all missing/outdated
           </span>
@@ -182,7 +182,7 @@ onMounted(async () => {
               <span v-if="map.status != WIC_Map_Status.CURRENT">{{ map.status }}</span>
             </td>
             <td class="status">
-              <span class="cta" @click="downloadLiveMap(map.name.toString())"
+              <span class="btn cta" @click="downloadLiveMap(map.name.toString())"
                 v-if="map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED">
                 <iconDownload class="icon" />
                 Download

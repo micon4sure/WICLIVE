@@ -228,7 +228,7 @@ const installHooks = async () => {
             <p>
               <small>If you have the massgate.org multiplayer fix installed, this action will overwrite it.</small>
             </p>
-            <button @click="installHooks" class="cta">Install update</button>
+            <button @click="installHooks" class="btn cta">Install update</button>
           </div>
         </div>
 
@@ -238,7 +238,7 @@ const installHooks = async () => {
             <p>
               Your World in Conflict multiplayer update is outdated. You need to update it to the latest version.
             </p>
-            <button @click="installHooks" class="cta">Update</button>
+            <button @click="installHooks" class="btn cta">Update</button>
           </div>
         </div>
 
@@ -262,26 +262,26 @@ const installHooks = async () => {
             <div id="set-cdkey-options">
               <div class="set-cdkey-option">
                 <div>Vanilla Edition<br />{{ VANILLA_KEY }}</div>
-                <button class="cta small secondary" @click="_isInConfirmModeVanilla = true"
+                <button class="btn cta small secondary" @click="_isInConfirmModeVanilla = true"
                   v-if="_isInConfirmModeVanilla == false">Write to registry</button>
-                <button class="cta small primary" @click="setCDKey(VANILLA_KEY)" v-else>Confirm Write to
+                <button class="btn cta small primary" @click="setCDKey(VANILLA_KEY)" v-else>Confirm Write to
                   registry</button>
               </div>
               <div class="set-cdkey-option">
                 <div>Soviet Assault / Complete Edition<br />{{ SOVIET_KEY }}</div>
-                <button class="cta small secondary" @click="_isInConfirmModeSoviet = true"
+                <button class="btn cta small secondary" @click="_isInConfirmModeSoviet = true"
                   v-if="_isInConfirmModeSoviet == false">Write to registry</button>
-                <button class="cta small primary" @click="setCDKey(SOVIET_KEY)" v-else>Confirm Write to
+                <button class="btn cta small primary" @click="setCDKey(SOVIET_KEY)" v-else>Confirm Write to
                   registry</button>
               </div>
               <div class="set-cdkey-option" v-if="CLAN_KEY">
                 <div>Clan Edition<br />{{ CLAN_KEY }}</div>
-                <button class="cta small primary" @click="setCDKey(CLAN_KEY)">Confirm Write to
+                <button class="btn cta small primary" @click="setCDKey(CLAN_KEY)">Confirm Write to
                   registry</button>
               </div>
               <div class="set-cdkey-option" v-if="STEAM_KEY">
                 <div>Steam Edition<br />{{ STEAM_KEY }}</div>
-                <button class="cta small primary" @click="setCDKey(STEAM_KEY)">Confirm Write to
+                <button class="btn cta small primary" @click="setCDKey(STEAM_KEY)">Confirm Write to
                   registry</button>
               </div>
               <div class="bg-danger p-3" v-if="_errorSetCDKey">{{ _errorSetCDKey }}</div>
@@ -297,7 +297,7 @@ const installHooks = async () => {
               to
               run the game.
             </p>
-            <button class="cta" @click="installVCRedist">Install VC Redist</button>
+            <button class="btn cta" @click="installVCRedist">Install VC Redist</button>
           </div>
         </div>
       </div>
@@ -324,7 +324,7 @@ const installHooks = async () => {
         </div>
         <div class="card-body" v-else>
           World in Conflict is not installed.
-          <router-link to="/install" class="cta">Install</router-link>
+          <router-link to="/install" class="btn cta">Install</router-link>
         </div>
       </div>
     </div>

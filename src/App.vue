@@ -42,10 +42,25 @@ onMounted(async () => {
     router.push('/init/patch')
   }
 })
+
+const isInstalled = ref(false);
+onMounted(async () => {
+  const installPath = await invoke('get_install_path')
+  if (installPath) {
+    isInstalled.value = true;
+  } else {
+    isInstalled.value = false;
+  }
+})
+const startGame = () => {
+  invoke('start_game')
+}
 </script>
 
 <template>
-  <h1><a :href="home"><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></a></h1>
+  <h1><a :href="home"><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></a>
+    <p v-if="isInstalled"><button class="btn cta special" @click="startGame">Start game</button></p>
+  </h1>
   <div id="container">
     <router-view />
   </div>
@@ -98,6 +113,21 @@ h1 {
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
   margin-bottom: 15px;
   padding: 25px;
+  display: flex;
+
+  p {
+    span.cta {
+      display: inline-block;
+      align-items: center;
+    }
+
+    flex: 1;
+    display: flex;
+    justify-content: right;
+    align-items: flex-end;
+    margin: 0;
+    padding: 0;
+  }
 
   a {
     display: flex;
@@ -187,6 +217,10 @@ h2 {
     background-image: url('./assets/pattern-dots-neutral.svg');
     border-bottom: 3px solid rgb(0, 255, 13);
     font-size: 17px;
+  }
+
+  &:hover {
+    border-bottom: 3px solid white;
   }
 }
 

@@ -310,7 +310,7 @@ const selectInstallDir = async () => {
       <div id="eula">
         {{ EULA_game }}
       </div>
-      <button @click="_step = 'location'" class="cta">Accept License Agreement</button>
+      <button @click="_step = 'location'" class="btn cta">Accept License Agreement</button>
     </div>
     <div class="card-body" v-if="_step == 'location'">
       <div class="mb-3">
@@ -321,7 +321,7 @@ const selectInstallDir = async () => {
         <input type="checkbox" class="form-check-input m-1" id="create-shortcut" v-model="_createShortcut">
         <label for="install-location" class="form-label">Create desktop shortcut</label>
       </div>
-      <button @click="_step = 'goes'; goes()" class="cta">Download and install</button>
+      <button @click="_step = 'goes'; goes()" class="btn cta">Download and install</button>
     </div>
     <div v-if="_step == 'goes'" class="card-body">
       <p style="display:block">Installing to {{ _installDir }}.</p>

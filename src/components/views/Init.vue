@@ -45,12 +45,13 @@ const skip = () => {
           </p>
           <p>
             If not, click here:
-            <a href="https://www.gog.com/game/world_in_conflict_complete_edition" class="cta" target="_blank">Buy and
+            <a href="https://www.gog.com/game/world_in_conflict_complete_edition" class="btn cta" target="_blank">Buy
+              and
               install World in
               Conflict on
               GOG</a>
           </p>
-          <button class="cta secondary small" @click="skip">Skip installation (server edition only)</button>
+          <button class="btn cta secondary small" @click="skip">Skip installation (server edition only)</button>
         </div>
       </div>
     </div>
@@ -70,9 +71,9 @@ const skip = () => {
       <div class="card">
         <div class="card-header">World in Conflict is installed but not patched</div>
         <div class="card-body">
-          <router-link to="/install/goes" class="cta primary">Automatically download and install the latest
+          <router-link to="/install/goes" class="btn cta primary">Automatically download and install the latest
             patches</router-link>
-          <button class="cta secondary" @click="skip">Skip</button>
+          <button class="btn cta secondary" @click="skip">Skip</button>
         </div>
       </div>
     </div>

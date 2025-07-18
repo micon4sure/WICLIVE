@@ -432,6 +432,23 @@ fn create_desktop_shortcut() -> Result<(), String> {
     return install::create_desktop_shortcut();
 }
 
+#[tauri::command]
+fn start_game() -> Result<(), String> {
+    let install_path = install::find_install_path().ok_or("Install path not found")?;
+    let game_exe = install::resolve_path(&install_path, "wic.exe");
+
+    if !PathBuf::from(&game_exe).exists() {
+        return Err("install path found but exe not present".to_string());
+    }
+
+    println!("Starting game: {:?}", game_exe);
+    std::process::Command::new(game_exe)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -464,6 +481,7 @@ fn main() {
             unzip_hooks,
             create_desktop_shortcut,
             get_secret,
+            start_game
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

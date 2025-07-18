@@ -78,7 +78,7 @@ const upload = async () => {
         <label for="key" class="form-label">API KEY</label>
         <input type="text" id="key" class="form-control" placeholder="API KEY" v-model="_key">
       </div>
-      <button type="button" id="upload" @click="upload" class="cta small">Upload</button>
+      <button type="button" id="upload" @click="upload" class="btn cta small">Upload</button>
     </div>
   </div>
 </template>

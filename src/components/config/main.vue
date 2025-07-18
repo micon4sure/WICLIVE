@@ -219,12 +219,14 @@ onMounted(async () => {
           <li>0 = Cluster</li>
         </ul>
         <div class="wicautoexec-buttons">
-          <button class="cta small" @click="enableLive" v-if="!_liveEnabled">Enable LIVE settings</button>
-          <button v-else class="cta small secondary" @click="restoreSettings">Restore wicautoexec</button>
+          <button class="btn cta small" @click="enableLive" v-if="!_liveEnabled">Enable LIVE settings</button>
+          <button v-else class="btn cta small secondary" @click="restoreSettings">Restore wicautoexec</button>
           <div v-if="_liveEnabled">
-            <button class="cta small neutral" @click="enableCompetitve" v-if="!_competitiveEnabled">Enable Competitive
+            <button class="btn cta small neutral" @click="enableCompetitve" v-if="!_competitiveEnabled">Enable
+              Competitive
               settings</button>
-            <button class="cta small neutral" @click="disableCompetitve" v-else>Disable Competitive settings</button>
+            <button class="btn cta small neutral" @click="disableCompetitve" v-else>Disable Competitive
+              settings</button>
           </div>
         </div>
       </div>
@@ -235,19 +237,21 @@ onMounted(async () => {
         <div id="set-cdkey-options">
           <div class="set-cdkey-option">
             <div>Vanilla Edition<br />{{ VANILLA_KEY }}</div>
-            <button class="cta small secondary" @click="_isInConfirmModeVanilla = true"
+            <button class="btn cta small secondary" @click="_isInConfirmModeVanilla = true"
               v-if="_isInConfirmModeVanilla == false">Write to registry</button>
-            <button class="cta small primary" @click="setCDKey(VANILLA_KEY)" v-else>Confirm Write to registry</button>
+            <button class="btn cta small primary" @click="setCDKey(VANILLA_KEY)" v-else>Confirm Write to
+              registry</button>
           </div>
           <div class="set-cdkey-option">
             <div>Soviet Assault / Complete Edition<br />{{ SOVIET_KEY }}</div>
-            <button class="cta small secondary" @click="_isInConfirmModeSoviet = true"
+            <button class="btn cta small secondary" @click="_isInConfirmModeSoviet = true"
               v-if="_isInConfirmModeSoviet == false">Write to registry</button>
-            <button class="cta small primary" @click="setCDKey(SOVIET_KEY)" v-else>Confirm Write to registry</button>
+            <button class="btn cta small primary" @click="setCDKey(SOVIET_KEY)" v-else>Confirm Write to
+              registry</button>
           </div>
           <div class="set-cdkey-option" v-if="CLAN_KEY">
             <div>Clan Edition<br />{{ CLAN_KEY }}</div>
-            <button class="cta small primary" @click="setCDKey(CLAN_KEY)">Confirm Write to
+            <button class="btn cta small primary" @click="setCDKey(CLAN_KEY)">Confirm Write to
               registry</button>
           </div>
 
@@ -269,9 +273,9 @@ onMounted(async () => {
           <li>C = Force move</li>
           <li>V = Enter nearest transport</li>
         </ul>
-        <button class="cta small" @click="enableProKeybindings" v-if="!_proKeybindingsEnabled">Enable Pro Key
+        <button class="btn cta small" @click="enableProKeybindings" v-if="!_proKeybindingsEnabled">Enable Pro Key
           Bindings</button>
-        <button class="cta small" @click="restoreKeybindings" v-else>Restore
+        <button class="btn cta small" @click="restoreKeybindings" v-else>Restore
           Key Bindings</button>
       </div>
     </div> -->
