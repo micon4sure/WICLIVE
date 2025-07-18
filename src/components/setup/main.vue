@@ -321,6 +321,9 @@ const installHooks = async () => {
           <p>
             The version of your update is {{ _hooksVersion }}
           </p>
+          <p>
+            <strong>You're all set for online multiplayer</strong>
+          </p>
         </div>
         <div class="card-body" v-else>
           World in Conflict is not installed.
