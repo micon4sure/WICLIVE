@@ -118,12 +118,15 @@ pub fn get_base_directory() -> Result<PathBuf, String> {
         return Ok(base_directory);
     }
 
-    Err("Base directory not found in standard or OneDrive locations.".to_string())
+    Err("Base directory not found in standard or OneDrive locations. Start World in Conflict once and then come restart this app.".to_string())
 }
 
 pub fn file_exists(path: &str) -> bool {
-    let config = get_base_directory();
-    let mut file_path = PathBuf::from(config.unwrap());
+    let base_dir = get_base_directory();
+    if base_dir.is_err() {
+        return false;
+    }
+    let mut file_path = PathBuf::from(base_dir.unwrap());
     file_path.push(path);
     file_path.exists()
 }
