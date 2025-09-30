@@ -50,7 +50,8 @@ async fn get_map_files() -> Result<Vec<String>, String> {
         }
 
         if let Some(filename) = path.file_name().and_then(|f| f.to_str()) {
-            result.push(filename.to_string());
+            // add lower case filename
+            result.push(filename.to_string().to_lowercase());
         } else {
             println!("failed to convert filename to string");
             continue;

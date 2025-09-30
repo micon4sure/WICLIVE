@@ -2,6 +2,7 @@ import _ from "lodash"
 import express from 'express';
 import formidable from 'formidable';
 import fs from 'fs';
+import http from 'http';
 import path, { format } from 'path';
 import https from 'https';
 import md5 from 'md5-file'
@@ -11,6 +12,8 @@ import dotenv from 'dotenv';
 import keys from '../keys.json'
 
 let mapsDirectory = './maps';
+const mapTempUploadDir = 'uploads';
+const remoteMapBaseUrl = 'http://89.163.230.140/maps';
 const dataFile = './_data.json';
 
 const app = express();
@@ -26,7 +29,6 @@ interface WIC_Map_Backend {
   date: string;
   uploader: string;
   version: number;
-  final: boolean;
 }
 
 class WIC_Database_Backend {
@@ -40,29 +42,31 @@ class WIC_Database_Backend {
     const files = fs.readdirSync(mapsDirectory);
     try {
       const data = JSON.parse(await fs.readFileSync(dataFile, 'utf8'));
+      // convert all map names to lowercase
+      data.maps = _.mapKeys(data.maps, (value, key) => key.toLowerCase());
       this.maps = data.maps;
-      for (const name in this.maps) {
-        if (this.maps[name].final === undefined) {
-          this.maps[name].final = false;
-        }
-      }
     } catch (error) {
       this.maps = {};
       console.log('no cache file found, building')
-
       const promises = _.map(files, async (file) => {
         if (!file.endsWith('.sdf')) return;
-        await this.addMap(file, 'unknown', false);
+        await this.addMap(file, 'unknown');
       });
       await Promise.all(promises);
     }
 
-    // check for maps removed on fs
     const removed = _.difference(_.keys(this.maps), files);
-    _.each(removed, (map) => {
-      console.log('removing map', map)
-      delete this.maps[map];
-    });
+    await Promise.all(_.map(removed, async (map) => {
+      const isRemote = await this.remoteMapExists(map);
+      if (isRemote === true) {
+        console.log('keeping remote map', map);
+        return;
+      }
+      if (isRemote === false) {
+        console.log('removing map', map);
+        delete this.maps[map];
+      }
+    }));
 
   }
   formatDate(date) {
@@ -78,17 +82,17 @@ class WIC_Database_Backend {
   }
 
   async addMap(mapName, uploader) {
+    mapName = mapName.toLowerCase();
     const hash = await this.getMapHash(mapName);
     const size = this.getMapSize(mapName);
     if (!this.maps[mapName]) {
       this.maps[mapName] = {
-        name: mapName,
+        name: mapName.toLowerCase(),
         size,
         hash,
         date: this.formatDate(new Date()),
         uploader: uploader,
-        version: 1,
-        final: false
+        version: 1
       };
     }
   }
@@ -119,6 +123,26 @@ class WIC_Database_Backend {
   async save() {
     fs.writeFileSync(dataFile, JSON.stringify(this.data));
   }
+
+  private async remoteMapExists(mapName: string): Promise<boolean | undefined> {
+    return new Promise((resolve) => {
+      const request = http.request(`${remoteMapBaseUrl}/${encodeURIComponent(mapName)}`, { method: 'HEAD' }, (response) => {
+        if (response.statusCode === undefined) {
+          resolve(undefined);
+          return;
+        }
+        resolve(response.statusCode < 400);
+      });
+
+      request.setTimeout(5000, () => {
+        request.destroy();
+        resolve(undefined);
+      });
+
+      request.on('error', () => resolve(undefined));
+      request.end();
+    });
+  }
 }
 
 // init database
@@ -141,17 +165,60 @@ app.get('/maps/download/:filename', async (req, res) => {
     res.status(400).send('Invalid filename');
     return;
   }
-  const filename = req.params.filename;
-  const filePath = `${mapsDirectory}/${filename}`;
+  const filename = req.params.filename.toLowerCase();
+  const localMapPath = path.resolve(mapsDirectory, filename);
 
-  const stat = fs.statSync(filePath);
+  if (fs.existsSync(localMapPath)) {
+    try {
+      const stat = fs.statSync(localMapPath);
+      res.header('X-Filesize', stat.size.toString());
+      res.download(localMapPath);
+      return;
+    } catch (error) {
+      console.error('Error serving local map', error);
+      res.status(500).send('Error serving local file.');
+      return;
+    }
+  }
 
-  res.header('X-Filesize', stat.size);
-  res.download(filePath);
+  const upstreamUrl = `${remoteMapBaseUrl}/${encodeURIComponent(filename)}`;
+
+  http.get(upstreamUrl, (upstreamRes) => {
+    const statusCode = upstreamRes.statusCode ?? 502;
+
+    if (!upstreamRes.statusCode) {
+      upstreamRes.destroy();
+      res.status(statusCode).send('Failed to fetch map from upstream.');
+      return;
+    }
+
+    if (upstreamRes.statusCode >= 400) {
+      const message = `Upstream server responded with status ${upstreamRes.statusCode}`;
+      console.error(message);
+      upstreamRes.resume();
+      res.status(statusCode).send(message);
+      return;
+    }
+
+    const contentLengthHeader = upstreamRes.headers['content-length'];
+    const contentLength = Array.isArray(contentLengthHeader) ? contentLengthHeader[0] : contentLengthHeader;
+    if (contentLength) {
+      res.header('X-Filesize', contentLength);
+    }
+
+    const contentTypeHeader = upstreamRes.headers['content-type'];
+    res.setHeader('Content-Type', Array.isArray(contentTypeHeader) ? contentTypeHeader[0] : (contentTypeHeader || 'application/octet-stream'));
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    res.status(statusCode);
+    upstreamRes.pipe(res);
+  }).on('error', (error) => {
+    console.error('Error fetching map from upstream', error);
+    res.status(502).send('Error fetching map from upstream.');
+  });
 });
 
 // ### UPLOAD MAP
-const mapTempUploadDir = 'uploads';
 fs.existsSync(mapTempUploadDir) || fs.mkdirSync(mapTempUploadDir, { recursive: true });
 app.post('/maps/upload', async (req, res) => {
   console.log('POST /maps/upload');
@@ -182,7 +249,7 @@ app.post('/maps/upload', async (req, res) => {
     console.log(key, key)
     const uploader = _.findKey(keys, (value) => value === key);
 
-    const mapName = files.file[0].originalFilename;
+    const mapName = files.file[0].originalFilename.toLowerCase();
     if (mapName.includes('..') || !mapName.endsWith('.sdf')) {
       return res.status(400).send('Invalid filename');
     }
