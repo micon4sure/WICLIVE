@@ -50,3 +50,8 @@ docs
 
 _build/src
 _build/.env
+
+# Staging/debug installer artifacts
+wiclive_x64-setup-debug.exe
+wiclive_x64-setup-debug-*.exe
+wiclive-setup-beta.exe

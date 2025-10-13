@@ -1,7 +1,7 @@
 import { $ } from "bun";
 import _ from 'lodash'
 import semver from 'semver'
-import { rename } from 'fs/promises';
+import { rename, unlink } from 'fs/promises';
 const args: string[] = Bun.argv;
 args.shift(); // remove binary name
 args.shift(); // remove script name
@@ -127,6 +127,14 @@ const actions = {
     `.json();
     console.log("Staging asset uploaded – available at", stagingUpload.browser_download_url);
 
+    // Remove local staging artifact to keep workspace clean
+    try {
+      await unlink(stagingDestPath);
+      console.log('Deleted local staging artifact', stagingDestPath);
+    } catch (e) {
+      console.warn('Failed to delete local staging artifact', stagingDestPath, e.toString());
+    }
+
     // Upload production asset (release build)
     console.log("Uploading production asset as wiclive-setup-beta.exe");
     let productionUpload = await $`
@@ -136,6 +144,53 @@ const actions = {
         "https://uploads.github.com/repos/micon4sure/WICLIVE/releases/${latestRelease.id}/assets?name=wiclive-setup-beta.exe"
     `.json();
     console.log("Production asset uploaded – available at", productionUpload.browser_download_url);
+  },
+
+  async release_staging() {
+    // Build a staging debug installer and upload it to the latest release without touching production assets
+    // Do NOT increment the package version; use the current package.json version so the debug asset is added to the latest release
+    const packageRaw: string = await $`cat package.json`.text();
+    const packageJson = JSON.parse(packageRaw);
+    const version = packageJson.version;
+
+    console.log("Finding latest release");
+    const token = await $`cat .github/token`.text();
+    const releases = await $`curl -H "Authorization: token ${token}" -s https://api.github.com/repos/micon4sure/WICLIVE/releases`.json();
+    const latestRelease = releases[0];
+
+    // Delete existing debug assets in the latest release to avoid duplicates
+    console.log("Removing existing debug assets from latest release if present");
+    const latestAssets = await $`curl -H "Authorization: token ${token}" -s https://api.github.com/repos/micon4sure/WICLIVE/releases/${latestRelease.id}/assets`.json();
+    for (let asset of latestAssets) {
+      // match common debug asset names or anything containing 'debug'
+      if ((asset.name && asset.name.toLowerCase().includes('debug')) || asset.name === 'wiclive_x64-setup-debug.exe') {
+        console.log('Deleting existing debug asset', asset.name);
+        await $`curl -X DELETE -H "Authorization: token ${token}" -s https://api.github.com/repos/micon4sure/WICLIVE/releases/assets/${asset.id}`;
+      }
+    }
+
+    // Set Tauri signing variables
+    const privateKey = await $`cat src-tauri/tauri-sign.key`.text();
+    process.env.TAURI_PRIVATE_KEY = privateKey.toString();
+    process.env.TAURI_KEY_PASSWORD = "";
+
+    console.log(`BUILDING STAGING (debug) for version ${version}`);
+    await actions.build("staging", false);
+    const stagingSourcePath = `./src-tauri/target/debug/bundle/nsis/WIC LIVE_${version}_x64-setup.exe`;
+    // Use a unique name to avoid clobbering existing debug assets
+    const stagingDestPath = `./wiclive_x64-setup-debug-${Date.now()}.exe`;
+    console.log(`Renaming ${stagingSourcePath} -> ${stagingDestPath}`);
+    await rename(stagingSourcePath, stagingDestPath);
+
+    // Upload staging asset to latest release
+    console.log("Uploading staging asset to latest release as", stagingDestPath);
+    let stagingUpload = await $`
+      curl -X POST -H "Authorization: token ${token}" \
+        -H "Content-Type: application/octet-stream" \
+        --data-binary @"${stagingDestPath}" \
+        "https://uploads.github.com/repos/micon4sure/WICLIVE/releases/${latestRelease.id}/assets?name=${encodeURIComponent(stagingDestPath)}"
+    `.json();
+    console.log("Staging asset uploaded – available at", stagingUpload.browser_download_url);
   }
 }
 

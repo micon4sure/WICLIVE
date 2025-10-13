@@ -18,6 +18,10 @@ use std::process::Stdio;
 
 use config::Config;
 use tauri::Manager;
+use std::panic::{self, PanicHookInfo};
+use std::io::Write;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::backtrace::Backtrace;
 
 lazy_static::lazy_static! {
     static ref CONFIG: Config = Config::new();
@@ -27,6 +31,90 @@ lazy_static::lazy_static! {
 fn get_config() -> Result<Config, String> {
     return Ok(Config::new());
 }
+
+// Write panic information and backtrace to a log file. Returns path if written.
+fn write_crash_log(info: &PanicHookInfo<'_>) -> Option<String> {
+    let ts = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs();
+
+    let payload = match info.payload().downcast_ref::<&str>() {
+        Some(s) => s.to_string(),
+        None => match info.payload().downcast_ref::<String>() {
+            Some(s) => s.clone(),
+            None => "<non-string payload>".to_string(),
+        },
+    };
+
+    let location = if let Some(loc) = info.location() {
+        format!("{}:{}", loc.file(), loc.line())
+    } else {
+        "<unknown>".to_string()
+    };
+
+    // Capture a backtrace (requires RUST_BACKTRACE=1 to be enabled for richer data)
+    let bt = Backtrace::capture();
+
+    // Build log contents
+    let contents = format!(
+        "Timestamp: {}\nPanic payload: {}\nLocation: {}\nEnv: {}\nAPI_URL: {}\nBacktrace:\n{:?}\n",
+        ts,
+        payload,
+        location,
+        CONFIG.ENV,
+        CONFIG.API_URL,
+        bt
+    );
+
+    // Prefer to store logs in the app base directory; fall back to temp dir
+    let dir = match io::get_base_directory() {
+        Ok(mut base) => {
+            base.push("WICLIVE_logs");
+            if !base.exists() {
+                let _ = std::fs::create_dir_all(&base);
+            }
+            base
+        }
+        Err(_) => std::env::temp_dir(),
+    };
+
+    let filename = format!("wiclive_crash_{}.log", ts);
+    let mut path = dir.clone();
+    path.push(filename);
+
+    if let Ok(mut f) = std::fs::File::create(&path) {
+        let _ = f.write_all(contents.as_bytes());
+        return Some(path.to_string_lossy().to_string());
+    }
+    None
+}
+
+#[tauri::command]
+fn get_last_crash_log() -> Option<String> {
+    // Locate logs directory
+    let logs_dir = match io::get_base_directory() {
+        Ok(mut base) => { base.push("WICLIVE_logs"); base }
+        Err(_) => std::env::temp_dir(),
+    };
+
+    if !logs_dir.exists() {
+        return None;
+    }
+
+    let mut latest: Option<(SystemTime, String)> = None;
+    if let Ok(entries) = std::fs::read_dir(&logs_dir) {
+        for entry in entries.flatten() {
+            if let Ok(meta) = entry.metadata() {
+                if let Ok(modified) = meta.modified() {
+                    let path_str = entry.path().to_string_lossy().to_string();
+                    if latest.is_none() || modified > latest.as_ref().unwrap().0 {
+                        latest = Some((modified, path_str));
+                    }
+                }
+            }
+        }
+    }
+    latest.map(|(_, p)| p)
+}
+
 #[tauri::command]
 async fn get_map_files() -> Result<Vec<String>, String> {
     let maps_directory = get_maps_directory()?;
@@ -451,8 +539,22 @@ fn start_game() -> Result<(), String> {
 }
 
 fn main() {
+    // Ensure backtraces are enabled in release builds when possible
+    std::env::set_var("RUST_BACKTRACE", "1");
+
+    // Install panic hook to write crash logs
+    panic::set_hook(Box::new(|info| {
+        if let Some(path) = write_crash_log(info) {
+            println!("Crash log written to {}", path);
+        } else {
+            println!("Crash occurred but failed to write crash log");
+        }
+    }));
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            get_last_crash_log,
+            trigger_panic_for_test,
             get_map_files,
             get_map_hash,
             download_map_live,
