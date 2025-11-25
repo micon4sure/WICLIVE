@@ -387,7 +387,6 @@ const fixLAA = async () => {
   width: 30px;
   height: 30px;
   margin: 0 10px;
-  color: #A72F01;
 }
 
 .big-error {
