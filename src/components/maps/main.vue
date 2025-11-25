@@ -36,6 +36,7 @@ const init = async () => {
   // init LIVE maps
   remoteData = (await axios.get(CONFIG.API_URL + '/maps/data')).data
   let promises = _.map(remoteData, async (map) => {
+    map.name = map.name.toLowerCase()
     let status: WIC_Map_Status;
     if (!_.includes(local, map.name)) {
       status = WIC_Map_Status.MISSING

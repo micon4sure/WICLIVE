@@ -346,3 +346,72 @@ pub fn resolve_path(dir: &str, resource: &str) -> String {
     path.push(resource);
     path.to_str().unwrap().to_string()
 }
+
+pub fn get_laa_flag(path: &str) -> Result<bool, String> {
+    use std::fs::File;
+    use std::io::{Read, Seek, SeekFrom};
+
+    let mut file = File::open(path).map_err(|e| e.to_string())?;
+
+    let mut buffer = [0u8; 4];
+    file.seek(SeekFrom::Start(0x3C)).map_err(|e| e.to_string())?;
+    file.read_exact(&mut buffer).map_err(|e| e.to_string())?;
+    let pe_offset = u32::from_le_bytes(buffer) as u64;
+
+    let characteristics_offset = pe_offset + 4 + 18;
+
+    file.seek(SeekFrom::Start(characteristics_offset)).map_err(|e| e.to_string())?;
+    let mut char_buffer = [0u8; 2];
+    file.read_exact(&mut char_buffer).map_err(|e| e.to_string())?;
+    
+    let characteristics = u16::from_le_bytes(char_buffer);
+    
+    Ok((characteristics & 0x0020) != 0)
+}
+
+pub fn set_laa_flag(path: &str) -> Result<bool, String> {
+    use std::fs::OpenOptions;
+    use std::io::{Read, Seek, SeekFrom, Write};
+
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(path)
+        .map_err(|e| e.to_string())?;
+
+    let mut buffer = [0u8; 4];
+    file.seek(SeekFrom::Start(0x3C)).map_err(|e| e.to_string())?;
+    file.read_exact(&mut buffer).map_err(|e| e.to_string())?;
+    let pe_offset = u32::from_le_bytes(buffer) as u64;
+
+    // Characteristics is at PE offset + 4 (Signature) + 18 (File Header offset to Characteristics)
+    let characteristics_offset = pe_offset + 4 + 18;
+
+    file.seek(SeekFrom::Start(characteristics_offset)).map_err(|e| e.to_string())?;
+    let mut char_buffer = [0u8; 2];
+    file.read_exact(&mut char_buffer).map_err(|e| e.to_string())?;
+    
+    let mut characteristics = u16::from_le_bytes(char_buffer);
+    
+    // Check if already patched
+    if (characteristics & 0x0020) != 0 {
+        return Ok(true); // Already patched
+    }
+
+    characteristics |= 0x0020;
+    
+    file.seek(SeekFrom::Start(characteristics_offset)).map_err(|e| e.to_string())?;
+    file.write_all(&characteristics.to_le_bytes()).map_err(|e| e.to_string())?;
+
+    Ok(true)
+}
+
+pub fn is_soviet_assault() -> bool {
+    let install_path = find_install_path();
+    if install_path.is_none() {
+        return false;
+    }
+    let mut path = PathBuf::from(install_path.unwrap());
+    path.push("assault.dat");
+    path.exists()
+}

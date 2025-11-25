@@ -524,9 +524,9 @@ fn create_desktop_shortcut() -> Result<(), String> {
 #[tauri::command]
 fn start_game() -> Result<(), String> {
     let install_path = install::find_install_path().ok_or("Install path not found")?;
-    let game_exe = install::resolve_path(&install_path, "wic.exe");
+    let game_exe = PathBuf::from(install_path).join("wic.exe");
 
-    if !PathBuf::from(&game_exe).exists() {
+    if !game_exe.exists() {
         return Err("install path found but exe not present".to_string());
     }
 
@@ -536,6 +536,35 @@ fn start_game() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+#[tauri::command]
+fn set_laa_flag() -> Result<bool, String> {
+    let install_path = install::find_install_path().ok_or("Install path not found")?;
+    let game_exe = PathBuf::from(install_path).join("wic.exe");
+
+    if !game_exe.exists() {
+        return Err("wic.exe not found".to_string());
+    }
+
+    install::set_laa_flag(game_exe.to_str().unwrap())
+}
+
+#[tauri::command]
+fn get_laa_flag() -> Result<bool, String> {
+    let install_path = install::find_install_path().ok_or("Install path not found")?;
+    let game_exe = PathBuf::from(install_path).join("wic.exe");
+
+    if !game_exe.exists() {
+        return Err("wic.exe not found".to_string());
+    }
+
+    install::get_laa_flag(game_exe.to_str().unwrap())
+}
+
+#[tauri::command]
+fn is_soviet_assault() -> bool {
+    return install::is_soviet_assault();
 }
 
 fn main() {
@@ -554,7 +583,6 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             get_last_crash_log,
-            trigger_panic_for_test,
             get_map_files,
             get_map_hash,
             download_map_live,
@@ -584,7 +612,10 @@ fn main() {
             unzip_hooks,
             create_desktop_shortcut,
             get_secret,
-            start_game
+            start_game,
+            set_laa_flag,
+            get_laa_flag,
+            is_soviet_assault
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

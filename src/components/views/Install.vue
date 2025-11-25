@@ -21,6 +21,9 @@ manager.clearJobs();
 const progress = wicJobs.progress
 
 const DEFAULT_INSTALL_DIR = 'C:\\Program Files (x86)\\Ubisoft\\World in Conflict'
+const VANILLA_KEY = '3EXO-ELED-MXGY-FP5M-286R'
+const SOVIET_KEY = 'LABG-U3MF-RG9G-95GB-AYTH'
+
 
 const _installDir = ref(localStorage.getItem('install-dir') || DEFAULT_INSTALL_DIR)
 const createShortcut = localStorage.getItem('create-shortcut')
@@ -134,8 +137,29 @@ let jobs = {
     return true;
   },
   set_cd_key: async job => {
+
     try {
-      await invoke('set_cd_key');
+      const soviet = await invoke('is_soviet_assault')
+      const key = soviet ? SOVIET_KEY : VANILLA_KEY
+      await invoke('set_cd_key', { key });
+      const confirmKey = await invoke('get_cd_key')
+      if (confirmKey !== key)
+        throw new Error('CD key not set correctly')
+      job.status = 'success'
+    } catch (error) {
+      console.error("error", error);
+      job.info.push(error)
+      return false;
+    }
+    return true;
+  },
+  set_laa: async job => {
+    try {
+      await invoke('set_laa_flag')
+      const confirmLAA = await invoke('get_laa_flag')
+      if (!confirmLAA)
+        throw new Error('LAA flag not set correctly')
+      job.status = 'success'
     } catch (error) {
       console.error("error", error);
       job.info.push(error)
@@ -241,6 +265,7 @@ const goes = async () => {
   todo.push(["Download update", jobs.download_hooks])
   todo.push(["Install update", jobs.unzip_hooks])
   todo.push(["Set CD key", jobs.set_cd_key])
+  todo.push(["Set Large Address Aware flag", jobs.set_laa])
   if (_createShortcut.value) {
     todo.push(["Create desktop shortcut", jobs.create_desktop_shortcut])
   }
