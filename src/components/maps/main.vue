@@ -5,25 +5,26 @@ import jobsVue from '../jobs.vue'
 import axios from 'axios'
 
 import { invoke } from "@tauri-apps/api/tauri";
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, ref, reactive } from 'vue';
+import { listen } from '@tauri-apps/api/event';
 
 import get_config from '../../get_config'
 
 import iconDownload from '@fortawesome/fontawesome-free/svgs/solid/download.svg';
 import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg';
+import iconClock from '@fortawesome/fontawesome-free/svgs/regular/clock.svg';
 
 import mapsUploadVue from './upload.vue'
 
 import { WIC_Map_Frontend, WIC_Map_Status } from '../../lib/wic-map'
 
-import wicJobs from '../../lib/wic-jobs';
-
-const manager = wicJobs.manager
-const progress = wicJobs.progress
-const _jobs = wicJobs._jobs
-manager.clearJobs();
+import createJob, { Job, Job_Data } from '../../lib/wic-job';
 
 let remoteData = {} as any
+
+const _jobs: Job[] = reactive([])
+const _queuedMaps: Set<string> = new Set()
+let _isProcessingQueue = false
 
 const state = ref({
   mapsLive: [] as WIC_Map_Frontend[]
@@ -66,45 +67,55 @@ const init = async () => {
 
 }
 
-const queueLive = []
-let busyLive = false
-const downloadLiveMap = async name => {
-  if (queueLive.includes(name)) return;
-  queueLive.push(name)
-  _.find(state.value.mapsLive, { name: name }).status = WIC_Map_Status.PENDING
-  if (busyLive) return;
-  busyLive = true
+const queueMapDownload = (name: string) => {
+  // Prevent adding the same map twice
+  if (_queuedMaps.has(name)) return
 
-  while (queueLive.length) {
-    const name = queueLive.shift()
+  _queuedMaps.add(name)
+  _.find(state.value.mapsLive, { name }).status = WIC_Map_Status.QUEUED
 
-    await manager.runJob(`Download ${name}`, async (job) => {
-      const progressId = progress.on({ type: 'download-map-live' }, (progress) => {
-        job.progress = progress.percentage
-      })
+  const job = createJob(`Download ${name}`, async (addInfo) => {
+    const map = _.find(state.value.mapsLive, { name })
+    map.status = WIC_Map_Status.DOWNLOADING
 
-      const map = _.find(state.value.mapsLive, { name: name })
-      map.status = WIC_Map_Status.LOADING
+    await invoke("download_map_live", { map: name })
 
-      await invoke("download_map_live", { map: name })
+    addInfo('Compute hash...')
+    const hash: string = await invoke("get_map_hash", { filename: name })
 
-      job.info.push('Compute hash...')
-      const hash: string = await invoke("get_map_hash", { filename: name })
+    if (remoteData[name].hash != hash) {
+      map.status = WIC_Map_Status.OUTDATED
+      _queuedMaps.delete(name)
+      console.log('hash mismatch', remoteData[name].hash, hash)
+      throw new Error('hash mismatch')
+    }
 
-      if (remoteData[name].hash != hash) {
-        map.status = WIC_Map_Status.OUTDATED
-        console.log('hash mismatch', remoteData[name].hash, hash)
-        throw new Error('hash mismatch')
-      }
+    map.hash = hash
+    addInfo('done.')
+    map.status = WIC_Map_Status.CURRENT
+    _queuedMaps.delete(name)
+  }, 'download-map-live')
 
-      map.hash = hash
-      progress.off(progressId)
-      job.info.push('done.')
-      map.status = WIC_Map_Status.CURRENT
-    })
+  _jobs.push(job)
+  processQueue()
+}
+
+const processQueue = async () => {
+  if (_isProcessingQueue) return
+  _isProcessingQueue = true
+
+  while (true) {
+    const nextJob = _.find(_jobs, j => j.data.status === 'queued')
+    if (!nextJob) break
+
+    try {
+      await nextJob.run()
+    } catch (e) {
+      console.error('Download failed', e)
+    }
   }
-  busyLive = false
 
+  _isProcessingQueue = false
 }
 
 // watch for action needed
@@ -118,31 +129,30 @@ const _mapsLive = computed(() => {
     (map) => {
       if (map.status == WIC_Map_Status.MISSING) return 0;
       if (map.status == WIC_Map_Status.OUTDATED) return 1;
-      if (map.status == WIC_Map_Status.LOADING) return 2;
-      if (map.status == WIC_Map_Status.PENDING) return 3;
+      if (map.status == WIC_Map_Status.DOWNLOADING) return 2;
+      if (map.status == WIC_Map_Status.QUEUED) return 3;
       return 4
     },
     map => map.name
   ])
 })
 
-const synchronize = async () => {
+const synchronize = () => {
   if (!actionNeeded.value) return;
-  manager.runJob('Synchronize', async (job) => {
-    const promisesLive = _.map(state.value.mapsLive, async (map) => {
-      if (map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED) {
-        await downloadLiveMap(map.name)
-      }
-    })
-    await Promise.all(promisesLive)
+  _.each(state.value.mapsLive, (map) => {
+    if (map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED) {
+      queueMapDownload(map.name)
+    }
   })
 }
 
 const _showUpload = ref(false)
 onMounted(async () => {
-  manager.runJob('Initialize', async (job) => {
+  const job = createJob('Initialize', async (addInfo) => {
     await init()
   })
+  _jobs.push(job)
+  await job.run()
 })
 </script>
 
@@ -180,12 +190,13 @@ onMounted(async () => {
               <span v-if="map.status != WIC_Map_Status.CURRENT">{{ map.status }}</span>
             </td>
             <td class="status">
-              <span class="btn cta" @click="downloadLiveMap(map.name.toString())"
+              <span class="btn cta" @click="queueMapDownload(map.name.toString())"
                 v-if="map.status == WIC_Map_Status.MISSING || map.status == WIC_Map_Status.OUTDATED">
                 <iconDownload class="icon" />
                 Download
               </span>
-              <div class="spinner-border" role="status" v-if="map.status == WIC_Map_Status.LOADING">
+              <iconClock class="icon map-queued" v-if="map.status == WIC_Map_Status.QUEUED" />
+              <div class="spinner-border" role="status" v-if="map.status == WIC_Map_Status.DOWNLOADING">
                 <span class="sr-only">&nbsp;</span>
               </div>
               <iconCheck class="icon map-current" v-if="map.status == WIC_Map_Status.CURRENT" />
@@ -317,8 +328,12 @@ onMounted(async () => {
 
     .icon.map-current {
       fill: #15a315;
-      height: 1.5em;
+      height: 3em;
+    }
 
+    .icon.map-queued {
+      fill: #888;
+      height: 3em;
     }
   }
 }

@@ -1,10 +1,9 @@
 export enum WIC_Map_Status {
   MISSING = 'missing',
   OUTDATED = 'outdated',
-  PENDING = 'pending',
-  LOADING = 'loading',
+  QUEUED = 'queued',
+  DOWNLOADING = 'downloading',
   CURRENT = 'current',
-  UNKNOWN = 'unknown'
 }
 
 export interface WIC_Map_Backend {

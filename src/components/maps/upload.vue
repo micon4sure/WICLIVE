@@ -5,7 +5,7 @@ import axios from 'axios'
 import config from '../../get_config'
 
 import jobsVue from '../jobs.vue'
-import wicJobs from '../../lib/wic-jobs';
+import wicJobs from '../../lib/wic-job';
 
 const manager = wicJobs.manager
 const progress = wicJobs.progress

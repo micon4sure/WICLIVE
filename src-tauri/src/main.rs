@@ -371,7 +371,7 @@ async fn download_vcredist(window: tauri::Window) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn clean_install_directory() {
+fn clean_temp_directory() {
     let paths = vec![
         "world_in_conflict_retail_1.000_en.zip",
         "world_in_conflict_retail_1.000_en",
@@ -602,7 +602,7 @@ fn main() {
             install_game,
             install_patch,
             install_vcredist,
-            clean_install_directory,
+            clean_temp_directory,
             get_cd_key,
             set_cd_key,
             needs_vc_redist,

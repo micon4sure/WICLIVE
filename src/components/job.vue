@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import _ from 'lodash'
-import { defineProps } from 'vue'
-
 import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg';
 import iconXMark from '@fortawesome/fontawesome-free/svgs/solid/xmark.svg';
+import iconClock from '@fortawesome/fontawesome-free/svgs/regular/clock.svg';
+import type { Job } from '../lib/wic-job'
 
-const props = defineProps({
-  job: Object
-})
+const props = defineProps<{
+  job: Job
+}>()
 
-const job = props.job as any
+const job = props.job.data
 </script>
 
 <template>
@@ -17,16 +16,18 @@ const job = props.job as any
     <span class="job-status">
       <iconCheck v-if="job.status === 'success'" />
       <iconXMark v-if="job.status === 'error'" />
-      <div class="spinner-border" role="status" v-if="job.status == 'pending'">
+      <iconClock v-if="job.status === 'queued'" />
+      <div class="spinner-border" role="status" v-if="job.status == 'running'">
         <span class="sr-only">&nbsp;</span>
       </div>
     </span>
     <div class="job-main">
       <div class="job-title">{{ job.title }}</div>
       <ul class="job-info" v-if="job.info.length">
-        <li v-for="(info, idx) in job.info" :key="idx + info">{{ info }}</li>
+        <li v-for="(info, idx) in job.info" :key="idx + info.text" :class="{ highlight: info.highlight }">{{ info.text
+        }}</li>
       </ul>
-      <div class="progress" v-if="job.progress && job.progress < 100">
+      <div class="progress" v-if="job.progress > 0 && job.progress < 100">
         <div class="progress-bar bg-info" role="progressbar" :style="{ width: Math.floor(job.progress) + '%' }"
           :aria-valuenow="job.progress" aria-valuemin="0" aria-valuemax="100"></div>
       </div>
@@ -86,6 +87,10 @@ div.job {
     fill: #15a315;
   }
 
+  &.queued svg {
+    fill: #888;
+  }
+
   .job-main {
     flex: 1;
   }
@@ -103,6 +108,12 @@ div.job {
     li {
       padding: 3px 10px;
       border-radius: 4px;
+
+      &.highlight {
+        background: rgba(255, 166, 0, 0.3);
+        color: #ffcc00;
+        font-weight: bold;
+      }
     }
 
   }

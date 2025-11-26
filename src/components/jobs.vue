@@ -1,27 +1,18 @@
 <script setup lang="ts">
-import _ from 'lodash'
 import jobVue from './job.vue'
 // actions as prop
-import { defineProps, ref, onMounted, watch } from 'vue'
-const props = defineProps({
-  jobs: Array
-})
-let jobs = props.jobs as Array<any>
+import { computed, defineProps } from 'vue'
+import type { Job } from '../lib/wic-job'
 
-const jobsSuccess = ref([]);
-const jobsError = ref([]);
-const jobsPending = ref([]);
+defineProps<{
+  jobs: Job[]
+}>()
 
-watch(jobs, (newVal) => {
-  jobsSuccess.value = jobs.filter((job) => job.status === 'success');
-  jobsError.value = jobs.filter((job) => job.status === 'error');
-  jobsPending.value = jobs.filter((job) => job.status === 'pending');
-})
 </script>
 
 <template>
   <ul class="jobs">
-    <li v-for="(job, idx) in jobs " :key="idx + job.title" :class="['action', job.status]">
+    <li v-for="(job, idx) in jobs" :key="idx + job.data.title" :class="['action', job.data.status]">
       <job-vue :job="job" />
     </li>
   </ul>
