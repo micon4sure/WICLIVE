@@ -5,12 +5,9 @@ import axios from 'axios'
 import config from '../../get_config'
 
 import jobsVue from '../jobs.vue'
-import wicJobs from '../../lib/wic-job';
+import createJob, { Job } from '../../lib/wic-job';
 
-const manager = wicJobs.manager
-const progress = wicJobs.progress
-const _jobs = wicJobs._jobs
-
+const _jobs: Job[] = reactive([])
 
 const $file = ref(null)
 
@@ -23,21 +20,18 @@ if (localStorage.getItem('upload-key')) {
 
 const upload = async () => {
   const CONFIG: any = await config()
-  manager.runJob('Upload map', async (job) => {
+  
+  const job = createJob('Upload map', async (addInfo) => {
     if (!_key.value) {
-      job.status = 'error'
-      job.info.push('No API Key')
-      return
+      throw new Error('No API Key')
     }
     if (!$file.value.value) {
-      job.status = 'error'
-      job.info.push('No File')
-      return
+      throw new Error('No File')
     }
 
     const filename = $file.value.files![0].name;
 
-    job.info.push(`Uploading ${filename}...`)
+    addInfo(`Uploading ${filename}...`)
 
     const formData = new FormData()
     formData.append('file', $file.value.files![0])
@@ -50,18 +44,18 @@ const upload = async () => {
         }
       })
     } catch (error) {
-      job.status = 'error'
       console.error(error)
-      job.info.push(error + ' (' + error.response?.data + ')')
-      return
+      throw new Error(error + ' (' + error.response?.data + ')')
     }
 
-    job.info.push('Upload complete..')
-    job.status = 'success'
+    addInfo('Upload complete..')
 
     // set key in local storage
     localStorage.setItem('upload-key', _key.value)
   })
+
+  _jobs.push(job)
+  await job.run()
 };
 </script>
 
@@ -79,6 +73,7 @@ const upload = async () => {
         <input type="text" id="key" class="form-control" placeholder="API KEY" v-model="_key">
       </div>
       <button type="button" id="upload" @click="upload" class="btn cta small">Upload</button>
+      <jobs-vue :jobs="_jobs" v-if="_jobs.length" />
     </div>
   </div>
 </template>
