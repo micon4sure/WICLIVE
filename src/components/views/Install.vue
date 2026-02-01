@@ -34,6 +34,9 @@ const _createShortcut = ref(createShortcut !== null ? createShortcut === 'true' 
 const _isElevated = ref(false);
 
 const goes = async () => {
+  // Fetch the actual install path from registry before using/displaying it
+  _installDir.value = await invoke('get_install_path') as string;
+
   let isElevated = await invoke('is_elevated')
   if (!isElevated) {
     console.log('not elevated, setting install dir and elevating permissions', _installDir.value)
