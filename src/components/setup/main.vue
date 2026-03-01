@@ -1,43 +1,37 @@
 <script setup lang="ts">
-import _ from 'lodash'
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api';
-import { computed, onMounted, reactive, ref, nextTick } from 'vue';
-
+import { onMounted, reactive, ref } from 'vue';
 
 import jobsVue from '../jobs.vue'
-import axios from 'axios';
 import { Job, Job_Data } from '../../lib/wic-job';
 import useInstallJobs from '../../lib/install-jobs'
+import useSetupState from '../../lib/use-setup-state'
 
 const installJobs = useInstallJobs();
+const {
+  initializeSuccess,
+  needsCDKey: _needsCDKey,
+  needsVCRedist: _needsVCRedist,
+  needsPatch: _needsPatch,
+  needsHooks: _needsHooks,
+  needsHooksUpdate: _needsHooksUpdate,
+  needsLAA: _needsLAA,
+  needsAction: _needsAction,
+  installDir: _installDir,
+  isSoviet: _isSoviet,
+  cdKey: _cdKey,
+  initSetupState,
+  ensureInit,
+} = useSetupState();
 
 const VANILLA_KEY = '3EXO-ELED-MXGY-FP5M-286R'
 const SOVIET_KEY = 'LABG-U3MF-RG9G-95GB-AYTH'
 const CLAN_KEY = ref(null)
 const STEAM_KEY = ref(null)
 
-const _isInitialized = ref(false)
-const _initializeSuccess = ref(true)
-
-const _installDir = ref('')
-const _gameVersion = ref(null)
-const _hooksVersion = ref('')
-
-const _jobsInit: Job[] = reactive([])
 const _jobsFixes: Job[] = reactive([])
-
-const _needsCDKey = ref(false)
-const _needsVCRedist = ref(false)
-const _needsPatch = ref(false)
-const _needsHooks = ref(false)
-const _needsHooksUpdate = ref(false)
-const _needsLAA = ref(false)
-
-const _needsAction = ref(false)
 const _display = ref(false)
-
-const _isSoviet = ref(false)
 
 // Track running state of fix actions
 const _isFixingPatches = ref(false)
@@ -46,43 +40,19 @@ const _isFixingLAA = ref(false)
 const _isFixingVCRedist = ref(false)
 const _isFixingCDKey = ref(false)
 
-const checkInit = () => {
-  let initialized = true;
-  for (const job of _jobsInit) {
-    if (job.data.status == 'queued' || job.data.status == 'running') {
-      initialized = false;
-    }
-  }
-
-  if (initialized) {
-    _isInitialized.value = true
-    onInitialized();
-  }
-}
-
-const runInitJob = async (title, action) => {
-  await createJob('init', title, action).run()
-}
 const runFixJob = async (title, action, progressFilter: string | null = null) => {
-  await createJob('fix', title, action, progressFilter).run()
+  await createFixJob(title, action, progressFilter).run()
 }
 const createFixJob = (title, action, progressFilter: string | null = null) => {
-  return createJob('fix', title, action, progressFilter)
-}
-
-const createJob = (type: 'init' | 'fix', title, action, progressFilter: string | null = null) => {
   const data: Job_Data = reactive({
     title,
     status: 'queued',
     info: [],
     progress: 0
   })
-  const jobs = type == 'init' ? _jobsInit : _jobsFixes
 
   const run = async () => {
     let unlisten: (() => void) | null = null
-
-
     data.status = 'running'
 
     if (progressFilter) {
@@ -103,108 +73,39 @@ const createJob = (type: 'init' | 'fix', title, action, progressFilter: string |
     } catch (e) {
       data.info.push({ text: String(e), highlight: true })
       data.status = "error"
-      if (type == 'init')
-        _initializeSuccess.value = false
     } finally {
       if (unlisten) unlisten()
-      if (type == 'init')
-        checkInit()
-      else
-        initSetupState()
+      initSetupState()
     }
   }
   const job = { data, run }
-  jobs.push(job)
+  _jobsFixes.push(job)
   return job
 }
 
-const initSetupState = async () => {
-  while (_jobsInit.length > 0)
-    _jobsInit.pop()
+onMounted(async () => {
+  CLAN_KEY.value = await invoke('get_secret', { secret: 'SECRET_CLAN_KEY' })
+  STEAM_KEY.value = await invoke('get_secret', { secret: 'SECRET_STEAM_KEY' })
 
-  await nextTick()
+  await ensureInit()
 
-  runInitJob("Check need game patches", async ({ addInfo }) => {
-    let version = await invoke('extract_game_version') as any;
-    _gameVersion.value = version.major + '.' + version.minor + '.' + version.patch + '.' + version.build;
-    addInfo(`Version: ${_gameVersion.value}`)
-    _needsPatch.value = version.patch != 1 || version.build != 1;
-    if (_needsPatch.value)
-      addInfo('Game is not patched to latest version', true)
-  })
-  runInitJob("Check LAA flag", async ({ addInfo }) => {
-    const laaFlag = await invoke('get_laa_flag') as boolean;
-    _needsLAA.value = !laaFlag;
-    addInfo(laaFlag ? 'Enabled' : 'Not set', _needsLAA.value)
-  })
-
-
-  runInitJob('Check need Visual Studio C++ Redistributable', async ({ addInfo }) => {
-    _needsVCRedist.value = await invoke('needs_vc_redist')
-    addInfo(_needsVCRedist.value ? 'Not installed' : 'Installed', _needsVCRedist.value)
-  })
-
-  runInitJob("Check CD key", async ({ addInfo }) => {
-    const key = _cdKey.value = await invoke('get_cd_key')
-    _needsCDKey.value = !key || key == "invalid"
-    addInfo(_needsCDKey.value ? 'Missing or invalid' : key, _needsCDKey.value)
-    _needsVCRedist.value = await invoke('needs_vc_redist')
-  })
-
-  runInitJob('Check need multiplayer fix', async ({ addInfo }) => {
-    _needsHooks.value = await invoke('needs_hooks')
-    _hooksVersion.value = (await axios.get('https://www.wicgate.com/wic_cl_hook-version.txt')).data
-    _needsHooksUpdate.value = !_needsHooks.value && await invoke('needs_hooks_update', { version: _hooksVersion.value })
-    if (_needsHooks.value) addInfo('Not installed', true)
-    else if (_needsHooksUpdate.value) addInfo(`Update available: ${_hooksVersion.value}`, true)
-    else addInfo(`Up to date: ${_hooksVersion.value}`)
-  })
-}
-
-const onInitialized = async () => {
-  _needsAction.value = _needsHooks.value || _needsHooksUpdate.value || _needsCDKey.value || _needsVCRedist.value || _needsLAA.value || _needsPatch.value;
   if (_needsAction.value)
     _display.value = true;
 
-  // Check for pending elevated actions
-  if (localStorage.getItem('do-install-hooks') == "true") {
-    _needsAction.value = true
-    localStorage.removeItem('do-install-hooks')
-    installHooks()
+  // If we're elevated, automatically run pending fixes
+  const isElevated = await invoke('is_elevated')
+  if (isElevated) {
+    if (_needsHooks.value || _needsHooksUpdate.value) installHooks()
+    if (_needsLAA.value) fixLAA()
+    if (_needsVCRedist.value) installVCRedist()
   }
-
-  if (localStorage.getItem('do-fix-laa') == "true") {
-    _needsAction.value = true
-    localStorage.removeItem('do-fix-laa')
-    fixLAA()
-  }
-
-  if (localStorage.getItem('do-install-vcredist') == "true") {
-    _needsAction.value = true
-    localStorage.removeItem('do-install-vcredist')
-    installVCRedist()
-  }
-
-  _installDir.value = await invoke('get_install_path')
-  _isSoviet.value = await invoke('is_soviet_assault')
-}
-
-onMounted(async () => {
-  await initSetupState()
-
-  CLAN_KEY.value = await invoke('get_secret', { secret: 'SECRET_CLAN_KEY' })
-  STEAM_KEY.value = await invoke('get_secret', { secret: 'SECRET_STEAM_KEY' })
 })
 
 const installPatches = async () => {
   _isFixingPatches.value = true
-  console.log('running install patches')
 
-  // Elevate permissions if needed (writes to Program Files)
   let isElevated = await invoke('is_elevated')
   if (!isElevated) {
-    console.log('elevating permissions to install patches')
-    localStorage.setItem('do-install-patches', "true");
     await invoke('elevate_permissions')
     return;
   }
@@ -212,7 +113,6 @@ const installPatches = async () => {
   const todo: Job[] = []
 
   let version = await invoke('extract_game_version') as any;
-  console.log('GAME VERSION:', version)
   if (version.patch == 0)
     todo.push(createFixJob('Download patch 1.0.1.0', async () => {
       await installJobs.download_patch10.run();
@@ -243,7 +143,6 @@ const installPatches = async () => {
 };
 
 // SET CD KEY
-const _cdKey = ref('')
 const _errorSetCDKey = ref(null)
 const setCDKey = async (key: string) => {
   _isFixingCDKey.value = true
@@ -260,11 +159,8 @@ const setCDKey = async (key: string) => {
 // INSTALL VC REDIST
 const installVCRedist = async () => {
   _isFixingVCRedist.value = true
-  // Elevate permissions if needed (VC Redist install requires admin)
   let isElevated = await invoke('is_elevated')
   if (!isElevated) {
-    console.log('elevating permissions to install VC Redist')
-    localStorage.setItem('do-install-vcredist', "true");
     await invoke('elevate_permissions')
     return;
   }
@@ -286,13 +182,9 @@ const installVCRedist = async () => {
 // INSTALL HOOKS
 const installHooks = async () => {
   _isFixingHooks.value = true
-  console.log('running install hooks')
 
-  // Elevate permissions if needed (writes to Program Files)
   let isElevated = await invoke('is_elevated')
   if (!isElevated) {
-    console.log('elevating permissions to install hooks')
-    localStorage.setItem('do-install-hooks', "true");
     await invoke('elevate_permissions')
     return;
   }
@@ -316,11 +208,8 @@ const installHooks = async () => {
 // FIX LAA
 const fixLAA = async () => {
   _isFixingLAA.value = true
-  // Elevate permissions if needed (modifies wic.exe in Program Files)
   let isElevated = await invoke('is_elevated')
   if (!isElevated) {
-    console.log('elevating permissions to set LAA flag')
-    localStorage.setItem('do-fix-laa', "true");
     await invoke('elevate_permissions')
     return;
   }
@@ -330,71 +219,12 @@ const fixLAA = async () => {
   });
   _isFixingLAA.value = false
 }
-
-
 </script>
 
 <template>
-  <!-- {{ {
-    _needsHooks,
-    _needsHooksUpdate,
-    _needsCDKey,
-    _needsVCRedist,
-    _needsPatch,
-    _needsAction,
-    _display,
-    _jobs,
-    _cdKey,
-    _errorSetCDKey,
-    _isInConfirmModeVanilla,
-    _isInConfirmModeSoviet,
-    VANILLA_KEY,
-    SOVIET_KEY,
-    CLAN_KEY,
-    STEAM_KEY
-  } }} -->
-  <div id="setup" class="mb-5">
+  <div id="setup" class="mb-5" v-if="initializeSuccess && _display">
     <h2>Setup</h2>
-    <div>
-      <div class="setup-flex">
-        <div class="setup-controls">
-          <div class="card mb-3">
-            <div class="card-header">Installation state</div>
-            <div class="card-body" v-if="!_initializeSuccess">
-              <p class="big-error">
-                There were errors during initialization. Please restart WIC LIVE to try again.
-              </p>
-            </div>
-            <div class="card-body" v-else-if="_installDir && _hooksVersion">
-              <p>
-                WIC LIVE is using this install directory: <strong>{{ _installDir }}</strong>
-              </p>
-              <p>
-                Your patch level is <strong>{{ _gameVersion }}</strong>
-              </p>
-              <p>The edition is: <strong v-if="_isSoviet">Soviet Assault</strong><strong v-else>Vanilla</strong></p>
-              <p>
-                The version of your multiplayer fix is <strong>{{ _hooksVersion }}</strong>
-              </p>
-              <p v-if="!_needsAction">
-                <strong>You're all set for online multiplayer</strong>
-              </p>
-            </div>
-            <div class="card-body" v-else-if="!_isInitialized">
-              <div class="spinner-border" role="status">
-                <span class="sr-only">&nbsp;</span>
-              </div>
-              <strong>Initializing...</strong>
-            </div>
-            <div class="card-body" v-else>
-              World in Conflict is not installed.
-            </div>
-          </div>
-        </div>
-        <jobs-vue :jobs="_jobsInit" />
-      </div>
-    </div>
-    <div class="setup-flex" v-if="_initializeSuccess && _display">
+    <div class="setup-flex">
       <div class="setup-controls">
 
         <div class="card mb-3" v-if="_needsPatch">
@@ -513,12 +343,6 @@ const fixLAA = async () => {
   .setup-controls {
     flex: 1;
   }
-}
-
-.spinner-border {
-  width: 30px;
-  height: 30px;
-  margin: 0 10px;
 }
 
 .big-error {

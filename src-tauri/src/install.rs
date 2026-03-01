@@ -88,10 +88,16 @@ pub fn elevate_permissions(handle: tauri::AppHandle) {
         );
     }
     println!("script: {}", script);
-    let output = runner.run(script.as_str()).unwrap();
-    println!("output: {}", output);
-    // exit the current process
-    handle.exit(0)
+    match runner.run(script.as_str()) {
+        Ok(output) => {
+            println!("output: {}", output);
+            // exit the current process
+            handle.exit(0)
+        }
+        Err(e) => {
+            println!("elevation cancelled or failed: {}", e);
+        }
+    }
 }
 
 pub fn find_install_path() -> Option<String> {

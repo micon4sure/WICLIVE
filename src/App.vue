@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api';
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router';
+import useSetupState from './lib/use-setup-state'
+
+import iconCheck from '@fortawesome/fontawesome-free/svgs/solid/check.svg';
+import iconXMark from '@fortawesome/fontawesome-free/svgs/solid/xmark.svg';
+import iconWarning from '@fortawesome/fontawesome-free/svgs/solid/triangle-exclamation.svg';
+
+const { jobsInit, initSetupState, initializeSuccess } = useSetupState()
+
 const _version = ref('');
 onMounted(async () => {
   const config: any = await invoke('get_config')
   _version.value = config.VERSION
 })
-
 
 const router = useRouter()
 const home = router.resolve('/').href
@@ -48,19 +55,66 @@ onMounted(async () => {
   const installPath = await invoke('get_install_path')
   if (installPath) {
     isInstalled.value = true;
-  } else {
-    isInstalled.value = false;
+    initSetupState()
   }
 })
+
 const startGame = () => {
   invoke('start_game')
 }
+
+const hasHighlight = (job) => {
+  return job.data.info.some(i => i.highlight)
+}
+
+const pillValue = (job) => {
+  if (!job.data.info.length) return ''
+  return job.data.info[0].text
+}
+
+const pillOrder = (job) => {
+  if (job.data.status === 'error') return 0
+  if (job.data.status === 'success' && hasHighlight(job)) return 1
+  if (job.data.status === 'queued' || job.data.status === 'running') return 2
+  return 3
+}
+
+const sortedJobs = computed(() => {
+  return [...jobsInit].sort((a, b) => pillOrder(a) - pillOrder(b))
+})
 </script>
 
 <template>
-  <h1><a :href="home"><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></a>
+  <h1>
+    <a :href="home"><img src="./assets/wiclive.png" alt="WIC LIVE" /> <small>{{ _version }}</small></a>
     <p v-if="isInstalled"><button class="btn cta special" @click="startGame">Start game</button></p>
   </h1>
+  <div id="status-bar" v-if="isInstalled">
+    <div
+      v-for="(job, idx) in sortedJobs"
+      :key="idx"
+      :class="['status-pill', {
+        'checking': job.data.status === 'queued' || job.data.status === 'running',
+        'ok': job.data.status === 'success' && !hasHighlight(job),
+        'warn': job.data.status === 'success' && hasHighlight(job),
+        'err': job.data.status === 'error'
+      }]"
+      :title="job.data.title"
+    >
+      <span class="pill-icon">
+        <span class="spinner-border spinner-border-sm" v-if="job.data.status === 'queued' || job.data.status === 'running'"></span>
+        <iconCheck v-else-if="job.data.status === 'success' && !hasHighlight(job)" />
+        <iconWarning v-else-if="job.data.status === 'success' && hasHighlight(job)" />
+        <iconXMark v-else-if="job.data.status === 'error'" />
+      </span>
+      <span class="pill-label">{{ job.data.title.replace('Check ', '') }}</span>
+      <span class="pill-value" v-if="pillValue(job)">{{ pillValue(job) }}</span>
+    </div>
+    <div class="status-pill err" v-if="!initializeSuccess">
+      <span class="pill-icon"><iconXMark /></span>
+      <span class="pill-label">Init failed</span>
+    </div>
+  </div>
   <div id="container">
     <router-view />
   </div>
@@ -111,7 +165,7 @@ body {
 
 h1 {
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
-  margin-bottom: 15px;
+  margin-bottom: 0;
   padding: 25px;
   display: flex;
 
@@ -141,6 +195,84 @@ h1 small {
   margin-left: 10px;
   font-size: 12px;
   color: #fff;
+}
+
+// STATUS BAR
+#status-bar {
+  display: flex;
+  align-items: stretch;
+  margin-bottom: 15px;
+  background: linear-gradient(180deg, rgba(5, 30, 45, 0.85) 0%, rgba(5, 50, 70, 0.6) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(5, 84, 121, 0.5);
+}
+
+.status-pill {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-family: "DIN_1451";
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-stretch: 110%;
+  white-space: nowrap;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.3);
+  color: #667;
+
+  &:last-child {
+    border-right: none;
+    box-shadow: none;
+  }
+
+  .pill-icon {
+    display: flex;
+    align-self: center;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    .spinner-border-sm {
+      width: 14px;
+      height: 14px;
+      border-width: 2px;
+      color: #556;
+    }
+  }
+
+  .pill-label {
+    letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .pill-value { }
+
+  &.checking {
+    color: #556;
+    .pill-value { color: #889; }
+  }
+
+  &.ok {
+    color: #3a9a5c;
+    .pill-value { color: #4aba6e; }
+  }
+
+  &.warn {
+    color: #cc4400;
+    .pill-value { color: #e05520; }
+  }
+
+  &.err {
+    color: #cc2222;
+    .pill-value { color: #e03333; }
+  }
 }
 
 h2 {

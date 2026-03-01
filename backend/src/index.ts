@@ -7,9 +7,8 @@ import path, { format } from 'path';
 import https from 'https';
 import md5 from 'md5-file'
 
-import dotenv from 'dotenv';
 
-import keys from '../keys.json'
+const keys = JSON.parse(fs.readFileSync('./keys.json', 'utf8'));
 
 let mapsDirectory = './maps';
 const mapTempUploadDir = 'uploads';
@@ -278,7 +277,7 @@ app.get(filesRegex, async (req, res) => {
   console.log(`GET /files/${req.params[0]}`);
 
 
-  if (!dotenv.config().parsed.ENV_DEVELOPMENT) {
+  if (!process.env.ENV_DEVELOPMENT) {
     res.status(403).send('Forbidden');
     return;
   }

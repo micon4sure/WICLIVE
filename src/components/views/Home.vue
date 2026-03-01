@@ -11,7 +11,6 @@ import setupVue from '../setup/main.vue'
 <template>
   <div>
     <setup-vue />
-    <maps-upload-vue />
     <maps-main-vue />
     <config-main-vue />
   </div>
