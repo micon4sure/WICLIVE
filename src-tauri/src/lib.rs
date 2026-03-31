@@ -14,11 +14,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                if let Some(window) = app.get_webview_window("main") {
-                    window.open_devtools();
-                }
+            #[cfg(debug_assertions)]
+            if let Some(window) = app.get_webview_window("main") {
+                window.open_devtools();
             }
+            let _ = app;
             Ok(())
         })
         .manage(ApiConfig { url: api_url })
