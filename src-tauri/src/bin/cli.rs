@@ -19,12 +19,15 @@ fn main() {
         "set-laa" => cmd_set_laa(&args[2..]),
         "cdkey" => cmd_cdkey(),
         "set-cdkey" => cmd_set_cdkey(&args[2..]),
+        "request-cdkey" => cmd_request_cdkey(),
         "vcredist" => cmd_vcredist(),
         "proxy" => cmd_proxy(&args[2..]),
         "soviet-assault" => cmd_soviet_assault(&args[2..]),
         "check" => cmd_check_all(&args[2..]),
         "reset" => cmd_reset(&args[2..]),
         "variants" => cmd_variants(&args[2..]),
+        "maps" => cmd_maps(),
+        "sync" => cmd_sync(),
         "download-test" => cmd_download_test(&args[2..]),
         "help" | "--help" | "-h" => usage(),
         other => {
@@ -53,7 +56,9 @@ COMMANDS:
     soviet-assault [dir]  Check if Soviet Assault is installed
     check [exe_path]      Run all readiness checks
     variants [game_dir]   List available wic.exe variants
-    reset <variant>       Reset wic.exe to a variant (e.g. wic.1.0.0.nolaa.exe)");
+    reset <variant>       Reset wic.exe to a variant (e.g. wic.1.0.0.nolaa.exe)
+    maps                  List maps and their status (missing/outdated/current)
+    sync                  Download all missing and outdated maps");
 }
 
 fn cmd_install_path() {
@@ -112,6 +117,22 @@ fn cmd_cdkey() {
             process::exit(1);
         }
     }
+}
+
+fn cmd_request_cdkey() {
+    let api = env::var("API_URL").unwrap_or_else(|_| "http://localhost:3243".into());
+    let url = format!("{}/cdkey/generate", api);
+    println!("POST {}", url);
+
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let client = reqwest::Client::new();
+        let resp = client.post(&url).send().await.unwrap();
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        println!("HTTP {}", status);
+        println!("{}", body);
+    });
 }
 
 fn cmd_set_cdkey(args: &[String]) {
@@ -319,6 +340,143 @@ fn resolve_dir(args: &[String]) -> String {
             }
         }
     }
+}
+
+#[derive(serde::Deserialize)]
+struct RemoteMap {
+    name: String,
+    size: u64,
+    hash: String,
+    #[allow(dead_code)] date: String,
+    #[allow(dead_code)] uploader: String,
+    #[allow(dead_code)] version: u32,
+}
+
+struct MapStatus {
+    name: String,
+    remote_hash: String,
+    size: u64,
+    status: &'static str, // "missing", "outdated", "current"
+}
+
+fn fetch_map_status() -> Vec<MapStatus> {
+    let api = env::var("API_URL").unwrap_or_else(|_| "http://localhost:3243".into());
+    let rt = tokio::runtime::Runtime::new().unwrap();
+
+    let remote: std::collections::HashMap<String, RemoteMap> = rt.block_on(async {
+        let resp = reqwest::get(&format!("{}/maps/data", api)).await.unwrap();
+        resp.json().await.unwrap()
+    });
+
+    let local_files: Vec<String> = core::list_map_files().unwrap_or_default();
+    let local_set: std::collections::HashSet<String> = local_files.iter().map(|f| f.to_lowercase()).collect();
+
+    let mut result: Vec<MapStatus> = Vec::new();
+    for info in remote.values() {
+        let key = info.name.to_lowercase();
+        let status = if !local_set.contains(&key) {
+            "missing"
+        } else {
+            match core::get_map_hash(&info.name) {
+                Ok(h) if h == info.hash => "current",
+                _ => "outdated",
+            }
+        };
+        result.push(MapStatus {
+            name: info.name.clone(),
+            remote_hash: info.hash.clone(),
+            size: info.size,
+            status,
+        });
+    }
+
+    result.sort_by(|a, b| {
+        let ord = |s: &str| match s { "missing" => 0, "outdated" => 1, _ => 2 };
+        ord(a.status).cmp(&ord(b.status)).then(a.name.cmp(&b.name))
+    });
+
+    result
+}
+
+fn cmd_maps() {
+    let maps_dir = match core::get_maps_dir() {
+        Ok(d) => d,
+        Err(e) => { eprintln!("Maps dir: {}", e); process::exit(1); }
+    };
+    println!("Maps dir: {}", maps_dir.display());
+
+    let statuses = fetch_map_status();
+    let missing = statuses.iter().filter(|m| m.status == "missing").count();
+    let outdated = statuses.iter().filter(|m| m.status == "outdated").count();
+    let current = statuses.iter().filter(|m| m.status == "current").count();
+    println!("{} maps: {} current, {} missing, {} outdated\n", statuses.len(), current, missing, outdated);
+
+    for m in &statuses {
+        let size_mb = m.size as f64 / 1024.0 / 1024.0;
+        let tag = match m.status {
+            "missing" => "MISSING ",
+            "outdated" => "OUTDATED",
+            _ => "   ok   ",
+        };
+        println!("  [{}]  {:30}  {:>7.1} MB", tag, m.name, size_mb);
+    }
+}
+
+fn cmd_sync() {
+    let api = env::var("API_URL").unwrap_or_else(|_| "http://localhost:3243".into());
+    let maps_dir = match core::get_maps_dir() {
+        Ok(d) => d,
+        Err(e) => { eprintln!("Maps dir: {}", e); process::exit(1); }
+    };
+    println!("Maps dir: {}", maps_dir.display());
+
+    let statuses = fetch_map_status();
+    let need: Vec<&MapStatus> = statuses.iter().filter(|m| m.status != "current").collect();
+
+    if need.is_empty() {
+        println!("All maps up to date.");
+        return;
+    }
+
+    println!("{} maps to download\n", need.len());
+
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    for (i, m) in need.iter().enumerate() {
+        let size_mb = m.size as f64 / 1024.0 / 1024.0;
+        println!("[{}/{}] {} ({:.1} MB)", i + 1, need.len(), m.name, size_mb);
+
+        let url = format!("{}/maps/download/{}", api, m.name);
+        let dest = maps_dir.join(&m.name);
+        let last_print = std::cell::Cell::new(std::time::Instant::now());
+
+        let ok = rt.block_on(async {
+            core::download_file(&url, &dest, |downloaded, total| {
+                if last_print.get().elapsed().as_millis() >= 500 || downloaded == total {
+                    let pct = if total > 0 { downloaded * 100 / total } else { 0 };
+                    eprint!("\r  {} / {} ({}%)    ", downloaded, total, pct);
+                    last_print.set(std::time::Instant::now());
+                }
+            }).await
+        });
+
+        match ok {
+            Ok(()) => {
+                eprintln!();
+                // verify hash
+                match core::get_map_hash(&m.name) {
+                    Ok(h) if h == m.remote_hash => println!("  OK"),
+                    Ok(h) => println!("  HASH MISMATCH: got {} expected {}", h, m.remote_hash),
+                    Err(e) => println!("  hash check failed: {}", e),
+                }
+            }
+            Err(e) => {
+                eprintln!();
+                println!("  FAILED: {}", e);
+            }
+        }
+    }
+
+    println!("\nDone.");
 }
 
 fn cmd_download_test(args: &[String]) {

@@ -35,11 +35,11 @@
 
   /* Text */
   --t: #f3f6f8;
-  --t2: #a7b7c3;
-  --t3: #6c7a85;
+  --t2: #c5d5e0;
+  --t3: #8a9aa8;
   --t-rgb: 243, 246, 248;
-  --t2-rgb: 167, 183, 195;
-  --t3-rgb: 108, 122, 133;
+  --t2-rgb: 197, 213, 224;
+  --t3-rgb: 138, 154, 168;
 
   /* Accents */
   --g: #7cb342;
@@ -52,6 +52,12 @@
   --dl-light-rgb: 220, 53, 69;
   --dl-mid-rgb: 200, 35, 51;
   --dl-dark-rgb: 167, 30, 42;
+
+  /* Gold */
+  --gold: #ffca28;
+  --gold-bright: #ffd54f;
+  --gold-dark: #ffa000;
+  --gold-rgb: 255, 202, 40;
 
   /* Border & effects */
   --bd: rgba(68, 117, 146, 0.25);
