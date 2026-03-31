@@ -13,12 +13,12 @@ html, body {
 
 body {
   font-family: 'Rajdhani', system-ui, -apple-system, sans-serif;
-  background: var(--bg);
   color: var(--t);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   user-select: none;
+  background: var(--bg);
 }
 
 #app {

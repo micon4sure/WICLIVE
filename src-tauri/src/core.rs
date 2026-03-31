@@ -2,37 +2,27 @@ use std::path::PathBuf;
 
 // ── Install detection ──────────────────────────────────────────────
 
-/// Detect game install path from GAME_DIR env var or Windows registry.
+/// Detect game install path from Windows registry.
 pub fn get_install_path() -> Option<String> {
-    // Check env var first (works on all platforms, set via .env)
-    if let Ok(dir) = std::env::var("GAME_DIR") {
-        if PathBuf::from(&dir).join("wic.exe").exists() {
-            return Some(dir);
+    use winreg::enums::*;
+    use winreg::RegKey;
+
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+
+    // Standard install
+    if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict") {
+        if let Ok(path) = key.get_value::<String, _>("InstallPath") {
+            if PathBuf::from(&path).join("wic.exe").exists() {
+                return Some(path);
+            }
         }
     }
 
-    #[cfg(target_os = "windows")]
-    {
-        use winreg::enums::*;
-        use winreg::RegKey;
-
-        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-
-        // Standard install
-        if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict") {
-            if let Ok(path) = key.get_value::<String, _>("InstallPath") {
-                if PathBuf::from(&path).join("wic.exe").exists() {
-                    return Some(path);
-                }
-            }
-        }
-
-        // GOG variant
-        if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414") {
-            if let Ok(path) = key.get_value::<String, _>("WORKINGDIR") {
-                if PathBuf::from(&path).join("wic.exe").exists() {
-                    return Some(path);
-                }
+    // GOG variant
+    if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414") {
+        if let Ok(path) = key.get_value::<String, _>("WORKINGDIR") {
+            if PathBuf::from(&path).join("wic.exe").exists() {
+                return Some(path);
             }
         }
     }
@@ -40,8 +30,56 @@ pub fn get_install_path() -> Option<String> {
     None
 }
 
+/// Check if the registry has an install path entry (regardless of whether files exist).
+pub fn has_registry_install_path() -> bool {
+    use winreg::enums::*;
+    use winreg::RegKey;
+
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+
+    if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict") {
+        if key.get_value::<String, _>("InstallPath").is_ok() {
+            return true;
+        }
+    }
+
+    if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414") {
+        if key.get_value::<String, _>("WORKINGDIR").is_ok() {
+            return true;
+        }
+    }
+
+    false
+}
+
 pub fn require_install_path() -> Result<String, String> {
     get_install_path().ok_or_else(|| "Install path not found".into())
+}
+
+/// Remove the game install path from the Windows registry.
+pub fn clear_install_registry() -> Result<(), String> {
+    use winreg::enums::*;
+    use winreg::RegKey;
+
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+
+    // Standard install
+    if let Ok(key) = hklm.open_subkey_with_flags(
+        r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict",
+        KEY_SET_VALUE,
+    ) {
+        let _ = key.delete_value("InstallPath");
+    }
+
+    // GOG variant
+    if let Ok(key) = hklm.open_subkey_with_flags(
+        r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414",
+        KEY_SET_VALUE,
+    ) {
+        let _ = key.delete_value("WORKINGDIR");
+    }
+
+    Ok(())
 }
 
 pub fn require_exe_path() -> Result<PathBuf, String> {
@@ -71,81 +109,69 @@ impl std::fmt::Display for VersionInfo {
 
 /// Read game version from a PE executable via Windows API.
 pub fn read_pe_version(exe_path: &str) -> Result<VersionInfo, String> {
-    #[cfg(target_os = "windows")]
-    {
-        use std::ffi::OsStr;
-        use std::os::windows::ffi::OsStrExt;
-        use windows::core::PCWSTR;
-        use windows::Win32::Storage::FileSystem::{
-            GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW, VS_FIXEDFILEINFO,
-        };
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use windows::core::PCWSTR;
+    use windows::Win32::Storage::FileSystem::{
+        GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW, VS_FIXEDFILEINFO,
+    };
 
-        unsafe {
-            let path_wide: Vec<u16> = OsStr::new(exe_path)
-                .encode_wide()
-                .chain(std::iter::once(0))
-                .collect();
-            let path_pcw = PCWSTR::from_raw(path_wide.as_ptr());
+    unsafe {
+        let path_wide: Vec<u16> = OsStr::new(exe_path)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+        let path_pcw = PCWSTR::from_raw(path_wide.as_ptr());
 
-            let data_len = GetFileVersionInfoSizeW(path_pcw, None);
-            if data_len == 0 {
-                return Err("Failed to get version info size".into());
-            }
-
-            let mut data = vec![0u8; data_len as usize];
-            GetFileVersionInfoW(path_pcw, Some(0), data_len, data.as_mut_ptr() as *mut _)
-                .map_err(|e| e.to_string())?;
-
-            let mut info_ptr: *mut VS_FIXEDFILEINFO = std::ptr::null_mut();
-            let mut info_len: u32 = 0;
-
-            let query_wide: Vec<u16> = OsStr::new(r"\")
-                .encode_wide()
-                .chain(std::iter::once(0))
-                .collect();
-
-            let ok = VerQueryValueW(
-                data.as_ptr() as *const _,
-                PCWSTR(query_wide.as_ptr()),
-                (&mut info_ptr) as *mut _ as *mut *mut std::ffi::c_void,
-                &mut info_len,
-            );
-
-            if !ok.as_bool() || info_ptr.is_null() {
-                return Err("Failed to query version value".into());
-            }
-
-            let ffi = info_ptr.read_unaligned();
-            Ok(VersionInfo {
-                major: ((ffi.dwFileVersionMS >> 16) & 0xFFFF) as u16,
-                minor: (ffi.dwFileVersionMS & 0xFFFF) as u16,
-                patch: ((ffi.dwFileVersionLS >> 16) & 0xFFFF) as u16,
-                build: (ffi.dwFileVersionLS & 0xFFFF) as u16,
-            })
+        let data_len = GetFileVersionInfoSizeW(path_pcw, None);
+        if data_len == 0 {
+            return Err("Failed to get version info size".into());
         }
-    }
 
-    #[cfg(not(target_os = "windows"))]
-    Err("Not supported on this platform".into())
+        let mut data = vec![0u8; data_len as usize];
+        GetFileVersionInfoW(path_pcw, Some(0), data_len, data.as_mut_ptr() as *mut _)
+            .map_err(|e| e.to_string())?;
+
+        let mut info_ptr: *mut VS_FIXEDFILEINFO = std::ptr::null_mut();
+        let mut info_len: u32 = 0;
+
+        let query_wide: Vec<u16> = OsStr::new(r"\")
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+
+        let ok = VerQueryValueW(
+            data.as_ptr() as *const _,
+            PCWSTR(query_wide.as_ptr()),
+            (&mut info_ptr) as *mut _ as *mut *mut std::ffi::c_void,
+            &mut info_len,
+        );
+
+        if !ok.as_bool() || info_ptr.is_null() {
+            return Err("Failed to query version value".into());
+        }
+
+        let ffi = info_ptr.read_unaligned();
+        Ok(VersionInfo {
+            major: ((ffi.dwFileVersionMS >> 16) & 0xFFFF) as u16,
+            minor: (ffi.dwFileVersionMS & 0xFFFF) as u16,
+            patch: ((ffi.dwFileVersionLS >> 16) & 0xFFFF) as u16,
+            build: (ffi.dwFileVersionLS & 0xFFFF) as u16,
+        })
+    }
 }
 
 /// Read game version from registry.
 pub fn read_registry_version() -> Option<String> {
-    #[cfg(target_os = "windows")]
-    {
-        use winreg::enums::*;
-        use winreg::RegKey;
+    use winreg::enums::*;
+    use winreg::RegKey;
 
-        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-        if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict") {
-            if let Ok(version) = key.get_value::<String, _>("Version") {
-                return Some(version);
-            }
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+    if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict") {
+        if let Ok(version) = key.get_value::<String, _>("Version") {
+            return Some(version);
         }
-        None
     }
-
-    #[cfg(not(target_os = "windows"))]
     None
 }
 
@@ -242,47 +268,35 @@ pub fn unset_laa(path: &str) -> Result<bool, String> {
 
 /// Read CD key from HKCU registry.
 pub fn read_cd_key() -> Result<String, String> {
-    #[cfg(target_os = "windows")]
-    {
-        use winreg::enums::*;
-        use winreg::RegKey;
+    use winreg::enums::*;
+    use winreg::RegKey;
 
-        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-        let reg_path = r"Software\Massive Entertainment AB\World In Conflict";
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let reg_path = r"Software\Massive Entertainment AB\World In Conflict";
 
-        match hkcu.open_subkey(reg_path) {
-            Ok(subkey) => match subkey.get_value::<String, _>("CDKEY") {
-                Ok(key) => Ok(key),
-                Err(_) => Ok(String::new()),
-            },
+    match hkcu.open_subkey(reg_path) {
+        Ok(subkey) => match subkey.get_value::<String, _>("CDKEY") {
+            Ok(key) => Ok(key),
             Err(_) => Ok(String::new()),
-        }
+        },
+        Err(_) => Ok(String::new()),
     }
-
-    #[cfg(not(target_os = "windows"))]
-    Ok(String::new())
 }
 
 /// Write CD key to HKCU registry.
 pub fn write_cd_key(key: &str) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    {
-        use winreg::enums::*;
-        use winreg::RegKey;
+    use winreg::enums::*;
+    use winreg::RegKey;
 
-        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-        let reg_path = r"Software\Massive Entertainment AB\World In Conflict";
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let reg_path = r"Software\Massive Entertainment AB\World In Conflict";
 
-        let (subkey, _) = hkcu.create_subkey(reg_path)
-            .map_err(|e| format!("Failed to open/create registry key: {}", e))?;
+    let (subkey, _) = hkcu.create_subkey(reg_path)
+        .map_err(|e| format!("Failed to open/create registry key: {}", e))?;
 
-        subkey.set_value("CDKEY", &key.to_string())
-            .map_err(|e| format!("Failed to set CDKEY: {}", e))?;
+    subkey.set_value("CDKEY", &key.to_string())
+        .map_err(|e| format!("Failed to set CDKEY: {}", e))?;
 
-        Ok(())
-    }
-
-    #[cfg(not(target_os = "windows"))]
     Ok(())
 }
 
@@ -290,17 +304,11 @@ pub fn write_cd_key(key: &str) -> Result<(), String> {
 
 /// Check if VC++ 2015-2022 x86 is installed.
 pub fn check_vcredist() -> bool {
-    #[cfg(target_os = "windows")]
-    {
-        use winreg::enums::*;
-        use winreg::RegKey;
+    use winreg::enums::*;
+    use winreg::RegKey;
 
-        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-        hklm.open_subkey(r"SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\X86").is_ok()
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    true
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+    hklm.open_subkey(r"SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\X86").is_ok()
 }
 
 // ── Hooks / Proxy ──────────────────────────────────────────────────
@@ -483,21 +491,236 @@ where
 
 /// Set game version in registry after patching.
 pub fn set_registry_version(version: &str) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    {
-        use winreg::enums::*;
-        use winreg::RegKey;
+    use winreg::enums::*;
+    use winreg::RegKey;
 
-        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-        let (key, _) = hklm.create_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict")
-            .map_err(|e| format!("Failed to open registry key: {}", e))?;
-        key.set_value("Version", &version.to_string())
-            .map_err(|e| format!("Failed to set version: {}", e))?;
-        Ok(())
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+    let (key, _) = hklm.create_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict")
+        .map_err(|e| format!("Failed to open registry key: {}", e))?;
+    key.set_value("Version", &version.to_string())
+        .map_err(|e| format!("Failed to set version: {}", e))?;
+    Ok(())
+}
+
+// ── Maps ──────────────────────────────────────────────────────────
+
+/// Get the WiC base directory (Documents/World in Conflict).
+/// Tries standard user profile path first, then OneDrive path.
+pub fn get_base_directory() -> Result<PathBuf, String> {
+    // USERPROFILE\Documents\World in Conflict
+    if let Ok(userprofile) = std::env::var("USERPROFILE") {
+        let path = PathBuf::from(&userprofile).join(r"Documents\World in Conflict");
+        if path.exists() {
+            return Ok(path);
+        }
     }
 
-    #[cfg(not(target_os = "windows"))]
-    Ok(())
+    // OneDrive\Documents\World in Conflict
+    if let Ok(onedrive) = std::env::var("OneDrive") {
+        let path = PathBuf::from(&onedrive).join(r"Documents\World in Conflict");
+        if path.exists() {
+            return Ok(path);
+        }
+    }
+
+    Err("Base directory not found in standard or OneDrive locations.".into())
+}
+
+/// Get the maps directory (base/Downloaded/maps). Creates it if missing.
+/// MAPS_DIR env var overrides for development.
+pub fn get_maps_dir() -> Result<PathBuf, String> {
+    let maps = if let Ok(dir) = std::env::var("MAPS_DIR") {
+        PathBuf::from(dir)
+    } else {
+        let base = get_base_directory()?;
+        base.join("Downloaded").join("maps")
+    };
+    if !maps.exists() {
+        std::fs::create_dir_all(&maps).map_err(|e| e.to_string())?;
+    }
+    Ok(maps)
+}
+
+/// List all .sdf files in the maps directory.
+pub fn list_map_files() -> Result<Vec<String>, String> {
+    let dir = get_maps_dir()?;
+    if !dir.exists() { return Ok(vec![]); }
+
+    let mut result = Vec::new();
+    for entry in std::fs::read_dir(&dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("sdf") {
+            if let Some(name) = path.file_name().and_then(|f| f.to_str()) {
+                result.push(name.to_string());
+            }
+        }
+    }
+    Ok(result)
+}
+
+/// Compute MD5 hash of a map file (uppercase hex).
+pub fn get_map_hash(filename: &str) -> Result<String, String> {
+    let path = get_maps_dir()?.join(filename);
+    if !path.exists() {
+        return Err(format!("Map file not found: {}", filename));
+    }
+    md5_file(&path)
+}
+
+fn md5_file(path: &std::path::Path) -> Result<String, String> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+    let mut hasher = md5::Context::new();
+    let mut buf = [0u8; 8192];
+    loop {
+        let n = file.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 { break; }
+        hasher.consume(&buf[..n]);
+    }
+    Ok(format!("{:X}", hasher.compute()))
+}
+
+// ── Autoexec config ───────────────────────────────────────────────
+
+const AUTOEXEC_FILE: &str = "wicautoexec.txt";
+
+const LIVE_START: &str = "// LIVE START";
+const LIVE_END: &str = "// LIVE END";
+const COMP_START: &str = "// COMPETITIVE START";
+const COMP_END: &str = "// COMPETITIVE END";
+
+const LIVE_BLOCK: &str = "\
+// LIVE START\r\n\
+CameraFreedom 1\r\n\
+CameraMaxHeight 1500\r\n\
+\r\n\
+bind f1 AerialRecon\r\n\
+alias AerialRecon tactical_aid; select_cat_1; shortcut_1\r\n\
+\r\n\
+bind f2 Air2Air\r\n\
+alias Air2Air tactical_aid; select_cat_2; shortcut_4; shortcut_4; shortcut_4\r\n\
+\r\n\
+bind f3 Tankbuster\r\n\
+alias Tankbuster tactical_aid; select_cat_2; shortcut_2; shortcut_2; shortcut_2\r\n\
+\r\n\
+bind f4 Larty\r\n\
+alias Larty tactical_aid; select_cat_3; shortcut_1; shortcut_1; shortcut_1\r\n\
+\r\n\
+bind f5 Harty\r\n\
+alias Harty tactical_aid; select_cat_3; shortcut_3; shortcut_3; shortcut_3\r\n\
+\r\n\
+bind 7 Jeepdrops\r\n\
+alias Jeepdrops tactical_aid; select_cat_1; shortcut_3; shortcut_3; shortcut_3\r\n\
+\r\n\
+bind 8 Tankdrops\r\n\
+alias Tankdrops tactical_aid; select_cat_1; shortcut_4; shortcut_4; shortcut_4\r\n\
+\r\n\
+bind 9 Airbornes\r\n\
+alias Airbornes tactical_aid; select_cat_1; shortcut_2; shortcut_2; shortcut_2\r\n\
+\r\n\
+bind 0 Cluster\r\n\
+alias Cluster tactical_aid; select_cat_3; shortcut_2; shortcut_2; shortcut_2\r\n\
+// LIVE END";
+
+const COMP_BLOCK: &str = "\
+// COMPETITIVE START\r\n\
+SetFogDistances 1 1 1 1\r\n\
+Ex3DRenderClouds 0\r\n\
+// COMPETITIVE END";
+
+fn autoexec_path() -> Result<PathBuf, String> {
+    let base = get_base_directory()?;
+    Ok(base.join(AUTOEXEC_FILE))
+}
+
+fn read_autoexec() -> Result<String, String> {
+    let path = autoexec_path()?;
+    if !path.exists() {
+        return Ok(String::new());
+    }
+    std::fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+fn write_autoexec(contents: &str) -> Result<(), String> {
+    let path = autoexec_path()?;
+    std::fs::write(&path, contents).map_err(|e| e.to_string())
+}
+
+fn has_block(contents: &str, start_marker: &str, end_marker: &str) -> bool {
+    contents.contains(start_marker) && contents.contains(end_marker)
+}
+
+fn remove_block(contents: &str, start_marker: &str, end_marker: &str) -> String {
+    let Some(start) = contents.find(start_marker) else {
+        return contents.to_string();
+    };
+    let Some(end_rel) = contents[start..].find(end_marker) else {
+        return contents.to_string();
+    };
+    let end = start + end_rel + end_marker.len();
+
+    // Consume ONE adjacent newline: prefer trailing, fall back to leading
+    let after = &contents[end..];
+    let (trim_after, trim_before) = if after.starts_with("\r\n") {
+        (2, 0)
+    } else if after.starts_with('\n') {
+        (1, 0)
+    } else {
+        let before = &contents[..start];
+        if before.ends_with("\r\n") { (0, 2) }
+        else if before.ends_with('\n') { (0, 1) }
+        else { (0, 0) }
+    };
+
+    let mut result = contents[..start - trim_before].to_string();
+    result.push_str(&contents[end + trim_after..]);
+    result
+}
+
+pub fn get_autoexec_state() -> Result<(bool, bool), String> {
+    let contents = read_autoexec()?;
+    let live = has_block(&contents, LIVE_START, LIVE_END);
+    let comp = has_block(&contents, COMP_START, COMP_END);
+    Ok((live, comp))
+}
+
+pub fn set_live_settings(enabled: bool) -> Result<(), String> {
+    let mut contents = read_autoexec()?;
+
+    if enabled {
+        if has_block(&contents, LIVE_START, LIVE_END) {
+            return Ok(());
+        }
+        if !contents.is_empty() && !contents.ends_with('\n') && !contents.ends_with("\r\n") {
+            contents.push_str("\r\n");
+        }
+        contents.push_str(LIVE_BLOCK);
+        contents.push_str("\r\n");
+    } else {
+        contents = remove_block(&contents, LIVE_START, LIVE_END);
+    }
+
+    write_autoexec(&contents)
+}
+
+pub fn set_competitive_settings(enabled: bool) -> Result<(), String> {
+    let mut contents = read_autoexec()?;
+
+    if enabled {
+        if has_block(&contents, COMP_START, COMP_END) {
+            return Ok(());
+        }
+        if !contents.is_empty() && !contents.ends_with('\n') && !contents.ends_with("\r\n") {
+            contents.push_str("\r\n");
+        }
+        contents.push_str(COMP_BLOCK);
+        contents.push_str("\r\n");
+    } else {
+        contents = remove_block(&contents, COMP_START, COMP_END);
+    }
+
+    write_autoexec(&contents)
 }
 
 // ── Game launch ────────────────────────────────────────────────────
@@ -508,4 +731,151 @@ pub fn launch_game(exe_path: &str) -> Result<(), String> {
         .spawn()
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+// ── Tests ─────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── has_block ──────────────────────────────────────────────
+
+    #[test]
+    fn has_block_finds_present_block() {
+        let contents = "some stuff\r\n// LIVE START\r\ndata\r\n// LIVE END\r\n";
+        assert!(has_block(contents, LIVE_START, LIVE_END));
+    }
+
+    #[test]
+    fn has_block_returns_false_when_missing() {
+        assert!(!has_block("just some text", LIVE_START, LIVE_END));
+    }
+
+    #[test]
+    fn has_block_returns_false_with_only_start() {
+        assert!(!has_block("// LIVE START\r\ndata", LIVE_START, LIVE_END));
+    }
+
+    #[test]
+    fn has_block_returns_false_with_only_end() {
+        assert!(!has_block("data\r\n// LIVE END", LIVE_START, LIVE_END));
+    }
+
+    // ── remove_block ──────────────────────────────────────────
+
+    #[test]
+    fn remove_block_strips_block_with_crlf() {
+        let input = "before\r\n// LIVE START\r\nstuff\r\n// LIVE END\r\nafter";
+        let result = remove_block(input, LIVE_START, LIVE_END);
+        assert_eq!(result, "before\r\nafter");
+    }
+
+    #[test]
+    fn remove_block_strips_block_with_lf() {
+        let input = "before\n// LIVE START\nstuff\n// LIVE END\nafter";
+        let result = remove_block(input, LIVE_START, LIVE_END);
+        assert_eq!(result, "before\nafter");
+    }
+
+    #[test]
+    fn remove_block_at_start_of_file() {
+        let input = "// LIVE START\r\nstuff\r\n// LIVE END\r\nafter";
+        let result = remove_block(input, LIVE_START, LIVE_END);
+        assert_eq!(result, "after");
+    }
+
+    #[test]
+    fn remove_block_at_end_of_file() {
+        let input = "before\r\n// LIVE START\r\nstuff\r\n// LIVE END";
+        let result = remove_block(input, LIVE_START, LIVE_END);
+        assert_eq!(result, "before");
+    }
+
+    #[test]
+    fn remove_block_only_block() {
+        let input = "// LIVE START\r\nstuff\r\n// LIVE END\r\n";
+        let result = remove_block(input, LIVE_START, LIVE_END);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn remove_block_noop_when_missing() {
+        let input = "just some text\r\n";
+        let result = remove_block(input, LIVE_START, LIVE_END);
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn remove_block_preserves_other_blocks() {
+        let input = "before\r\n// LIVE START\r\ndata\r\n// LIVE END\r\n// COMPETITIVE START\r\nfog\r\n// COMPETITIVE END\r\nafter";
+        let result = remove_block(input, LIVE_START, LIVE_END);
+        assert_eq!(result, "before\r\n// COMPETITIVE START\r\nfog\r\n// COMPETITIVE END\r\nafter");
+    }
+
+    #[test]
+    fn remove_comp_block_preserves_live() {
+        let input = "// LIVE START\r\ndata\r\n// LIVE END\r\n// COMPETITIVE START\r\nfog\r\n// COMPETITIVE END\r\n";
+        let result = remove_block(input, COMP_START, COMP_END);
+        assert!(has_block(&result, LIVE_START, LIVE_END));
+        assert!(!has_block(&result, COMP_START, COMP_END));
+    }
+
+    // ── LIVE_BLOCK / COMP_BLOCK constants ─────────────────────
+
+    #[test]
+    fn live_block_has_correct_markers() {
+        assert!(LIVE_BLOCK.starts_with(LIVE_START));
+        assert!(LIVE_BLOCK.ends_with(LIVE_END));
+    }
+
+    #[test]
+    fn comp_block_has_correct_markers() {
+        assert!(COMP_BLOCK.starts_with(COMP_START));
+        assert!(COMP_BLOCK.ends_with(COMP_END));
+    }
+
+    #[test]
+    fn live_block_uses_crlf() {
+        assert!(LIVE_BLOCK.contains("\r\n"));
+        assert!(!LIVE_BLOCK.contains("\r\n\n")); // no stray LFs
+    }
+
+    // ── Round-trip: insert then remove ────────────────────────
+
+    #[test]
+    fn insert_then_remove_live_is_clean() {
+        let original = "some user config\r\n";
+        let mut contents = original.to_string();
+        contents.push_str(LIVE_BLOCK);
+        contents.push_str("\r\n");
+
+        let result = remove_block(&contents, LIVE_START, LIVE_END);
+        assert_eq!(result, "some user config\r\n");
+    }
+
+    #[test]
+    fn insert_both_then_remove_both() {
+        let mut contents = String::new();
+        contents.push_str(LIVE_BLOCK);
+        contents.push_str("\r\n");
+        contents.push_str(COMP_BLOCK);
+        contents.push_str("\r\n");
+
+        let contents = remove_block(&contents, COMP_START, COMP_END);
+        let contents = remove_block(&contents, LIVE_START, LIVE_END);
+        assert_eq!(contents, "");
+    }
+
+    #[test]
+    fn insert_live_around_existing_content() {
+        let original = "CameraMaxHeight 800\r\n";
+        let mut contents = original.to_string();
+        contents.push_str(LIVE_BLOCK);
+        contents.push_str("\r\n");
+
+        assert!(has_block(&contents, LIVE_START, LIVE_END));
+        let result = remove_block(&contents, LIVE_START, LIVE_END);
+        assert_eq!(result, "CameraMaxHeight 800\r\n");
+    }
 }

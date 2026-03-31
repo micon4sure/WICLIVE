@@ -13,9 +13,11 @@ interface Action {
   detail?: string
 }
 
+type AppMode = 'checking' | 'not-installed' | 'broken' | 'needs-fixes' | 'ready'
+
 const appWindow = getCurrentWindow()
 const version = ref('')
-const allReady = computed(() => actions.value.every(a => a.status === 'done' || a.status === 'fixed'))
+const installState = ref<'ok' | 'broken' | 'not-installed'>('ok')
 
 const actions = ref<Action[]>([
   { id: 'vcredist', label: 'VC++', status: 'checking' },
@@ -25,7 +27,16 @@ const actions = ref<Action[]>([
   { id: 'hooks', label: 'Proxy', status: 'checking' },
 ])
 
-defineExpose({ actions, allReady, runChecks })
+const mode = computed<AppMode>(() => {
+  if (installState.value === 'not-installed') return 'not-installed'
+  if (installState.value === 'broken') return 'broken'
+  const statuses = actions.value.map(a => a.status)
+  if (statuses.some(s => s === 'checking')) return 'checking'
+  if (statuses.every(s => s === 'done' || s === 'fixed')) return 'ready'
+  return 'needs-fixes'
+})
+
+defineExpose({ actions, mode, runChecks })
 
 function find(id: string) {
   return actions.value.find(a => a.id === id)!
@@ -39,9 +50,12 @@ async function runChecks() {
 
   const installPath = await invoke<string | null>('get_install_path')
   if (!installPath) {
+    const hasRegistry = await invoke<boolean>('has_registry_install_path')
+    installState.value = hasRegistry ? 'broken' : 'not-installed'
     for (const a of actions.value) a.status = 'error'
     return
   }
+  installState.value = 'ok'
 
   try {
     const ok = await invoke<boolean>('check_vcredist')
@@ -129,6 +143,14 @@ async function removeCdKey() {
   await invoke('set_cd_key', { key: '' })
   runChecks()
 }
+
+const debugCopied = ref(false)
+async function copyDebug() {
+  const info = await invoke<string>('get_debug_info')
+  await navigator.clipboard.writeText(info)
+  debugCopied.value = true
+  setTimeout(() => { debugCopied.value = false }, 2000)
+}
 </script>
 
 <template>
@@ -143,18 +165,18 @@ async function removeCdKey() {
       <button class="titlebar-btn titlebar-close" @click="close">&#x2715;</button>
     </div>
   </div>
-  <div class="header" data-tauri-drag-region>
-    <img src="../assets/wiclive.png" alt="WIC LIVE" class="header-logo" data-tauri-drag-region />
-    <small class="header-version" data-tauri-drag-region>{{ version }}</small>
+  <div class="header" :class="{ 'header-copied': debugCopied }" @click="copyDebug">
+    <img src="../assets/wiclive.png" alt="WIC LIVE" class="header-logo" />
+    <small class="header-version">{{ version }}</small>
 
-    <div class="status-area" data-tauri-drag-region>
+    <div v-if="mode !== 'broken' && mode !== 'not-installed'" class="status-area">
       <div v-if="isDev" class="dev-toolbar">
-        <button class="dev-btn" @click="undoPatches">undo patches</button>
-        <button class="dev-btn" @click="undoLaa">undo laa</button>
-        <button class="dev-btn" @click="removeCdKey">remove cdkey</button>
-        <button class="dev-btn" @click="undoProxy">undo proxy</button>
+        <button class="dev-btn" @click.stop="undoPatches">undo patches</button>
+        <button class="dev-btn" @click.stop="undoLaa">undo laa</button>
+        <button class="dev-btn" @click.stop="removeCdKey">remove cdkey</button>
+        <button class="dev-btn" @click.stop="undoProxy">undo proxy</button>
       </div>
-      <div class="status-bar" data-tauri-drag-region>
+      <div class="status-bar">
         <div v-for="action in actions" :key="action.id" class="status-pill" :class="action.status">
           <span class="pill-icon">
             <template v-if="action.status === 'done' || action.status === 'fixed'">&#x2713;</template>
@@ -168,7 +190,7 @@ async function removeCdKey() {
       </div>
     </div>
 
-    <button class="btn btn-launch header-launch" :disabled="!allReady" @click="launchGame">Start Game</button>
+    <button v-if="mode !== 'broken' && mode !== 'not-installed'" class="btn btn-launch header-launch" :disabled="mode !== 'ready'" @click.stop="launchGame">Start Game</button>
   </div>
 </template>
 
@@ -187,7 +209,7 @@ async function removeCdKey() {
   display: flex;
   align-items: stretch;
   padding: 0 25px;
-  background: linear-gradient(180deg, rgba(var(--graphite-light-rgb), 0.95) 0%, rgba(var(--graphite-dark-rgb), 0.98) 100%);
+  background: rgba(0, 0, 0, 0.75);
   border-bottom: 2px solid rgba(var(--dl-rgb), 0.45);
   flex-shrink: 0;
 }
@@ -321,6 +343,10 @@ async function removeCdKey() {
   color: var(--sw);
 }
 
+.status-pill.applying {
+  color: var(--b);
+}
+
 .status-pill.error {
   color: var(--dl-light);
 }
@@ -332,6 +358,30 @@ async function removeCdKey() {
 
 .header-launch {
   align-self: center;
+}
+
+.header:hover {
+  background: linear-gradient(180deg, rgba(var(--graphite-light-rgb), 1) 0%, rgba(var(--graphite-dark-rgb), 1) 100%);
+  cursor: pointer;
+}
+
+.header {
+  position: relative;
+}
+
+.header-copied::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--b-rgb), 0.15);
+  pointer-events: none;
+  animation: header-pulse 0.8s ease-in-out forwards;
+}
+
+@keyframes header-pulse {
+  0% { opacity: 0; }
+  40% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .titlebar-brand {

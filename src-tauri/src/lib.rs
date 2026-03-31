@@ -3,11 +3,9 @@ pub mod core;
 
 use tauri::Manager;
 
-#[cfg(target_os = "windows")]
 pub mod elevation;
 
 pub fn run() {
-    // Load .env from the project root (next to the exe in release, or src-tauri/ in dev)
     dotenvy::dotenv().ok();
 
     let api_url = std::env::var("API_URL").unwrap_or_else(|_| "https://wiclive.techtile.media".into());
@@ -46,6 +44,16 @@ pub fn run() {
             commands::remove_proxy,
             commands::apply_patches,
             commands::request_cd_key,
+            commands::has_registry_install_path,
+            commands::clear_install_registry,
+            commands::get_autoexec_state,
+            commands::set_live_settings,
+            commands::set_competitive_settings,
+            commands::get_debug_info,
+            commands::list_map_files,
+            commands::delete_all_maps,
+            commands::get_map_hash,
+            commands::download_map,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
