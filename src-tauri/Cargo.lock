@@ -5233,7 +5233,7 @@ dependencies = [
 
 [[package]]
 name = "wiclive"
-version = "4.0.0-alpha"
+version = "4.0.1-beta"
 dependencies = [
  "dotenvy",
  "futures-util",
