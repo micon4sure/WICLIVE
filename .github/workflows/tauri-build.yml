@@ -1,149 +1,113 @@
-name: Build and Release WIC LIVE
+name: Build and Release
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      beta:
+        description: "Beta release (no auto-update)"
+        type: boolean
+        default: true
 
 jobs:
-  build-and-release:
+  build:
     runs-on: windows-latest
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      # - name: Install Bun
-        #   run: |
-          #     irm bun.sh/install.ps1 | iex
-          #     echo "C:\Users\runneradmin\.bun\bin" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
-        #   shell: powershell
-
-      # - name: Install Bun modules
-      #   run: bun install
-      #   shell: powershell
-
-      - name: Setup Node/NPM
-        uses: actions/setup-node@v4      
-
-      - name: Install node modules
-        run: npm install
-        shell: powershell
-
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install
 
       - name: Build Tauri app
         env:
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ""
-          WICLIVE_ENV: production
-        run: npm run tauri build
-        shell: powershell
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+          API_URL: https://wiclive.techtile.media
+        run: bun run tauri build
 
-      - name: Get version from tauri.conf.json
-        id: get_version
-        run: |
-          $version = (Get-Content ./src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).package.version
-          echo "::set-output name=version::$version"
-        shell: powershell
-
-      - name: Check if Tag Exists
-        id: check_tag
-        run: |
-          $tagExists = git ls-remote --tags origin ${{ steps.get_version.outputs.version }}
-          if ($tagExists) {
-            echo "Tag already exists."
-            echo "::set-output name=tagExists::true"
-          } else {
-            echo "Tag does not exist yet."
-            echo "::set-output name=tagExists::false"
-          }
-        shell: powershell
-
-        
-      - name: Generate version.json
-        if: steps.check_tag.outputs.tagExists == 'false'
-        run: |
-          version=${{ steps.get_version.outputs.version }}
-          url="https://github.com/${{ github.repository }}/releases/download/$version/wiclive_${version}_x64-setup.nsis.zip"
-          signaturePath="${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${version}_x64-setup.nsis.zip.sig"
-          signature=$(cat "$signaturePath")
-          
-          # Create JSON
-          json=$(jq -n \
-                  --arg version "$version" \
-                  --arg url "$url" \
-                  --arg signature "$signature" \
-                  '{
-                    version: $version,
-                    platforms: {
-                      "windows-x86_64": {
-                        installMode: "passive",
-                        signature: $signature,
-                        url: $url
-                      }
-                    }
-                  }')
-          
-          echo "$json" > version.json
+      - name: Read version
+        id: version
         shell: bash
+        run: echo "version=$(jq -r .version src-tauri/tauri.conf.json)" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
-        if: steps.check_tag.outputs.tagExists == 'false'
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Check if release exists
+        id: check
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.get_version.outputs.version }}
-          release_name: Release ${{ steps.get_version.outputs.version }}
-          draft: false
-          prerelease: false
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view ${{ steps.version.outputs.version }} &>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
+      - name: Generate changelog
+        if: steps.check.outputs.exists == 'false'
+        id: changelog
+        shell: bash
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            NOTES=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s" --no-merges)
+          else
+            NOTES=$(git log --pretty=format:"- %s" --no-merges -20)
+          fi
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Upload Release Asset version.json
-        if: steps.check_tag.outputs.tagExists == 'false'
-        uses: actions/upload-release-asset@v1
+      - name: Build version.json
+        if: steps.check.outputs.exists == 'false' && inputs.beta == false
+        shell: bash
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          SIG=$(cat "src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.nsis.zip.sig")
+          NOTES=$(cat <<'NOTESEOF'
+          ${{ steps.changelog.outputs.notes }}
+          NOTESEOF
+          )
+          jq -n \
+            --arg v "$VERSION" \
+            --arg sig "$SIG" \
+            --arg url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/wiclive_${VERSION}_x64-setup.nsis.zip" \
+            --arg notes "$NOTES" \
+            '{
+              version: $v,
+              notes: $notes,
+              platforms: {
+                "windows-x86_64": {
+                  installMode: "passive",
+                  signature: $sig,
+                  url: $url
+                }
+              }
+            }' > version.json
+
+      - name: Create release
+        if: steps.check.outputs.exists == 'false'
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/version.json
-          asset_name: version.json
-          asset_content_type: text/json
-
-      - name: Upload Release Asset EXE
-        if: steps.check_tag.outputs.tagExists == 'false'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${{ steps.get_version.outputs.version }}_x64-setup.exe
-          asset_name: wiclive_x64-setup.exe
-          asset_content_type: application/octet-stream
-
-      - name: Upload Release Asset NSIS ZIP
-        if: steps.check_tag.outputs.tagExists == 'false'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset NSIS ZIP SIG
-        if: steps.check_tag.outputs.tagExists == 'false'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/WIC LIVE_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
-          asset_name: wiclive_${{ steps.get_version.outputs.version }}_x64-setup.nsis.zip.sig
-          asset_content_type: application/octet-stream
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          BETA=${{ inputs.beta }}
+          PRERELEASE=""
+          FILES=()
+          FILES+=("src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.exe#wiclive_x64-setup.exe")
+          if [ "$BETA" != "true" ]; then
+            FILES+=("src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.nsis.zip#wiclive_${VERSION}_x64-setup.nsis.zip")
+            FILES+=("src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.nsis.zip.sig#wiclive_${VERSION}_x64-setup.nsis.zip.sig")
+            FILES+=("version.json")
+          else
+            PRERELEASE="--prerelease"
+          fi
+          gh release create "$VERSION" \
+            --title "Release $VERSION" \
+            --notes "${{ steps.changelog.outputs.notes }}" \
+            $PRERELEASE \
+            "${FILES[@]}"
