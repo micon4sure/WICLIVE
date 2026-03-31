@@ -1,4 +1,7 @@
 mod commands;
+pub mod core;
+
+use tauri::Manager;
 
 #[cfg(target_os = "windows")]
 pub mod elevation;
@@ -12,6 +15,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            if cfg!(debug_assertions) {
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                }
+            }
+            Ok(())
+        })
         .manage(ApiConfig { url: api_url })
         .invoke_handler(tauri::generate_handler![
             commands::get_install_path,
@@ -19,6 +30,7 @@ pub fn run() {
             commands::get_game_version_registry,
             commands::get_laa_flag,
             commands::set_laa_flag,
+            commands::unset_laa_flag,
             commands::get_cd_key,
             commands::set_cd_key,
             commands::check_vcredist,
@@ -27,7 +39,13 @@ pub fn run() {
             commands::needs_hooks_update,
             commands::is_soviet_assault,
             commands::start_game,
+            commands::reset_game,
             commands::get_api_url,
+            commands::install_proxy,
+            commands::get_latest_proxy_version,
+            commands::remove_proxy,
+            commands::apply_patches,
+            commands::request_cd_key,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -2,10 +2,15 @@
 name = "wiclive"
 version = "4.0.0-alpha"
 edition = "2021"
+default-run = "wiclive"
 
 [lib]
 name = "wiclive_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "wiclive-cli"
+path = "src/bin/cli.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -17,6 +22,10 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 dotenvy = "0.15"
+reqwest = { version = "0.12", features = ["stream", "json"] }
+futures-util = "0.3"
+zip = "2"
+tokio = { version = "1", features = ["fs"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55"

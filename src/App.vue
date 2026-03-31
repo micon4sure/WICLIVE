@@ -1,15 +1,27 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import Titlebar from './components/Titlebar.vue'
+import ReadinessCard from './components/ReadinessCard.vue'
 import Config from './components/Config.vue'
 import Maps from './components/Maps.vue'
 
+const titlebar = ref<InstanceType<typeof Titlebar>>()
 const activeTab = ref<'config' | 'maps'>('config')
+
+const showReadiness = computed(() => {
+  const acts = titlebar.value?.actions
+  if (!acts) return false
+  return acts.some(a => a.status !== 'checking' && a.status !== 'done')
+})
 </script>
 
 <template>
-  <Titlebar />
+  <Titlebar ref="titlebar" />
   <div class="app-body">
+    <ReadinessCard
+      v-if="showReadiness && titlebar?.actions"
+      :actions="titlebar.actions"
+    />
     <div class="tab-area">
       <div class="tab-nav">
         <button
@@ -55,33 +67,35 @@ const activeTab = ref<'config' | 'maps'>('config')
 .tab-nav {
   display: flex;
   gap: 0;
-  border-bottom: 2px solid var(--bd);
+  background: linear-gradient(180deg, rgba(var(--graphite-rgb), 0.95) 0%, rgba(var(--graphite-dark-rgb), 0.95) 100%);
+  border-bottom: 2px solid rgba(var(--graphite-rgb), 0.8);
 }
 
 .tab-btn {
   font-family: 'Oswald', sans-serif;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  padding: 10px 24px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--t3);
+  letter-spacing: 1px;
+  padding: 12px 24px;
+  background: linear-gradient(180deg, rgba(var(--graphite-rgb), 0.9) 0%, rgba(var(--graphite-dark-rgb), 0.92) 100%);
+  border: 1px solid rgba(var(--graphite-dark-rgb), 0.6);
+  color: var(--t2);
   cursor: pointer;
   transition: var(--tr);
-  margin-bottom: -2px;
 }
 
 .tab-btn:hover {
-  color: var(--t2);
+  color: var(--t);
+  background: linear-gradient(180deg, rgba(var(--graphite-rgb), 1) 0%, rgba(var(--graphite-dark-rgb), 1) 100%);
 }
 
 .tab-btn.active {
-  color: var(--sw);
-  border-bottom-color: var(--sw);
-  text-shadow: 0 0 12px rgba(var(--sw-rgb), 0.3);
+  background: linear-gradient(180deg, rgba(var(--sw-rgb), 0.98) 0%, rgba(var(--sw-rgb), 0.8) 100%);
+  color: var(--ink);
+  font-weight: 600;
+  border-color: rgba(var(--sw-rgb), 0.95);
+  box-shadow: 0 0 18px rgba(var(--sw-rgb), 0.35);
 }
 
 .tab-content {

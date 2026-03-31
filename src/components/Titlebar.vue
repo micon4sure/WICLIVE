@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
@@ -15,33 +15,33 @@ interface Action {
 
 const appWindow = getCurrentWindow()
 const version = ref('')
-const allReady = ref(false)
+const allReady = computed(() => actions.value.every(a => a.status === 'done' || a.status === 'fixed'))
 
 const actions = ref<Action[]>([
-  { id: 'laa', label: 'LAA', status: 'checking' },
   { id: 'vcredist', label: 'VC++', status: 'checking' },
   { id: 'patch', label: 'Patches', status: 'checking' },
+  { id: 'laa', label: 'LAA', status: 'checking' },
   { id: 'cdkey', label: 'CD Key', status: 'checking' },
-  { id: 'hooks', label: 'Hooks', status: 'checking' },
+  { id: 'hooks', label: 'Proxy', status: 'checking' },
 ])
+
+defineExpose({ actions, allReady, runChecks })
 
 function find(id: string) {
   return actions.value.find(a => a.id === id)!
 }
 
 async function runChecks() {
+  for (const a of actions.value) {
+    a.status = 'checking'
+    a.detail = undefined
+  }
+
   const installPath = await invoke<string | null>('get_install_path')
   if (!installPath) {
     for (const a of actions.value) a.status = 'error'
     return
   }
-
-  try {
-    const laa = await invoke<boolean>('get_laa_flag')
-    const a = find('laa')
-    a.status = laa ? 'done' : 'needed'
-    a.detail = laa ? 'Enabled' : 'Not set'
-  } catch { find('laa').status = 'error' }
 
   try {
     const ok = await invoke<boolean>('check_vcredist')
@@ -60,6 +60,13 @@ async function runChecks() {
   } catch { find('patch').status = 'error' }
 
   try {
+    const laa = await invoke<boolean>('get_laa_flag')
+    const a = find('laa')
+    a.status = laa ? 'done' : 'needed'
+    a.detail = laa ? 'Enabled' : 'Not set'
+  } catch { find('laa').status = 'error' }
+
+  try {
     const key = await invoke<string>('get_cd_key')
     const a = find('cdkey')
     const ok = key.length > 0
@@ -72,15 +79,20 @@ async function runChecks() {
     const a = find('hooks')
     if (ok) {
       const ver = await invoke<string>('get_hooks_version')
-      a.status = 'done'
-      a.detail = ver.trim()
+      const latest = await invoke<string>('get_latest_proxy_version').catch(() => '')
+      if (latest && ver.trim() !== latest.trim()) {
+        a.status = 'needed'
+        a.detail = `${ver.trim()} → ${latest.trim()}`
+      } else {
+        a.status = 'done'
+        a.detail = ver.trim()
+      }
     } else {
       a.status = 'needed'
       a.detail = 'Not installed'
     }
   } catch { find('hooks').status = 'error' }
 
-  allReady.value = actions.value.every(a => a.status === 'done')
 }
 
 onMounted(async () => {
@@ -95,10 +107,36 @@ function close() { appWindow.close() }
 async function launchGame() {
   await invoke('start_game')
 }
+
+const isDev = import.meta.env.DEV
+
+async function undoPatches() {
+  await invoke('reset_game', { variant: 'wic.1.0.0.nolaa.exe' })
+  runChecks()
+}
+
+async function undoLaa() {
+  await invoke('unset_laa_flag')
+  runChecks()
+}
+
+async function undoProxy() {
+  await invoke('remove_proxy')
+  runChecks()
+}
+
+async function removeCdKey() {
+  await invoke('set_cd_key', { key: '' })
+  runChecks()
+}
 </script>
 
 <template>
   <div class="titlebar" data-tauri-drag-region>
+    <div class="titlebar-brand" data-tauri-drag-region>
+      <img src="../assets/icon.png" alt="" class="titlebar-icon" data-tauri-drag-region />
+      <span class="titlebar-title" data-tauri-drag-region>WIC LIVE</span>
+    </div>
     <div class="titlebar-controls">
       <button class="titlebar-btn" @click="minimize">&#x2013;</button>
       <button class="titlebar-btn" @click="toggleMaximize">&#x25A1;</button>
@@ -109,16 +147,24 @@ async function launchGame() {
     <img src="../assets/wiclive.png" alt="WIC LIVE" class="header-logo" data-tauri-drag-region />
     <small class="header-version" data-tauri-drag-region>{{ version }}</small>
 
-    <div class="status-bar" data-tauri-drag-region>
-      <div v-for="action in actions" :key="action.id" class="status-pill" :class="action.status">
-        <span class="pill-icon">
-          <template v-if="action.status === 'done'">&#x2713;</template>
-          <template v-else-if="action.status === 'needed'">&#x25CB;</template>
-          <template v-else-if="action.status === 'error'">&#x2717;</template>
-          <template v-else>&middot;&middot;</template>
-        </span>
-        <span class="pill-label">{{ action.label }}</span>
-        <span class="pill-detail" :class="{ 'pill-detail-hidden': !(action.id === 'patch' || action.id === 'cdkey' || action.id === 'hooks') }">{{ action.detail || '&nbsp;' }}</span>
+    <div class="status-area" data-tauri-drag-region>
+      <div v-if="isDev" class="dev-toolbar">
+        <button class="dev-btn" @click="undoPatches">undo patches</button>
+        <button class="dev-btn" @click="undoLaa">undo laa</button>
+        <button class="dev-btn" @click="removeCdKey">remove cdkey</button>
+        <button class="dev-btn" @click="undoProxy">undo proxy</button>
+      </div>
+      <div class="status-bar" data-tauri-drag-region>
+        <div v-for="action in actions" :key="action.id" class="status-pill" :class="action.status">
+          <span class="pill-icon">
+            <template v-if="action.status === 'done' || action.status === 'fixed'">&#x2713;</template>
+            <template v-else-if="action.status === 'needed'">&#x25CB;</template>
+            <template v-else-if="action.status === 'error'">&#x2717;</template>
+            <template v-else>&middot;&middot;</template>
+          </span>
+          <span class="pill-label">{{ action.label }}</span>
+          <span class="pill-detail" :class="{ 'pill-detail-hidden': !(action.id === 'patch' || action.id === 'cdkey' || action.id === 'hooks') }">{{ action.detail || '&nbsp;' }}</span>
+        </div>
       </div>
     </div>
 
@@ -132,7 +178,8 @@ async function launchGame() {
   align-items: center;
   justify-content: flex-end;
   height: 32px;
-  background: var(--graphite-dark);
+  background: linear-gradient(180deg, var(--graphite-dark) 0%, var(--graphite) 100%);
+  border-bottom: 1px solid rgba(var(--mg-rgb), 0.25);
   flex-shrink: 0;
 }
 
@@ -140,8 +187,8 @@ async function launchGame() {
   display: flex;
   align-items: stretch;
   padding: 0 25px;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
-  border-bottom: 1px solid var(--bd);
+  background: linear-gradient(180deg, rgba(var(--graphite-light-rgb), 0.95) 0%, rgba(var(--graphite-dark-rgb), 0.98) 100%);
+  border-bottom: 2px solid rgba(var(--dl-rgb), 0.45);
   flex-shrink: 0;
 }
 
@@ -160,13 +207,45 @@ async function launchGame() {
   padding-bottom: 20px;
 }
 
+.status-area {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  margin-left: auto;
+  margin-right: 20px;
+}
+
+.dev-toolbar {
+  display: flex;
+  gap: 1px;
+  justify-content: flex-end;
+  padding: 4px 0 0;
+}
+
+.dev-btn {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  background: rgba(var(--dl-rgb), 0.3);
+  border: 1px solid rgba(var(--dl-rgb), 0.4);
+  color: var(--dl-light);
+  cursor: pointer;
+  transition: var(--tr);
+}
+
+.dev-btn:hover {
+  background: rgba(var(--dl-rgb), 0.6);
+  color: #fff;
+}
+
 .status-bar {
   display: flex;
   align-items: stretch;
-  align-self: stretch;
+  flex: 1;
   gap: 0;
-  margin-left: auto;
-  margin-right: 20px;
 }
 
 .status-pill {
@@ -233,7 +312,8 @@ async function launchGame() {
   visibility: hidden;
 }
 
-.status-pill.done {
+.status-pill.done,
+.status-pill.fixed {
   color: var(--g);
 }
 
@@ -247,10 +327,34 @@ async function launchGame() {
 
 .status-pill.checking {
   color: var(--t3);
+  animation: pulse 2s ease-in-out infinite;
 }
 
 .header-launch {
   align-self: center;
+}
+
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+  margin-right: auto;
+}
+
+.titlebar-icon {
+  height: 18px;
+  width: auto;
+  opacity: 0.7;
+}
+
+.titlebar-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--t3);
 }
 
 .titlebar-controls {
