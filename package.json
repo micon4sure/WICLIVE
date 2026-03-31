@@ -1,7 +1,7 @@
 {
   "name": "wiclive",
   "private": true,
-  "version": "3.3.2",
+  "version": "4.0.0-alpha",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,25 +10,16 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^6.5.1",
-    "@tauri-apps/api": "^1",
-    "axios": "^1.6.8",
-    "bootswatch": "^5.3.3",
-    "cors": "^2.8.5",
-    "lodash": "^4.17.21",
-    "semver": "^7.6.0",
-    "vite-svg-loader": "^5.1.0",
-    "vue": "^3.3.4",
-    "vue-router": "latest"
+    "vue": "^3.5",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-opener": "^2"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1",
-    "@types/bun": "^1.0.12",
-    "@types/node": "22.13.9",
-    "@vitejs/plugin-vue": "^5.0.4",
-    "sass": "^1.72.0",
-    "typescript": "^5.4.3",
-    "vite": "6.2.0",
-    "vue-tsc": "2.2.8"
+    "@tauri-apps/cli": "^2",
+    "@vitejs/plugin-vue": "^5",
+    "typescript": "^5.7",
+    "vite": "^6",
+    "vue-tsc": "^2"
   }
 }

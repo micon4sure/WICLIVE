@@ -1,0 +1,70 @@
+:root {
+  /* Structural palette */
+  --mg: #1f2f3b;
+  --mg-dark: #101a22;
+  --mg-muted: #344654;
+  --sw: #f37c2b;
+  --sw-light: #f8a85e;
+  --dl: #8b1d14;
+  --graphite: #0f1215;
+  --graphite-dark: #08090b;
+  --graphite-light: #1a1e22;
+  --ink: #0b141a;
+
+  /* RGB helpers */
+  --mg-rgb: 31, 47, 59;
+  --mg-dark-rgb: 16, 26, 34;
+  --mg-muted-rgb: 52, 70, 84;
+  --sw-rgb: 243, 124, 43;
+  --sw-light-rgb: 248, 168, 94;
+  --dl-rgb: 139, 29, 20;
+  --graphite-rgb: 15, 18, 21;
+  --graphite-dark-rgb: 8, 9, 11;
+  --graphite-light-rgb: 26, 30, 34;
+  --ink-rgb: 11, 20, 26;
+
+  /* Backgrounds */
+  --bg: #050a0f;
+  --s1: #0e1a22;
+  --s2: #14222a;
+  --surface-alt: #1f313d;
+  --bg-rgb: 5, 10, 15;
+  --s1-rgb: 14, 26, 34;
+  --s2-rgb: 20, 34, 42;
+  --surface-alt-rgb: 31, 49, 61;
+
+  /* Text */
+  --t: #f3f6f8;
+  --t2: #a7b7c3;
+  --t3: #6c7a85;
+  --t-rgb: 243, 246, 248;
+  --t2-rgb: 167, 183, 195;
+  --t3-rgb: 108, 122, 133;
+
+  /* Accents */
+  --g: #7cb342;
+  --g-rgb: 124, 179, 66;
+  --dl-light: #dc3545;
+  --dl-mid: #c82333;
+  --dl-dark: #a71e2a;
+  --dl-light-rgb: 220, 53, 69;
+  --dl-mid-rgb: 200, 35, 51;
+  --dl-dark-rgb: 167, 30, 42;
+
+  /* Border & effects */
+  --bd: rgba(68, 117, 146, 0.25);
+  --divider-strong: rgba(68, 117, 146, 0.7);
+  --divider-soft: rgba(68, 117, 146, 0.35);
+
+  /* Transition */
+  --tr: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  /* Gradients */
+  --grad-main: linear-gradient(135deg, rgba(30, 52, 66, 0.95) 0%, rgba(11, 21, 27, 0.98) 100%);
+  --grad-card: linear-gradient(135deg, rgba(20, 36, 47, 0.95) 0%, rgba(12, 21, 27, 0.98) 100%);
+  --grad-dark: linear-gradient(135deg, rgba(14, 28, 36, 0.96) 0%, rgba(7, 15, 20, 0.98) 100%);
+
+  /* Shadows */
+  --shadow-card: 0 12px 24px rgba(5, 10, 15, 0.45);
+  --shadow-glow: 0 0 8px rgba(68, 117, 146, 0.25);
+}

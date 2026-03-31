@@ -1,46 +1,20 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
 node_modules
 dist
-dist-ssr
 *.local
+*.log
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+.vscode
 .idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.sw?
 
-# wic live
-_install
-
-backend/
-automation/setup.log
-automation/tmp.iss
-
+# Tauri
+src-tauri/target
 src-tauri/tauri-sign.key
 src-tauri/.env
 
+# Legacy
+backend/
+_build/
+_install/
 .github/token
-
-docs
-
-_build/src
-_build/.env
-
-# Staging/debug installer artifacts
-wiclive_x64-setup-debug.exe
-wiclive_x64-setup-debug-*.exe
-wiclive-setup-beta.exe

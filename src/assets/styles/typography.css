@@ -1,0 +1,55 @@
+* {
+  font-family: 'Rajdhani', 'Oswald', system-ui, sans-serif;
+}
+
+h1, h2, h3 {
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+h3 {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--sw);
+  letter-spacing: 0.5px;
+}
+
+p {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.text-muted { color: var(--t2); }
+.text-dim { color: var(--t3); }
+.text-sm { font-size: 0.875rem; }
+.text-xs { font-size: 0.75rem; }
+
+.text-command {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sw);
+  text-shadow: 0 0 12px rgba(var(--sw-rgb), 0.45);
+}
+
+.mono {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}

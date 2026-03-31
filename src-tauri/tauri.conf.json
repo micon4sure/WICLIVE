@@ -1,79 +1,44 @@
 {
+  "$schema": "https://raw.githubusercontent.com/nicollassilva/tauri-v2/main/tooling/cli/schema.json",
+  "productName": "WIC LIVE",
+  "version": "4.0.0-alpha",
+  "identifier": "wiclive.techtile.media",
   "build": {
     "beforeDevCommand": "bun run dev",
-    "beforeBuildCommand": "bun run build || npm run build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist"
+    "devUrl": "http://localhost:1421",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../dist"
   },
-  "package": {
-    "productName": "WIC LIVE",
-    "version": "3.3.2"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      },
-      "path": {
-        "all": true
-      },
-      "dialog": {
-        "all": false,
-        "ask": false,
-        "confirm": false,
-        "message": false,
-        "open": true,
-        "save": false
-      }
-    },
+  "app": {
     "windows": [
       {
         "title": "WIC LIVE",
         "width": 1280,
         "height": 720,
         "minWidth": 1280,
-        "minHeight": 720
+        "minHeight": 720,
+        "decorations": false,
+        "transparent": false
       }
     ],
     "security": {
       "csp": null
-    },
-    "bundle": {
-      "active": true,
-      "targets": [
-        "nsis",
-        "updater"
-      ],
-      "identifier": "wiclive.techtile.media",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "windows": {
-        "nsis": {
-          "license": "LICENSE"
-        }
-      },
-      "resources": [
-        "../automation/*"
-      ]
-    },
-    "updater": {
-      "active": true,
-      "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVEN0UwOTY0NUJCMTM0N0YKUldSL05MRmJaQWwrWFhOWUErQTdnMUc1NDV3QlhoTGM5K1hIbmxiMXRKMFlheWVoQ05BeHN6aGEK",
-      "windows": {
-        "installMode": "passive",
-        "installerArgs": []
-      },
-      "endpoints": [
-        "https://github.com/micon4sure/WICLIVE/releases/latest/download/version.json"
-      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "windows": {
+      "nsis": {
+        "displayLanguageSelector": false
+      }
     }
   }
 }

@@ -1,36 +1,29 @@
 [package]
 name = "wiclive"
-version = "3.3.2"
-description = "WIC LIVE"
-authors = ["mICON"]
+version = "4.0.0-alpha"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "wiclive_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]
-tauri-build = { version = "1.5.1", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "1", features = [ "dialog-open", "path-all", "shell-open", "updater"] }
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.11.26", features = ["stream"] }
-tokio = { version = "1", features = ["full"] }
-md5 = "0.7"
-lazy_static = "1.4"
-futures = "0.3"
-futures-util = "0.3"
-winreg = "0.52.0"
-windows = { version = "0.54.0", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_Diagnostics_ToolHelp"] }
-winapi = { version = "0.3", features = ["processthreadsapi", "securitybaseapi", "handleapi"] }
-zip = "0.6.6"
-libc = "0.2.101"
-rust-ini = "0.21.0"
-powershell_script = "1.1.0"
-num_cpus = "1.13.0"
-dotenv = "0.15.0"
-dirs = "6.0.0"
+dotenvy = "0.15"
 
-[features]
-# This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
-custom-protocol = ["tauri/custom-protocol"]
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
+windows = { version = "0.61", features = [
+  "Win32_Security",
+  "Win32_System_Threading",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_Storage_FileSystem",
+] }
