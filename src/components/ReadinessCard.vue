@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { openUrl } from '@tauri-apps/plugin-opener'
@@ -263,7 +263,7 @@ async function runFixes() {
           <span v-if="action.status === 'fixed'" class="item-detail item-fixed">
             {{ action.detail }}
           </span>
-          <span v-else-if="action.status !== 'applying' && action.status !== 'done' && action.status !== 'fixed'" class="item-desc">
+          <span v-else-if="action.status !== 'applying' && action.status !== 'done'" class="item-desc">
             {{ items[action.id]?.desc }}
           </span>
         </div>

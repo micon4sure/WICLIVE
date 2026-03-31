@@ -4,7 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
 
-type ActionStatus = 'checking' | 'done' | 'needed' | 'error'
+type ActionStatus = 'checking' | 'done' | 'needed' | 'applying' | 'fixed' | 'error'
 
 interface Action {
   id: string
