@@ -8,7 +8,7 @@ pub mod elevation;
 pub fn run() {
     dotenvy::dotenv().ok();
 
-    let api_url = std::env::var("API_URL").unwrap_or_else(|_| "https://wiclive.techtile.media".into());
+    let api_url = std::env::var("API_URL").expect("API_URL environment variable must be set");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
