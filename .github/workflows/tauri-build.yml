@@ -32,7 +32,16 @@ jobs:
       - name: Read version
         id: version
         shell: bash
-        run: echo "version=$(jq -r .version src-tauri/tauri.conf.json)" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=$(jq -r .version src-tauri/tauri.conf.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if echo "$VERSION" | grep -qE '-(alpha|beta|rc)'; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          elif [ "${{ inputs.beta }}" = "true" ]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Check if release exists
         id: check
@@ -62,7 +71,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Build version.json
-        if: steps.check.outputs.exists == 'false' && inputs.beta == false
+        if: steps.check.outputs.exists == 'false' && steps.version.outputs.prerelease == 'false'
         shell: bash
         run: |
           VERSION=${{ steps.version.outputs.version }}
@@ -95,11 +104,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=${{ steps.version.outputs.version }}
-          BETA=${{ inputs.beta }}
           PRERELEASE=""
           FILES=()
           FILES+=("src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.exe#wiclive_x64-setup.exe")
-          if [ "$BETA" != "true" ]; then
+          if [ "${{ steps.version.outputs.prerelease }}" = "false" ]; then
             FILES+=("src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.nsis.zip#wiclive_${VERSION}_x64-setup.nsis.zip")
             FILES+=("src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.nsis.zip.sig#wiclive_${VERSION}_x64-setup.nsis.zip.sig")
             FILES+=("version.json")
