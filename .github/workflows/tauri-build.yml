@@ -3,12 +3,6 @@ name: Build and Release
 on:
   push:
     branches: [master]
-  workflow_dispatch:
-    inputs:
-      beta:
-        description: "Beta release (no auto-update)"
-        type: boolean
-        default: true
 
 jobs:
   build:
@@ -18,104 +12,108 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: oven-sh/setup-bun@v2
+      - name: Read version and check tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          echo "version=$version" >> $env:GITHUB_OUTPUT
 
-      - run: bun install
+          # Check if tag already exists
+          $tagExists = git tag -l $version
+          if ($tagExists) {
+            echo "exists=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "exists=false" >> $env:GITHUB_OUTPUT
+          }
+
+          # Prerelease if version contains alpha, beta, or rc
+          if ($version -match '-(alpha|beta|rc)') {
+            echo "prerelease=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "prerelease=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Skip if already released
+        if: steps.version.outputs.exists == 'true'
+        shell: pwsh
+        run: |
+          echo "Tag ${{ steps.version.outputs.version }} already exists, skipping."
+          exit 0
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.version.outputs.exists == 'false'
+
+      - name: Install dependencies
+        if: steps.version.outputs.exists == 'false'
+        run: bun install
 
       - name: Build Tauri app
+        if: steps.version.outputs.exists == 'false'
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
           API_URL: https://wiclive.techtile.media
         run: bun run tauri build
 
-      - name: Read version
-        id: version
-        shell: bash
-        run: |
-          VERSION=$(jq -r .version src-tauri/tauri.conf.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          if echo "$VERSION" | grep -qE '-(alpha|beta|rc)'; then
-            echo "prerelease=true" >> $GITHUB_OUTPUT
-          elif [ "${{ inputs.beta }}" = "true" ]; then
-            echo "prerelease=true" >> $GITHUB_OUTPUT
-          else
-            echo "prerelease=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Check if release exists
-        id: check
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if gh release view ${{ steps.version.outputs.version }} &>/dev/null; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Generate changelog
-        if: steps.check.outputs.exists == 'false'
+        if: steps.version.outputs.exists == 'false'
         id: changelog
-        shell: bash
+        shell: pwsh
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
-            NOTES=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s" --no-merges)
-          else
-            NOTES=$(git log --pretty=format:"- %s" --no-merges -20)
-          fi
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          $prevTag = git describe --tags --abbrev=0 2>$null
+          if ($prevTag) {
+            $notes = git log "$prevTag..HEAD" --pretty=format:"- %s" --no-merges
+          } else {
+            $notes = git log --pretty=format:"- %s" --no-merges -20
+          }
+          echo "notes<<EOF" >> $env:GITHUB_OUTPUT
+          echo "$notes" >> $env:GITHUB_OUTPUT
+          echo "EOF" >> $env:GITHUB_OUTPUT
 
-      - name: Build version.json
-        if: steps.check.outputs.exists == 'false' && steps.version.outputs.prerelease == 'false'
-        shell: bash
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-          SIG=$(cat "src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.nsis.zip.sig")
-          NOTES=$(cat <<'NOTESEOF'
-          ${{ steps.changelog.outputs.notes }}
-          NOTESEOF
-          )
-          jq -n \
-            --arg v "$VERSION" \
-            --arg sig "$SIG" \
-            --arg url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/wiclive_${VERSION}_x64-setup.nsis.zip" \
-            --arg notes "$NOTES" \
-            '{
-              version: $v,
-              notes: $notes,
-              platforms: {
-                "windows-x86_64": {
-                  installMode: "passive",
-                  signature: $sig,
-                  url: $url
-                }
-              }
-            }' > version.json
-
-      - name: Create release
-        if: steps.check.outputs.exists == 'false'
-        shell: bash
+      - name: Create prerelease
+        if: steps.version.outputs.exists == 'false' && steps.version.outputs.prerelease == 'true'
+        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          PRERELEASE=""
-          FILES=()
-          FILES+=("src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.exe#wiclive_x64-setup.exe")
-          if [ "${{ steps.version.outputs.prerelease }}" = "false" ]; then
-            FILES+=("src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.nsis.zip#wiclive_${VERSION}_x64-setup.nsis.zip")
-            FILES+=("src-tauri/target/release/bundle/nsis/WIC LIVE_${VERSION}_x64-setup.nsis.zip.sig#wiclive_${VERSION}_x64-setup.nsis.zip.sig")
-            FILES+=("version.json")
-          else
-            PRERELEASE="--prerelease"
-          fi
-          gh release create "$VERSION" \
-            --title "Release $VERSION" \
-            --notes "${{ steps.changelog.outputs.notes }}" \
-            $PRERELEASE \
-            "${FILES[@]}"
+          $version = "${{ steps.version.outputs.version }}"
+          $exe = "src-tauri/target/release/WIC LIVE.exe"
+          gh release create $version `
+            --title "Release $version" `
+            --notes "${{ steps.changelog.outputs.notes }}" `
+            --prerelease `
+            "${exe}#wiclive_${version}_x64.exe"
+
+      - name: Create stable release
+        if: steps.version.outputs.exists == 'false' && steps.version.outputs.prerelease == 'false'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $nsis = "src-tauri/target/release/bundle/nsis/WIC LIVE_${version}_x64-setup.exe"
+          $nsisZip = "src-tauri/target/release/bundle/nsis/WIC LIVE_${version}_x64-setup.nsis.zip"
+          $nsisZipSig = "${nsisZip}.sig"
+          $sig = Get-Content $nsisZipSig
+
+          # Build version.json for Tauri auto-updater
+          @{
+            version = $version
+            notes = "${{ steps.changelog.outputs.notes }}"
+            platforms = @{
+              "windows-x86_64" = @{
+                installMode = "passive"
+                signature = $sig
+                url = "https://github.com/${{ github.repository }}/releases/download/${version}/wiclive_${version}_x64-setup.nsis.zip"
+              }
+            }
+          } | ConvertTo-Json -Depth 4 | Set-Content version.json
+
+          gh release create $version `
+            --title "Release $version" `
+            --notes "${{ steps.changelog.outputs.notes }}" `
+            "${nsis}#wiclive_${version}_x64-setup.exe" `
+            "${nsisZip}#wiclive_${version}_x64-setup.nsis.zip" `
+            "${nsisZipSig}#wiclive_${version}_x64-setup.nsis.zip.sig" `
+            "version.json"
