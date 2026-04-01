@@ -78,12 +78,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          $exe = "src-tauri/target/release/WIC LIVE.exe"
+          $dest = "wiclive_${version}_x64.exe"
+          Copy-Item "src-tauri/target/release/WIC LIVE.exe" $dest
           gh release create $version `
             --title "Release $version" `
             --notes "${{ steps.changelog.outputs.notes }}" `
             --prerelease `
-            "${exe}#wiclive_${version}_x64.exe"
+            $dest
 
       - name: Create stable release
         if: steps.version.outputs.exists == 'false' && steps.version.outputs.prerelease == 'false'
