@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Check that version was bumped compared to HEAD
+pkg_version=$(grep '"version"' package.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
+old_version=$(git show HEAD:package.json 2>/dev/null | grep '"version"' | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
+
+if [ "$pkg_version" = "$old_version" ]; then
+    echo "ERROR: version in package.json ($pkg_version) has not changed since last commit"
+    exit 1
+fi
+
+# Check all three files are in sync
+cargo_version=$(grep '^version' src-tauri/Cargo.toml | head -1 | sed 's/.*= *"\(.*\)".*/\1/')
+tauri_version=$(grep '"version"' src-tauri/tauri.conf.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
+
+if [ "$pkg_version" != "$cargo_version" ]; then
+    echo "ERROR: version mismatch — package.json ($pkg_version) != Cargo.toml ($cargo_version)"
+    exit 1
+fi
+
+if [ "$pkg_version" != "$tauri_version" ]; then
+    echo "ERROR: version mismatch — package.json ($pkg_version) != tauri.conf.json ($tauri_version)"
+    exit 1
+fi

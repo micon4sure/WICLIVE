@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicollassilva/tauri-v2/main/tooling/cli/schema.json",
   "productName": "WIC LIVE",
-  "version": "4.0.2-beta",
+  "version": "4.0.3-beta",
   "identifier": "wiclive.techtile.media",
   "build": {
     "beforeDevCommand": "bun run dev",
