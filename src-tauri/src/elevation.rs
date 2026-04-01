@@ -31,7 +31,9 @@ pub fn is_elevated() -> bool {
 /// The current (non-elevated) process should exit after calling this.
 pub fn relaunch_elevated() {
     let exe = std::env::current_exe().expect("failed to get current exe path");
+    let dir = exe.parent().expect("failed to get exe directory");
     let exe_wide: Vec<u16> = exe.to_string_lossy().encode_utf16().chain(std::iter::once(0)).collect();
+    let dir_wide: Vec<u16> = dir.to_string_lossy().encode_utf16().chain(std::iter::once(0)).collect();
     let verb: Vec<u16> = "runas\0".encode_utf16().collect();
 
     unsafe {
@@ -40,7 +42,7 @@ pub fn relaunch_elevated() {
             PCWSTR(verb.as_ptr()),
             PCWSTR(exe_wide.as_ptr()),
             PCWSTR::null(),
-            PCWSTR::null(),
+            PCWSTR(dir_wide.as_ptr()),
             windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL,
         );
     }

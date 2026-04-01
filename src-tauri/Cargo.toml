@@ -1,6 +1,6 @@
 [package]
 name = "wiclive"
-version = "4.0.1-beta"
+version = "4.0.2-beta"
 edition = "2021"
 default-run = "wiclive"
 
