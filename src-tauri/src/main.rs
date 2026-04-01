@@ -1,7 +1,7 @@
 #![windows_subsystem = "windows"]
 
 fn main() {
-    #[cfg(target_os = "windows")]
+    #[cfg(not(debug_assertions))]
     {
         if !wiclive_lib::elevation::is_elevated() {
             wiclive_lib::elevation::relaunch_elevated();

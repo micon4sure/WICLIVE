@@ -315,18 +315,18 @@ pub fn check_vcredist() -> bool {
 
 /// Check if proxy is installed (version file exists in game dir).
 pub fn check_proxy(install_dir: &str) -> bool {
-    PathBuf::from(install_dir).join("wic_cl_hook-version.txt").exists()
+    PathBuf::from(install_dir).join("wicgate-proxy-version.txt").exists()
 }
 
 /// Get installed proxy version string.
 pub fn read_proxy_version(install_dir: &str) -> Result<String, String> {
-    let version_file = PathBuf::from(install_dir).join("wic_cl_hook-version.txt");
+    let version_file = PathBuf::from(install_dir).join("wicgate-proxy-version.txt");
     std::fs::read_to_string(&version_file).map_err(|e| e.to_string())
 }
 
 /// Check if proxy needs updating by comparing installed vs latest version.
 pub fn needs_proxy_update(install_dir: &str, latest: &str) -> Result<bool, String> {
-    let version_file = PathBuf::from(install_dir).join("wic_cl_hook-version.txt");
+    let version_file = PathBuf::from(install_dir).join("wicgate-proxy-version.txt");
     let installed = std::fs::read_to_string(&version_file).unwrap_or_default();
     Ok(installed.trim() != latest.trim())
 }
@@ -334,7 +334,7 @@ pub fn needs_proxy_update(install_dir: &str, latest: &str) -> Result<bool, Strin
 /// Remove proxy files from install directory.
 pub fn remove_proxy(install_dir: &str) -> Result<(), String> {
     let dir = PathBuf::from(install_dir);
-    for name in &["wic_cl_hook.dll", "wic_ds_hook.dll", "wic_cl_hook-version.txt"] {
+    for name in &["dbghelp.dll", "wicgate-proxy-version.txt"] {
         let path = dir.join(name);
         if path.exists() {
             std::fs::remove_file(&path)

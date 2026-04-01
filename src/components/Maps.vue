@@ -34,10 +34,10 @@ const dlTotal = ref(0)
 let lastDlUpdate = 0
 
 const statusOrder: Record<MapStatus, number> = {
-  error: 0,
-  missing: 1,
-  outdated: 2,
-  loading: 3,
+  loading: 0,
+  error: 1,
+  missing: 2,
+  outdated: 3,
   pending: 4,
   current: 5,
 }
@@ -161,11 +161,12 @@ async function downloadSingle(filename: string) {
   try {
     await invoke('download_map', { filename })
     const hash = await invoke<string>('get_map_hash', { filename })
+    console.log(`[hash] ${filename} local=${hash} remote=${entry.remote.hash}`)
     if (hash === entry.remote.hash) {
       entry.status = 'current'
     } else {
       entry.status = 'error'
-      entry.error = 'Hash mismatch after download'
+      entry.error = `Hash mismatch: local=${hash} remote=${entry.remote.hash}`
     }
   } catch (e) {
     entry.status = 'error'
@@ -294,9 +295,11 @@ onMounted(async () => {
         <tr class="table-header">
           <th class="th-status" />
           <th class="th-name">Name</th>
-          <th class="th-badge" />
+          <th class="th-file">File</th>
           <th class="th-type">Type</th>
-          <th class="th-meta">Info</th>
+          <th class="th-size">Size</th>
+          <th class="th-uploader">Uploader</th>
+          <th class="th-date">Date</th>
           <th class="th-action" />
         </tr>
       </thead>
@@ -310,15 +313,18 @@ onMounted(async () => {
           <!-- Error row -->
           <template v-if="map.status === 'error'">
             <td class="cell-status"><span class="status-dot" /></td>
-            <td class="cell-name">{{ displayName(map.name) }}</td>
-            <td class="cell-error" colspan="4">{{ map.error }}</td>
+            <td class="cell-name">{{ displayName(map.name) }}<span v-if="map.remote?.version > 1" class="version-tag">v{{ map.remote.version }}</span></td>
+            <td class="cell-error" colspan="5">{{ map.error }}</td>
+            <td class="cell-action">
+              <button class="btn-download" :disabled="isDownloading" @click="downloadSingle(map.name)">Retry</button>
+            </td>
           </template>
 
           <!-- Loading row -->
           <template v-else-if="map.status === 'loading'">
             <td class="cell-status"><span class="status-dot" /></td>
-            <td class="cell-name">{{ displayName(map.name) }}</td>
-            <td class="cell-progress" colspan="4">
+            <td class="cell-name">{{ displayName(map.name) }}<span v-if="map.remote?.version > 1" class="version-tag">v{{ map.remote.version }}</span></td>
+            <td class="cell-progress" colspan="6">
               <span class="loading-pct">{{ dlText() }}</span>
               <div v-if="dlTotal > 0" class="progress-track">
                 <div class="progress-fill" :style="{ width: dlPct() + '%' }" />
@@ -329,23 +335,12 @@ onMounted(async () => {
           <!-- Normal row -->
           <template v-else>
             <td class="cell-status"><span class="status-dot" /></td>
-            <td class="cell-name">{{ displayName(map.name) }}</td>
-            <td class="cell-badge">
-              <span v-if="map.remote.final" class="badge badge-final">Final</span>
-              <span v-if="map.remote.beta" class="badge badge-beta">Beta</span>
-            </td>
+            <td class="cell-name">{{ displayName(map.name) }}<span v-if="map.remote.version > 1" class="version-tag">v{{ map.remote.version }}</span></td>
+            <td class="cell-file">{{ map.name }}</td>
             <td class="cell-type">{{ parseGameType(map.name) }}</td>
-            <td class="cell-meta">
-              <span>{{ formatSize(map.remote.size) }}</span>
-              <span class="meta-sep">&middot;</span>
-              <span>{{ map.remote.uploader }}</span>
-              <span class="meta-sep">&middot;</span>
-              <span>{{ formatDate(map.remote.date) }}</span>
-              <template v-if="map.remote.version > 1">
-                <span class="meta-sep">&middot;</span>
-                <span>v{{ map.remote.version }}</span>
-              </template>
-            </td>
+            <td class="cell-size">{{ formatSize(map.remote.size) }}</td>
+            <td class="cell-uploader">{{ map.remote.uploader }}</td>
+            <td class="cell-date">{{ formatDate(map.remote.date) }}</td>
             <td class="cell-action">
               <span v-if="map.status === 'current'" class="action-check">&#10003;</span>
               <span v-else-if="map.status === 'pending'" class="action-pending">&middot;&middot;</span>
@@ -511,9 +506,11 @@ onMounted(async () => {
 
 .th-status { width: 22px; }
 .th-name { }
-.th-type { width: 90px; }
-.th-meta { width: 220px; }
-.th-badge { width: 90px; }
+.th-file { width: 180px; }
+.th-type { width: 80px; }
+.th-size { width: 70px; }
+.th-uploader { width: 100px; }
+.th-date { width: 110px; }
 .th-action { width: 70px; text-align: center; }
 
 /* ── Table rows ──────────────────────────────────────── */
@@ -567,45 +564,38 @@ onMounted(async () => {
   text-overflow: ellipsis;
 }
 
-.cell-type {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 13px;
-  color: var(--t2);
-  white-space: nowrap;
+.version-tag {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--t3);
 }
 
-.cell-meta {
-  gap: 5px;
+.cell-size,
+.cell-uploader,
+.cell-date {
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
   color: var(--t3);
   white-space: nowrap;
+  padding: 0 8px;
 }
 
-.meta-sep { opacity: 0.35; }
-
-.cell-badge {
-}
-
-.badge {
-  display: inline-block;
-  margin: 0 10px;
+.cell-file {
   font-family: 'Rajdhani', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 3px 12px;
+  font-size: 13px;
+  color: var(--t2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 12px;
 }
-.badge-final {
-  background: rgba(var(--g-rgb), 0.15);
-  color: var(--g);
-  border: 1px solid rgba(var(--g-rgb), 0.3);
-}
-.badge-beta {
-  background: rgba(var(--b-rgb), 0.15);
-  color: var(--b);
-  border: 1px solid rgba(var(--b-rgb), 0.3);
+
+.cell-type {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  color: var(--t3);
+  white-space: nowrap;
 }
 
 .cell-action {
