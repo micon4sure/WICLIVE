@@ -78,7 +78,7 @@ async function runChecks() {
   try {
     const key = await invoke<string>('get_cd_key')
     const a = find('cdkey')
-    const hasKey = key.length > 0
+    const hasKey = key.length > 0 && key.toLowerCase() !== 'invalid'
     a.status = hasKey ? 'done' : 'needed'
     a.detail = hasKey ? key.substring(0, 9) + '...' : 'Not set'
   } catch (e) {

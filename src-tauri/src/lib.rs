@@ -6,9 +6,11 @@ use tauri::Manager;
 pub mod elevation;
 
 pub fn run() {
-    dotenvy::dotenv().ok();
+    if let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())) {
+        dotenvy::from_path(exe_dir.join(".env")).ok();
+    }
 
-    let api_url = std::env::var("API_URL").expect("API_URL environment variable must be set");
+    let api_url = api_url();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -61,4 +63,8 @@ pub fn run() {
 
 pub struct ApiConfig {
     pub url: String,
+}
+
+pub fn api_url() -> String {
+    std::env::var("API_URL").unwrap_or_else(|_| "https://wiclive.wicgate.org".into())
 }

@@ -5,7 +5,8 @@ pkg_version=$(grep '"version"' package.json | head -1 | sed 's/.*: *"\(.*\)".*/\
 old_version=$(git show HEAD:package.json 2>/dev/null | grep '"version"' | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
 
 if [ "$pkg_version" = "$old_version" ]; then
-    echo "ERROR: version in package.json ($pkg_version) has not changed since last commit"
+    echo "ERROR: version has not changed since last commit (current: $pkg_version)"
+    echo "Run: bun run update-version.ts <new-version>"
     exit 1
 fi
 

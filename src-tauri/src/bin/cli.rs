@@ -120,7 +120,7 @@ fn cmd_cdkey() {
 }
 
 fn cmd_request_cdkey() {
-    let api = env::var("API_URL").unwrap_or_else(|_| "http://localhost:3243".into());
+    let api = wiclive_lib::api_url();
     let url = format!("{}/cdkey/generate", api);
     println!("POST {}", url);
 
@@ -360,7 +360,7 @@ struct MapStatus {
 }
 
 fn fetch_map_status() -> Vec<MapStatus> {
-    let api = env::var("API_URL").unwrap_or_else(|_| "http://localhost:3243".into());
+    let api = wiclive_lib::api_url();
     let rt = tokio::runtime::Runtime::new().unwrap();
 
     let remote: std::collections::HashMap<String, RemoteMap> = rt.block_on(async {
@@ -423,7 +423,7 @@ fn cmd_maps() {
 }
 
 fn cmd_sync() {
-    let api = env::var("API_URL").unwrap_or_else(|_| "http://localhost:3243".into());
+    let api = wiclive_lib::api_url();
     let maps_dir = match core::get_maps_dir() {
         Ok(d) => d,
         Err(e) => { eprintln!("Maps dir: {}", e); process::exit(1); }
@@ -483,7 +483,7 @@ fn cmd_download_test(args: &[String]) {
     let url = if let Some(u) = args.first() {
         u.clone()
     } else {
-        let api = env::var("API_URL").unwrap_or_else(|_| "http://localhost:13243".into());
+        let api = wiclive_lib::api_url();
         format!("{}/patches/patch-p11.zip", api)
     };
 
