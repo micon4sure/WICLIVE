@@ -7,7 +7,7 @@ import Config from './components/Config.vue'
 import Maps from './components/Maps.vue'
 import { useGameState } from './composables/useGameState'
 
-const { needInstall, needFix, isReady, check, readinessActions, installActions, wasFixed, wasInstalled } = useGameState()
+const { needInstall, needFix, isReady, wasFixed, wasInstalled } = useGameState()
 const activeTab = ref<'maps' | 'config'>('maps')
 
 const tabsDetached = ref(false)
