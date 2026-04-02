@@ -521,7 +521,7 @@ pub fn register_install(install_dir: &str) -> Result<(), String> {
         .map_err(|e| format!("Failed to set InstallPath: {}", e))?;
 
     // Set version
-    key.set_value("Version", &"1.0.0.0".to_string())
+    key.set_value("Version", &"1.0.1.1".to_string())
         .map_err(|e| format!("Failed to set Version: {}", e))?;
 
     #[cfg(not(feature = "portable"))]
@@ -534,7 +534,7 @@ pub fn register_install(install_dir: &str) -> Result<(), String> {
         ukey.set_value("InstallLocation", &install_dir.to_string()).ok();
         ukey.set_value("DisplayIcon", &format!(r"{}\{},0", install_dir, GAME_EXE)).ok();
         ukey.set_value("Publisher", &"Massive Entertainment".to_string()).ok();
-        ukey.set_value("DisplayVersion", &"1.0.0.0".to_string()).ok();
+        ukey.set_value("DisplayVersion", &"1.0.1.1".to_string()).ok();
         ukey.set_value("NoModify", &1u32).ok();
         ukey.set_value("NoRepair", &1u32).ok();
         if let Ok(exe) = std::env::current_exe() {
