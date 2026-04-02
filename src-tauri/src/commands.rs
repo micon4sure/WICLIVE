@@ -192,6 +192,11 @@ pub fn get_api_url(config: tauri::State<'_, crate::ApiConfig>) -> String {
     config.url.clone()
 }
 
+#[tauri::command]
+pub fn is_portable() -> bool {
+    cfg!(feature = "portable")
+}
+
 // ── Maps ─────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -441,4 +446,70 @@ pub async fn apply_patches(
     });
 
     Ok(format!("Patched with {} ({} files)", patch_name, count))
+}
+
+// ── Installer download ───────────────────────────────────────────
+
+#[tauri::command]
+pub async fn download_installer(
+    app: tauri::AppHandle,
+    config: tauri::State<'_, crate::ApiConfig>,
+) -> Result<String, String> {
+    let dest = std::env::temp_dir().join("WIC_MP_ONLY_installer.zip");
+    let url = format!("{}/files/WIC_MP_ONLY_installer.zip", config.url);
+
+    let app_dl = app.clone();
+    core::download_file(&url, &dest, move |downloaded, total| {
+        let _ = app_dl.emit("installer-progress", PatchProgress {
+            stage: "downloading".into(),
+            downloaded,
+            total,
+            detail: "WIC_MP_ONLY_installer.zip".into(),
+        });
+    }).await?;
+
+    let _ = app.emit("installer-progress", PatchProgress {
+        stage: "done".into(),
+        downloaded: 0,
+        total: 0,
+        detail: dest.to_string_lossy().into_owned(),
+    });
+
+    Ok(dest.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+pub async fn extract_installer(
+    app: tauri::AppHandle,
+    install_dir: String,
+) -> Result<String, String> {
+    let zip_path = std::env::temp_dir().join("WIC_MP_ONLY_installer.zip");
+    if !zip_path.exists() {
+        return Err("Installer not downloaded yet".into());
+    }
+    std::fs::create_dir_all(&install_dir).map_err(|e| e.to_string())?;
+
+    let app_ex = app.clone();
+    let count = core::extract_zip(&zip_path, &install_dir, move |done, total, name| {
+        let _ = app_ex.emit("installer-progress", PatchProgress {
+            stage: "extracting".into(),
+            downloaded: done,
+            total,
+            detail: name.to_string(),
+        });
+    })?;
+
+    let _ = std::fs::remove_file(&zip_path);
+
+    // Register installation
+    core::register_install(&install_dir)?;
+
+    let _ = app.emit("installer-progress", PatchProgress {
+        stage: "done".into(),
+        downloaded: count,
+        total: count,
+        detail: format!("{} files extracted", count),
+    });
+
+    Ok(format!("{} files extracted to {}", count, install_dir))
 }

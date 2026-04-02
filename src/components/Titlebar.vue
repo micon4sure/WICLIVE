@@ -3,115 +3,34 @@ import { ref, computed, onMounted } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
+import { useGameState } from '../composables/useGameState'
 
-type ActionStatus = 'checking' | 'done' | 'needed' | 'applying' | 'fixed' | 'error'
-
-interface Action {
-  id: string
-  label: string
-  status: ActionStatus
-  detail?: string
-}
-
-type AppMode = 'checking' | 'not-installed' | 'broken' | 'needs-fixes' | 'ready'
+const { readinessActions, checking, installed, isReady, check } = useGameState()
 
 const appWindow = getCurrentWindow()
 const version = ref('')
-const installState = ref<'ok' | 'broken' | 'not-installed'>('ok')
 
-const actions = ref<Action[]>([
-  { id: 'vcredist', label: 'VC++', status: 'checking' },
-  { id: 'patch', label: 'Patches', status: 'checking' },
-  { id: 'laa', label: 'LAA', status: 'checking' },
-  { id: 'cdkey', label: 'CD Key', status: 'checking' },
-  { id: 'hooks', label: 'Proxy', status: 'checking' },
-])
-
-const mode = computed<AppMode>(() => {
-  if (installState.value === 'not-installed') return 'not-installed'
-  if (installState.value === 'broken') return 'broken'
-  const statuses = actions.value.map(a => a.status)
-  if (statuses.some(s => s === 'checking')) return 'checking'
-  if (statuses.every(s => s === 'done' || s === 'fixed')) return 'ready'
-  return 'needs-fixes'
-})
-
-defineExpose({ actions, mode, runChecks })
-
-function find(id: string) {
-  return actions.value.find(a => a.id === id)!
+const labels: Record<string, string> = {
+  vcredist: 'VC++',
+  patch: 'Patches',
+  laa: 'LAA',
+  cdkey: 'CD Key',
+  hooks: 'Proxy',
 }
 
-async function runChecks() {
-  for (const a of actions.value) {
-    a.status = 'checking'
-    a.detail = undefined
-  }
-
-  const installPath = await invoke<string | null>('get_install_path')
-  if (!installPath) {
-    const hasRegistry = await invoke<boolean>('has_registry_install_path')
-    installState.value = hasRegistry ? 'broken' : 'not-installed'
-    for (const a of actions.value) a.status = 'error'
-    return
-  }
-  installState.value = 'ok'
-
-  try {
-    const ok = await invoke<boolean>('check_vcredist')
-    const a = find('vcredist')
-    a.status = ok ? 'done' : 'needed'
-    a.detail = ok ? 'Installed' : 'Missing'
-  } catch { find('vcredist').status = 'error' }
-
-  try {
-    const ver = await invoke<{ major: number; minor: number; patch: number; build: number }>('get_game_version')
-    const a = find('patch')
-    const str = `${ver.major}.${ver.minor}.${ver.patch}.${ver.build}`
-    const ok = ver.patch === 1 && ver.build === 1
-    a.status = ok ? 'done' : 'needed'
-    a.detail = ok ? str : `${str} → 1.0.1.1`
-  } catch { find('patch').status = 'error' }
-
-  try {
-    const laa = await invoke<boolean>('get_laa_flag')
-    const a = find('laa')
-    a.status = laa ? 'done' : 'needed'
-    a.detail = laa ? 'Enabled' : 'Not set'
-  } catch { find('laa').status = 'error' }
-
-  try {
-    const key = await invoke<string>('get_cd_key')
-    const a = find('cdkey')
-    const ok = key.length > 0 && key.toLowerCase() !== 'invalid'
-    a.status = ok ? 'done' : 'needed'
-    a.detail = ok ? key : 'Not set'
-  } catch { find('cdkey').status = 'error' }
-
-  try {
-    const ok = await invoke<boolean>('check_hooks')
-    const a = find('hooks')
-    if (ok) {
-      const ver = await invoke<string>('get_hooks_version')
-      const latest = await invoke<string>('get_latest_proxy_version').catch(() => '')
-      if (latest && ver.trim() !== latest.trim()) {
-        a.status = 'needed'
-        a.detail = `${ver.trim()} → ${latest.trim()}`
-      } else {
-        a.status = 'done'
-        a.detail = ver.trim()
-      }
-    } else {
-      a.status = 'needed'
-      a.detail = 'Not installed'
-    }
-  } catch { find('hooks').status = 'error' }
-
-}
+const pills = computed(() =>
+  Object.entries(readinessActions.value).map(([id, a]) => {
+    let status: string
+    if (checking.value && !a.need) status = 'checking'
+    else if (a.has) status = 'done'
+    else if (a.need) status = 'needed'
+    else status = 'checking'
+    return { id, label: labels[id] || id, status, detail: a.detail }
+  })
+)
 
 onMounted(async () => {
   version.value = await getVersion()
-  runChecks()
 })
 
 function minimize() { appWindow.minimize() }
@@ -126,22 +45,22 @@ const isDev = import.meta.env.DEV
 
 async function undoPatches() {
   await invoke('reset_game', { variant: 'wic.1.0.0.nolaa.exe' })
-  runChecks()
+  check()
 }
 
 async function undoLaa() {
   await invoke('unset_laa_flag')
-  runChecks()
+  check()
 }
 
 async function undoProxy() {
   await invoke('remove_proxy')
-  runChecks()
+  check()
 }
 
 async function removeCdKey() {
   await invoke('set_cd_key', { key: '' })
-  runChecks()
+  check()
 }
 
 const debugCopied = ref(false)
@@ -169,7 +88,7 @@ async function copyDebug() {
     <img src="../assets/wiclive.png" alt="WIC LIVE" class="header-logo" />
     <small class="header-version">{{ version }}</small>
 
-    <div v-if="mode !== 'broken' && mode !== 'not-installed'" class="status-area">
+    <div v-if="installed" class="status-area">
       <div v-if="isDev" class="dev-toolbar">
         <button class="dev-btn" @click.stop="undoPatches">undo patches</button>
         <button class="dev-btn" @click.stop="undoLaa">undo laa</button>
@@ -177,20 +96,19 @@ async function copyDebug() {
         <button class="dev-btn" @click.stop="undoProxy">undo proxy</button>
       </div>
       <div class="status-bar">
-        <div v-for="action in actions" :key="action.id" class="status-pill" :class="action.status">
+        <div v-for="pill in pills" :key="pill.id" class="status-pill" :class="pill.status">
           <span class="pill-icon">
-            <template v-if="action.status === 'done' || action.status === 'fixed'">&#x2713;</template>
-            <template v-else-if="action.status === 'needed'">&#x25CB;</template>
-            <template v-else-if="action.status === 'error'">&#x2717;</template>
+            <template v-if="pill.status === 'done'">&#x2713;</template>
+            <template v-else-if="pill.status === 'needed'">&#x25CB;</template>
             <template v-else>&middot;&middot;</template>
           </span>
-          <span class="pill-label">{{ action.label }}</span>
-          <span class="pill-detail" :class="{ 'pill-detail-hidden': !(action.id === 'patch' || action.id === 'cdkey' || action.id === 'hooks') }">{{ action.detail || '&nbsp;' }}</span>
+          <span class="pill-label">{{ pill.label }}</span>
+          <span class="pill-detail" :class="{ 'pill-detail-hidden': !(pill.id === 'patch' || pill.id === 'cdkey' || pill.id === 'hooks') }">{{ pill.detail || '&nbsp;' }}</span>
         </div>
       </div>
     </div>
 
-    <button v-if="mode !== 'broken' && mode !== 'not-installed'" class="btn btn-launch header-launch" :disabled="mode !== 'ready'" @click.stop="launchGame">Start Game</button>
+    <button v-if="installed" class="btn btn-launch header-launch" :disabled="!isReady" @click.stop="launchGame">Start Game</button>
   </div>
 </template>
 

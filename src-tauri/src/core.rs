@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+const GAME_EXE: &str = "wic_online.exe";
+
 // ── Install detection ──────────────────────────────────────────────
 
 /// Detect game install path from Windows registry.
@@ -12,7 +14,7 @@ pub fn get_install_path() -> Option<String> {
     // Standard install
     if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict") {
         if let Ok(path) = key.get_value::<String, _>("InstallPath") {
-            if PathBuf::from(&path).join("wic.exe").exists() {
+            if PathBuf::from(&path).join(GAME_EXE).exists() {
                 return Some(path);
             }
         }
@@ -21,7 +23,7 @@ pub fn get_install_path() -> Option<String> {
     // GOG variant
     if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414") {
         if let Ok(path) = key.get_value::<String, _>("WORKINGDIR") {
-            if PathBuf::from(&path).join("wic.exe").exists() {
+            if PathBuf::from(&path).join(GAME_EXE).exists() {
                 return Some(path);
             }
         }
@@ -84,9 +86,9 @@ pub fn clear_install_registry() -> Result<(), String> {
 
 pub fn require_exe_path() -> Result<PathBuf, String> {
     let path = require_install_path()?;
-    let exe = PathBuf::from(&path).join("wic.exe");
+    let exe = PathBuf::from(&path).join(GAME_EXE);
     if !exe.exists() {
-        return Err("wic.exe not found".into());
+        return Err(format!("{} not found", GAME_EXE));
     }
     Ok(exe)
 }
@@ -360,7 +362,7 @@ pub fn list_variants(install_dir: &str) -> Vec<String> {
     if let Ok(entries) = std::fs::read_dir(&dir) {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
-            if name.starts_with("wic.") && name.ends_with(".exe") && name != "wic.exe" {
+            if name.starts_with("wic") && name.ends_with(".exe") && name != GAME_EXE {
                 variants.push(name);
             }
         }
@@ -373,14 +375,14 @@ pub fn list_variants(install_dir: &str) -> Vec<String> {
 pub fn reset_exe(install_dir: &str, variant: &str) -> Result<(), String> {
     let dir = PathBuf::from(install_dir);
     let source = dir.join(variant);
-    let target = dir.join("wic.exe");
+    let target = dir.join(GAME_EXE);
 
     if !source.exists() {
         return Err(format!("{} not found", variant));
     }
 
     std::fs::copy(&source, &target)
-        .map_err(|e| format!("Failed to copy {} -> wic.exe: {}", variant, e))?;
+        .map_err(|e| format!("Failed to copy {} -> {}: {}", variant, GAME_EXE, e))?;
 
     Ok(())
 }
@@ -500,6 +502,129 @@ pub fn set_registry_version(version: &str) -> Result<(), String> {
     key.set_value("Version", &version.to_string())
         .map_err(|e| format!("Failed to set version: {}", e))?;
     Ok(())
+}
+
+// ── Install registration ──────────────────────────────────────────
+
+/// Register WiC installation: registry keys, Add/Remove Programs, desktop shortcut.
+#[cfg(windows)]
+pub fn register_install(install_dir: &str) -> Result<(), String> {
+    use winreg::enums::*;
+    use winreg::RegKey;
+
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+
+    // Set install path (what get_install_path() reads)
+    let (key, _) = hklm.create_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict")
+        .map_err(|e| format!("Failed to create registry key: {}", e))?;
+    key.set_value("InstallPath", &install_dir.to_string())
+        .map_err(|e| format!("Failed to set InstallPath: {}", e))?;
+
+    // Set version
+    key.set_value("Version", &"1.0.0.0".to_string())
+        .map_err(|e| format!("Failed to set Version: {}", e))?;
+
+    #[cfg(not(feature = "portable"))]
+    {
+        // Add/Remove Programs (Uninstall entry)
+        let uninstall_key = r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\World in Conflict - Multiplayer";
+        let (ukey, _) = hklm.create_subkey(uninstall_key)
+            .map_err(|e| format!("Failed to create uninstall key: {}", e))?;
+        ukey.set_value("DisplayName", &"World in Conflict - Multiplayer".to_string()).ok();
+        ukey.set_value("InstallLocation", &install_dir.to_string()).ok();
+        ukey.set_value("DisplayIcon", &format!(r"{}\{},0", install_dir, GAME_EXE)).ok();
+        ukey.set_value("Publisher", &"Massive Entertainment".to_string()).ok();
+        ukey.set_value("DisplayVersion", &"1.0.0.0".to_string()).ok();
+        ukey.set_value("NoModify", &1u32).ok();
+        ukey.set_value("NoRepair", &1u32).ok();
+        if let Ok(exe) = std::env::current_exe() {
+            ukey.set_value("UninstallString", &format!("\"{}\" --uninstall", exe.to_string_lossy())).ok();
+        }
+
+        // Desktop shortcut
+        if let Ok(userprofile) = std::env::var("USERPROFILE") {
+            let desktop = PathBuf::from(&userprofile).join("Desktop");
+            let shortcut_path = desktop.join("World in Conflict.lnk");
+            let exe_path = PathBuf::from(install_dir).join(GAME_EXE);
+            let _ = create_shortcut(&shortcut_path, &exe_path);
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(not(windows))]
+pub fn register_install(_install_dir: &str) -> Result<(), String> {
+    Ok(())
+}
+
+/// Create a Windows .lnk shortcut file.
+#[cfg(windows)]
+fn create_shortcut(shortcut_path: &std::path::Path, target: &std::path::Path) -> Result<(), String> {
+    use std::process::Command;
+    // Use PowerShell to create the shortcut
+    let ps_script = format!(
+        "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('{}'); $s.TargetPath = '{}'; $s.WorkingDirectory = '{}'; $s.Save()",
+        shortcut_path.to_string_lossy(),
+        target.to_string_lossy(),
+        target.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default(),
+    );
+    Command::new("powershell")
+        .args(["-NoProfile", "-Command", &ps_script])
+        .output()
+        .map_err(|e| format!("Failed to create shortcut: {}", e))?;
+    Ok(())
+}
+
+/// Uninstall: delete game files, remove registry keys, remove desktop shortcut.
+#[cfg(windows)]
+pub fn uninstall_game() -> Result<String, String> {
+    use winreg::enums::*;
+    use winreg::RegKey;
+
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+
+    // Get install path before we delete the key
+    let install_path = get_install_path();
+
+    // Remove game registry keys
+    clear_install_registry()?;
+
+    // Remove version
+    if let Ok(key) = hklm.open_subkey_with_flags(
+        r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict",
+        KEY_SET_VALUE,
+    ) {
+        let _ = key.delete_value("Version");
+    }
+
+    // Remove Add/Remove Programs entry
+    let _ = hklm.delete_subkey_all(
+        r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\World in Conflict - Multiplayer",
+    );
+
+    // Remove desktop shortcut
+    if let Ok(userprofile) = std::env::var("USERPROFILE") {
+        let shortcut = PathBuf::from(&userprofile).join("Desktop").join("World in Conflict.lnk");
+        let _ = std::fs::remove_file(shortcut);
+    }
+
+    // Delete game files
+    if let Some(path) = install_path {
+        let dir = PathBuf::from(&path);
+        if dir.exists() {
+            std::fs::remove_dir_all(&dir)
+                .map_err(|e| format!("Failed to delete {}: {}", path, e))?;
+            return Ok(format!("World in Conflict uninstalled from {}", path));
+        }
+    }
+
+    Ok("World in Conflict uninstalled (registry cleaned).".into())
+}
+
+#[cfg(not(windows))]
+pub fn uninstall_game() -> Result<String, String> {
+    Ok("Uninstall is only supported on Windows.".into())
 }
 
 // ── Maps ──────────────────────────────────────────────────────────

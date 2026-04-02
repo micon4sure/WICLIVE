@@ -2,43 +2,9 @@
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { openUrl } from '@tauri-apps/plugin-opener'
+import { useGameState } from '../composables/useGameState'
 
-type ActionStatus = 'checking' | 'done' | 'needed' | 'applying' | 'fixed' | 'error'
-
-interface Action {
-  id: string
-  label: string
-  status: ActionStatus
-  detail?: string
-}
-
-type AppMode = 'checking' | 'not-installed' | 'broken' | 'needs-fixes' | 'ready'
-
-const props = defineProps<{
-  actions: Action[]
-  mode: AppMode
-}>()
-
-const emit = defineEmits<{
-  fixed: []
-}>()
-
-const clearingRegistry = ref(false)
-const registryCleared = ref(false)
-const registryError = ref('')
-
-async function clearRegistry() {
-  clearingRegistry.value = true
-  registryError.value = ''
-  try {
-    await invoke('clear_install_registry')
-    registryCleared.value = true
-  } catch (e) {
-    registryError.value = String(e)
-  }
-  clearingRegistry.value = false
-}
+const { readinessActions, wasFixed, check } = useGameState()
 
 const fixing = ref(false)
 const currentFix = ref('')
@@ -50,11 +16,10 @@ const exProgress = ref(0)
 const exTotal = ref(0)
 let lastProgressUpdate = 0
 
-const items: Record<string, { label: string; desc: string }> = {
-  laa: {
-    label: 'Large Address Aware',
-    desc: 'Your game executable is not Large Address Aware. This can cause crashes when starting or running the game.',
-  },
+const fixStatus = ref<Record<string, 'applying' | 'fixed' | 'error'>>({})
+const fixDetail = ref<Record<string, string>>({})
+
+const meta: Record<string, { label: string; desc: string }> = {
   vcredist: {
     label: 'VC++ Redistributable',
     desc: 'The Visual Studio C++ Redistributable is missing. This is required to run the game.',
@@ -62,6 +27,10 @@ const items: Record<string, { label: string; desc: string }> = {
   patch: {
     label: 'Game Patches',
     desc: 'Your game version is outdated and needs to be patched to play online.',
+  },
+  laa: {
+    label: 'Large Address Aware',
+    desc: 'Your game executable is not Large Address Aware. This can cause crashes when starting or running the game.',
   },
   cdkey: {
     label: 'CD Key',
@@ -73,19 +42,21 @@ const items: Record<string, { label: string; desc: string }> = {
   },
 }
 
-
-
-const visibleActions = computed(() =>
-  props.actions.filter(a => a.status !== 'checking' && a.status !== 'done')
+const visibleItems = computed(() =>
+  Object.entries(readinessActions.value)
+    .filter(([id, a]) => (a.need && !a.has) || fixStatus.value[id])
+    .map(([id, a]) => ({
+      id,
+      label: meta[id]?.label || id,
+      desc: meta[id]?.desc || '',
+      status: fixStatus.value[id] || 'needed',
+      detail: fixDetail.value[id] || a.detail,
+    }))
 )
 
 const allFixed = computed(() =>
-  visibleActions.value.length > 0 && !visibleActions.value.some(a => a.status === 'needed' || a.status === 'error' || a.status === 'applying')
+  visibleItems.value.length > 0 && visibleItems.value.every(i => i.status === 'fixed')
 )
-
-function failedActions() {
-  return props.actions.filter(a => a.status === 'needed' || a.status === 'error')
-}
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -107,9 +78,11 @@ function exPercent(): number {
 
 async function runFixes() {
   fixing.value = true
-  const failed = failedActions()
 
-  // Listen for patch download progress
+  const toFix = Object.entries(readinessActions.value)
+    .filter(([, a]) => a.need && !a.has)
+    .map(([id]) => id)
+
   const unlisten = await listen<{
     stage: string
     downloaded: number
@@ -136,9 +109,9 @@ async function runFixes() {
     }
   })
 
-  for (const action of failed) {
-    currentFix.value = action.id
-    action.status = 'applying'
+  for (const id of toFix) {
+    currentFix.value = id
+    fixStatus.value[id] = 'applying'
     dlProgress.value = 0
     dlTotal.value = 0
     dlDone.value = false
@@ -146,35 +119,35 @@ async function runFixes() {
     exTotal.value = 0
 
     try {
-      if (action.id === 'patch') {
+      if (id === 'patch') {
         currentStage.value = 'downloading'
-        action.detail = 'Downloading...'
+        fixDetail.value[id] = 'Downloading...'
         await invoke('apply_patches')
-        action.status = 'fixed'
-        action.detail = 'Patched to 1.0.1.1'
-      } else if (action.id === 'laa') {
-        action.detail = 'Applying...'
+        fixStatus.value[id] = 'fixed'
+        fixDetail.value[id] = 'Patched to 1.0.1.1'
+      } else if (id === 'laa') {
+        fixDetail.value[id] = 'Applying...'
         await invoke('set_laa_flag')
-        action.status = 'fixed'
-        action.detail = 'Enabled'
-      } else if (action.id === 'cdkey') {
-        action.detail = 'Requesting key...'
+        fixStatus.value[id] = 'fixed'
+        fixDetail.value[id] = 'Enabled'
+      } else if (id === 'cdkey') {
+        fixDetail.value[id] = 'Requesting key...'
         const key = await invoke<string>('request_cd_key')
         await invoke('set_cd_key', { key })
-        action.status = 'fixed'
-        action.detail = key
-      } else if (action.id === 'hooks') {
-        action.detail = 'Installing...'
+        fixStatus.value[id] = 'fixed'
+        fixDetail.value[id] = key
+      } else if (id === 'hooks') {
+        fixDetail.value[id] = 'Installing...'
         const ver = await invoke<string>('install_proxy')
-        action.status = 'fixed'
-        action.detail = ver || 'Installed'
+        fixStatus.value[id] = 'fixed'
+        fixDetail.value[id] = ver || 'Installed'
       } else {
-        action.status = 'needed'
+        delete fixStatus.value[id]
         continue
       }
     } catch (e) {
-      action.status = 'error'
-      action.detail = String(e)
+      fixStatus.value[id] = 'error'
+      fixDetail.value[id] = String(e)
     }
   }
 
@@ -182,54 +155,18 @@ async function runFixes() {
   currentFix.value = ''
   fixing.value = false
 
-  emit('fixed')
+  wasFixed.value = true
+  await check()
 }
-
 </script>
 
 <template>
-  <div class="readiness-card" :class="{ 'is-done': allFixed, 'is-fatal': mode === 'broken' || mode === 'not-installed' }">
-    <!-- Not installed: no registry entry -->
-    <div v-if="mode === 'not-installed'" class="install-missing">
-      <div class="missing-icon">&#x25CB;</div>
-      <div class="missing-text">
-        <h3>Game Not Installed</h3>
-        <p>World in Conflict is not installed on this computer.</p>
-        <button class="btn btn-sm btn-get-game" @click="openUrl('https://www.gog.com/de/game/world_in_conflict_complete_edition')">
-          Get it on GOG.com
-        </button>
-        <p class="missing-hint">Install the game and restart WIC LIVE.</p>
-      </div>
-    </div>
-
-    <!-- Broken: registry exists but files missing -->
-    <div v-else-if="mode === 'broken'" class="install-missing">
-      <div class="missing-icon">&#x2717;</div>
-      <div class="missing-text">
-        <h3>Game Not Found</h3>
-        <p>The Windows registry says the game is installed, but the files are not there. This usually happens when the game was deleted without being properly uninstalled.</p>
-        <p class="missing-hint">You can clean up the stale registry entry, then reinstall the game.</p>
-        <button class="btn btn-sm btn-fix-registry" :disabled="clearingRegistry" @click="clearRegistry">
-          {{ clearingRegistry ? 'Cleaning...' : 'Remove from Registry' }}
-        </button>
-        <span v-if="registryCleared" class="registry-cleared">Done — reinstall the game and restart WIC LIVE.</span>
-        <span v-if="registryError" class="registry-error">{{ registryError }}</span>
-      </div>
-    </div>
-
-    <!-- Checking -->
-    <div v-else-if="mode === 'checking'" class="readiness-header">
-      <h3 class="header-title">
-        <span class="title-text title-checking">Checking...</span>
-      </h3>
-    </div>
-
-    <!-- Needs fixes -->
-    <template v-else>
+  <div class="action-card readiness-card" :class="{ 'is-done': allFixed, 'is-fixing': fixing }">
     <div class="readiness-header">
       <div class="readiness-header-row">
         <h3 class="header-title">
-          <span class="title-text title-pending" :class="{ 'title-hidden': allFixed }">Game Readiness</span>
+          <span class="title-text title-pending" :class="{ 'title-hidden': allFixed || fixing }">Game Readiness</span>
+          <span class="title-text title-fixing" :class="{ 'title-hidden': !fixing || allFixed }">Fixing Issues</span>
           <span class="title-text title-done" :class="{ 'title-hidden': !allFixed }">Game Readiness: All Set</span>
         </h3>
         <div class="header-btn-wrap" :class="{ 'btn-hidden': allFixed }">
@@ -242,34 +179,29 @@ async function runFixes() {
       </div>
     </div>
     <div class="readiness-body">
-      <div
-        v-for="action in visibleActions"
-        :key="action.id"
-        class="readiness-item"
-        :class="['status-' + action.status, { 'item-collapsed': action.status === 'fixed' }]"
-      >
+      <div v-for="item in visibleItems" :key="item.id" class="readiness-item"
+        :class="['status-' + item.status, { 'item-collapsed': item.status === 'fixed' }]">
         <div class="item-row">
-          <span class="item-label">{{ items[action.id]?.label || action.label }}</span>
+          <span class="item-label">{{ item.label }}</span>
           <span class="item-status">
-            <template v-if="action.status === 'applying'">fixing...</template>
-            <template v-else-if="action.status === 'fixed'">fixed</template>
-            <template v-else-if="action.status === 'done'">ok</template>
-            <template v-else-if="action.status === 'error'">failed</template>
+            <template v-if="item.status === 'applying'">fixing...</template>
+            <template v-else-if="item.status === 'fixed'">fixed</template>
+            <template v-else-if="item.status === 'error'">failed</template>
             <template v-else>pending</template>
           </span>
         </div>
 
         <div class="item-detail-wrap">
-          <span v-if="action.status === 'fixed'" class="item-detail item-fixed">
-            {{ action.detail }}
+          <span v-if="item.status === 'fixed'" class="item-detail item-fixed">
+            {{ item.detail }}
           </span>
-          <span v-else-if="action.status !== 'applying' && action.status !== 'done'" class="item-desc">
-            {{ items[action.id]?.desc }}
+          <span v-else-if="item.status !== 'applying'" class="item-desc">
+            {{ item.desc }}
           </span>
         </div>
 
         <!-- Download progress -->
-        <div v-if="action.status === 'applying' && currentFix === action.id && dlTotal > 0" class="progress-area">
+        <div v-if="item.status === 'applying' && currentFix === item.id && dlTotal > 0" class="progress-area">
           <div class="progress-stage">
             <span class="stage-icon" :class="{ 'stage-done': dlDone }">{{ dlDone ? '&#x2713;' : '' }}</span>
             <span class="stage-label">Download</span>
@@ -285,9 +217,11 @@ async function runFixes() {
         </div>
 
         <!-- Extract progress -->
-        <div v-if="action.status === 'applying' && currentFix === action.id && dlDone" class="progress-area">
+        <div v-if="item.status === 'applying' && currentFix === item.id && dlDone" class="progress-area">
           <div class="progress-stage">
-            <span class="stage-icon" :class="{ 'stage-done': exProgress >= exTotal && exTotal > 0 }">{{ exProgress >= exTotal && exTotal > 0 ? '&#x2713;' : '' }}</span>
+            <span class="stage-icon" :class="{ 'stage-done': exProgress >= exTotal && exTotal > 0 }">{{ exProgress >=
+              exTotal &&
+              exTotal > 0 ? '&#x2713;' : '' }}</span>
             <span class="stage-label">Extract</span>
           </div>
           <div v-if="exTotal > 0" class="progress-track">
@@ -300,119 +234,51 @@ async function runFixes() {
           </div>
         </div>
 
-        <span v-if="action.status === 'applying' && currentFix === action.id && dlTotal === 0" class="item-detail">
-          {{ action.detail }}
+        <span v-if="item.status === 'applying' && currentFix === item.id && dlTotal === 0" class="item-detail">
+          {{ item.detail }}
         </span>
 
-        <span v-if="action.status === 'error'" class="item-detail item-error">{{ action.detail }}</span>
+        <span v-if="item.status === 'error'" class="item-detail item-error">{{ item.detail }}</span>
       </div>
     </div>
-    </template>
   </div>
 </template>
 
+<style src="../assets/styles/card.css"></style>
 <style scoped>
-/* ── Card shell ──────────────────────────────────────── */
 .readiness-card {
-  border: 1px solid rgba(var(--sw-rgb), 0.3);
-  background: rgba(var(--bg-rgb), 0.85);
-  transition: border-color 0.6s ease;
+  border-color: rgba(var(--dl-light-rgb), 0.5);
 }
-.is-done { border-color: rgba(var(--g-rgb), 0.3); }
-.is-fatal { border-color: rgba(var(--dl-light-rgb), 0.5); }
 
-/* ── Install missing banner ────────────────────────────── */
-.install-missing {
-  display: flex;
-  gap: 16px;
-  padding: 20px 24px;
-  align-items: flex-start;
+.readiness-card .readiness-header {
+  border-bottom-color: rgba(var(--dl-light-rgb), 0.3);
 }
-.missing-icon {
-  font-size: 28px;
-  color: var(--dl-light);
-  line-height: 1;
-  flex-shrink: 0;
+
+.readiness-card.is-fixing {
+  border-color: rgba(var(--b-rgb), 0.5);
 }
-.missing-text h3 {
-  margin: 0 0 6px;
-  font-family: 'Oswald', sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--dl-light);
+
+.readiness-card.is-fixing .readiness-header {
+  border-bottom-color: rgba(var(--b-rgb), 0.3);
 }
-.missing-text p {
-  margin: 0 0 4px;
-  font-size: 14px;
-  color: var(--t2);
-  line-height: 1.4;
+
+.readiness-card.is-done {
+  border-color: rgba(var(--g-rgb), 0.3);
 }
-.missing-hint {
-  color: var(--t3) !important;
-  font-size: 13px !important;
+
+.readiness-card.is-done .readiness-header {
+  border-bottom-color: rgba(var(--g-rgb), 0.2);
 }
-.btn-get-game {
-  display: inline-block;
-  font-family: 'Oswald', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 8px 20px;
-  margin: 12px 0;
-  background: rgba(var(--sw-rgb), 0.2);
-  border: 1px solid rgba(var(--sw-rgb), 0.5);
-  color: var(--sw);
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-.btn-get-game:hover {
-  background: rgba(var(--sw-rgb), 0.35);
-}
-.btn-fix-registry {
-  font-family: 'Oswald', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 6px 16px;
-  background: rgba(var(--dl-light-rgb), 0.2);
-  border: 1px solid rgba(var(--dl-light-rgb), 0.4);
-  color: var(--dl-light);
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-.btn-fix-registry:hover:not(:disabled) {
-  background: rgba(var(--dl-light-rgb), 0.35);
-}
-.btn-fix-registry:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-.registry-cleared {
-  display: block;
-  margin-top: 10px;
-  font-size: 14px;
-  color: var(--g);
-}
-.registry-error {
-  display: block;
-  margin-top: 10px;
-  font-size: 13px;
+
+.title-pending {
   color: var(--dl-light);
 }
 
-/* ── Header ──────────────────────────────────────────── */
-.readiness-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(var(--sw-rgb), 0.2);
-  transition: padding 0.5s ease, border-color 0.6s ease;
-}
-.is-done .readiness-header {
-  padding: 10px 20px;
-  border-color: rgba(var(--g-rgb), 0.2);
+.title-fixing {
+  color: var(--b);
+  position: absolute;
+  left: 0;
+  top: 0;
 }
 
 .readiness-header-row {
@@ -423,26 +289,19 @@ async function runFixes() {
 
 .header-title {
   position: relative;
-  margin: 0 0 4px;
-  font-family: 'Oswald', sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
 }
 
-.title-text {
-  transition: opacity 0.4s ease, color 0.4s ease;
-}
-.title-checking { color: var(--t3); }
-.title-pending {
-  color: var(--sw);
+.title-pending,
+.title-fixing {
   position: absolute;
   left: 0;
   top: 0;
 }
-.title-done { color: var(--g); }
-.title-hidden { opacity: 0; pointer-events: none; }
+
+.title-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
 
 .header-btn-wrap {
   overflow: hidden;
@@ -450,134 +309,16 @@ async function runFixes() {
   opacity: 1;
   transition: max-width 0.4s ease, opacity 0.3s ease;
 }
+
 .header-btn-wrap.btn-hidden {
   max-width: 0;
   opacity: 0;
 }
 
-.header-sub {
-  max-height: 30px;
-  opacity: 1;
-  overflow: hidden;
-  transition: max-height 0.4s ease, opacity 0.3s ease;
-}
 .header-sub.sub-hidden {
   max-height: 0;
   opacity: 0;
 }
-.header-sub p {
-  margin: 0;
-  font-size: 15px;
-  color: var(--t2);
-}
-
-/* ── Body ────────────────────────────────────────────── */
-.readiness-body {
-  padding: 12px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: padding 0.5s ease, gap 0.5s ease;
-}
-.is-done .readiness-body {
-  padding: 6px 20px;
-  gap: 2px;
-}
-
-/* ── Items ────────────────────────────────────────────── */
-.readiness-item {
-  padding: 12px 16px;
-  border-left: 3px solid var(--t3);
-  background: rgba(255, 255, 255, 0.03);
-  transition: padding 0.5s ease, border-color 0.4s ease;
-}
-.is-done .readiness-item,
-.item-collapsed {
-  padding: 4px 16px;
-  background: transparent;
-}
-
-.item-collapsed .item-row { margin-bottom: 0; }
-.item-collapsed .item-label { font-size: 12px; }
-.item-collapsed .item-status { font-size: 11px; }
-.item-collapsed .item-detail-wrap {
-  max-height: 0;
-  opacity: 0;
-}
-
-.item-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
-  transition: margin 0.5s ease;
-}
-.is-done .item-row { margin-bottom: 0; }
-
-.item-label {
-  font-family: 'Oswald', sans-serif;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: 15px;
-  color: #fff;
-  transition: font-size 0.5s ease, color 0.4s ease;
-}
-.is-done .item-label { font-size: 12px; }
-
-.item-status {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--t3);
-  transition: font-size 0.5s ease, color 0.4s ease;
-}
-.is-done .item-status { font-size: 11px; }
-
-.item-detail-wrap {
-  max-height: 60px;
-  opacity: 1;
-  overflow: hidden;
-  transition: max-height 0.5s ease, opacity 0.4s ease;
-}
-.is-done .item-detail-wrap {
-  max-height: 0;
-  opacity: 0;
-}
-
-/* ── Status colors ───────────────────────────────────── */
-.status-needed  { border-left-color: var(--sw); }
-.status-applying { border-left-color: var(--b); }
-.status-done    { border-left-color: var(--t3); opacity: 0.6; }
-.status-fixed   { border-left-color: var(--g); }
-.status-error   { border-left-color: var(--dl-light); }
-
-.status-applying .item-status { color: var(--b); }
-.status-done .item-status     { color: var(--t3); }
-.status-fixed .item-status    { color: var(--g); }
-.status-fixed .item-label     { color: var(--g); }
-
-/* ── Detail text ─────────────────────────────────────── */
-.item-desc {
-  display: block;
-  font-size: 14px;
-  color: var(--t2);
-  line-height: 1.4;
-}
-
-.item-detail {
-  display: block;
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--t3);
-}
-.item-fixed { color: var(--g); }
-.item-error { color: var(--dl-light); }
-
-/* ── Progress bar ────────────────────────────────────── */
-.progress-area { margin-top: 8px; }
 
 .progress-stage {
   display: flex;
@@ -611,78 +352,5 @@ async function runFixes() {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--t2);
-}
-
-.progress-track {
-  position: relative;
-  height: 22px;
-  background: rgba(var(--mg-rgb), 0.5);
-  border: 1px solid rgba(var(--mg-rgb), 0.6);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background-size: 22.6px 100%, 100% 100%;
-  transition: width 0.15s linear;
-  animation: progress-stripes 0.6s linear infinite;
-  position: relative;
-}
-
-.progress-fill-dl {
-  background:
-    repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.08) 8px, rgba(255,255,255,0.08) 16px),
-    linear-gradient(180deg, rgba(var(--b-rgb), 0.95) 0%, rgba(var(--b-rgb), 0.7) 100%);
-  background-size: 22.6px 100%, 100% 100%;
-  box-shadow: 0 0 12px rgba(var(--b-rgb), 0.3);
-}
-
-.progress-fill-ex {
-  background:
-    repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.08) 8px, rgba(255,255,255,0.08) 16px),
-    linear-gradient(180deg, rgba(var(--b-rgb), 0.95) 0%, rgba(var(--b-rgb), 0.7) 100%);
-  background-size: 22.6px 100%, 100% 100%;
-  box-shadow: 0 0 12px rgba(var(--b-rgb), 0.3);
-}
-
-.progress-fill::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: progress-shimmer 2s ease-in-out infinite;
-}
-
-@keyframes progress-stripes {
-  from { background-position: 0 0, 0 0; }
-  to { background-position: 22.6px 0, 0 0; }
-}
-@keyframes progress-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.progress-label {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Oswald', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-.progress-meta {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 13px;
-  color: var(--t3);
 }
 </style>

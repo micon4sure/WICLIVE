@@ -9,6 +9,12 @@ pub fn run() {
     if let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())) {
         dotenvy::from_path(exe_dir.join(".env")).ok();
     }
+    dotenvy::dotenv().ok();
+
+    // Ensure registry entry is up to date
+    if let Some(path) = core::get_install_path() {
+        let _ = core::register_install(&path);
+    }
 
     let api_url = api_url();
 
@@ -41,6 +47,7 @@ pub fn run() {
             commands::start_game,
             commands::reset_game,
             commands::get_api_url,
+            commands::is_portable,
             commands::install_proxy,
             commands::get_latest_proxy_version,
             commands::remove_proxy,
@@ -56,6 +63,8 @@ pub fn run() {
             commands::delete_all_maps,
             commands::get_map_hash,
             commands::download_map,
+            commands::download_installer,
+            commands::extract_installer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -67,4 +76,31 @@ pub struct ApiConfig {
 
 pub fn api_url() -> String {
     std::env::var("API_URL").unwrap_or_else(|_| "https://wiclive.wicgate.org".into())
+}
+
+pub fn uninstall() {
+    match core::uninstall_game() {
+        Ok(msg) => {
+            #[cfg(windows)]
+            {
+                use windows::Win32::UI::WindowsAndMessaging::*;
+                let text: Vec<u16> = format!("{}\0", msg).encode_utf16().collect();
+                let title: Vec<u16> = "WIC LIVE\0".encode_utf16().collect();
+                unsafe {
+                    MessageBoxW(
+                        None,
+                        windows::core::PCWSTR(text.as_ptr()),
+                        windows::core::PCWSTR(title.as_ptr()),
+                        MB_OK | MB_ICONINFORMATION,
+                    );
+                }
+            }
+            #[cfg(not(windows))]
+            println!("{}", msg);
+        }
+        Err(e) => {
+            eprintln!("Uninstall failed: {}", e);
+            std::process::exit(1);
+        }
+    }
 }

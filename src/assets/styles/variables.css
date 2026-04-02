@@ -59,6 +59,12 @@
   --gold-dark: #ffa000;
   --gold-rgb: 255, 202, 40;
 
+  /* Blue */
+  --blue: #4ea8d9;
+  --blue-bright: #6ec0e8;
+  --blue-dark: #2b7fb3;
+  --blue-rgb: 78, 168, 217;
+
   /* Border & effects */
   --bd: rgba(68, 117, 146, 0.25);
   --divider-strong: rgba(68, 117, 146, 0.7);

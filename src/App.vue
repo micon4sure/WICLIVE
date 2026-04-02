@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import Titlebar from './components/Titlebar.vue'
+import InstallCard from './components/InstallCard.vue'
 import ReadinessCard from './components/ReadinessCard.vue'
 import Config from './components/Config.vue'
 import Maps from './components/Maps.vue'
+import { useGameState } from './composables/useGameState'
 
-const titlebar = ref<InstanceType<typeof Titlebar>>()
+const { needInstall, needFix, isReady, check, readinessActions, installActions, wasFixed, wasInstalled } = useGameState()
 const activeTab = ref<'maps' | 'config'>('maps')
-const wasFixed = ref(false)
-
-const mode = computed(() => titlebar.value?.mode ?? 'checking')
 
 const tabsDetached = ref(false)
 const appBody = ref<HTMLElement>()
@@ -19,37 +18,36 @@ function onScroll() {
   tabsDetached.value = appBody.value.scrollTop > 16
 }
 
-onMounted(() => appBody.value?.addEventListener('scroll', onScroll, { passive: true }))
+onMounted(async () => {
+  appBody.value?.addEventListener('scroll', onScroll, { passive: true })
+})
 onUnmounted(() => appBody.value?.removeEventListener('scroll', onScroll))
 </script>
 
 <template>
   <Titlebar ref="titlebar" />
   <div ref="appBody" class="app-body">
-    <ReadinessCard
-      v-if="mode !== 'ready' || wasFixed"
-      :class="{ 'readiness-full': mode !== 'ready' }"
-      :mode="mode"
-      :actions="titlebar?.actions ?? []"
-      @fixed="wasFixed = true"
-    />
-    <div v-if="mode === 'ready'" class="tab-area">
+    <InstallCard v-if="needInstall || wasInstalled" />
+
+    <ReadinessCard v-if="(!needInstall && needFix) || wasFixed" />
+    <div v-if="isReady" class="tab-area">
       <div class="tab-nav-sticky" :class="{ detached: tabsDetached }">
         <div class="tab-nav">
-          <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'maps' }"
-            @click="activeTab = 'maps'"
-          >
-            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          <button class="tab-btn" :class="{ active: activeTab === 'maps' }" @click="activeTab = 'maps'">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+              <line x1="8" y1="2" x2="8" y2="18" />
+              <line x1="16" y1="6" x2="16" y2="22" />
+            </svg>
             Maps
           </button>
-          <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'config' }"
-            @click="activeTab = 'config'"
-          >
-            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          <button class="tab-btn" :class="{ active: activeTab === 'config' }" @click="activeTab = 'config'">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
             Config
           </button>
         </div>
@@ -93,16 +91,14 @@ onUnmounted(() => appBody.value?.removeEventListener('scroll', onScroll))
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 10px,
-    rgba(255, 255, 255, 0.03) 10px,
-    rgba(255, 255, 255, 0.03) 11px
-  );
+  background-image: repeating-linear-gradient(45deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 255, 255, 0.03) 10px,
+      rgba(255, 255, 255, 0.03) 11px);
 }
 
-.app-body > * {
+.app-body>* {
   position: relative;
   z-index: 1;
 }
@@ -196,7 +192,7 @@ onUnmounted(() => appBody.value?.removeEventListener('scroll', onScroll))
   flex-direction: column;
 }
 
-.tab-content > * {
+.tab-content>* {
   flex: 1;
 }
 </style>

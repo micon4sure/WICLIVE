@@ -1,6 +1,6 @@
 [package]
 name = "wiclive"
-version = "4.0.5-beta"
+version = "4.1.0-beta"
 edition = "2021"
 default-run = "wiclive"
 
@@ -11,6 +11,9 @@ crate-type = ["lib", "cdylib", "staticlib"]
 [[bin]]
 name = "wiclive-cli"
 path = "src/bin/cli.rs"
+
+[features]
+portable = []
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

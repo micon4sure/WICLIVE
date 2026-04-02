@@ -9,5 +9,10 @@ fn main() {
         }
     }
 
+    if std::env::args().any(|a| a == "--uninstall") {
+        wiclive_lib::uninstall();
+        return;
+    }
+
     wiclive_lib::run();
 }
