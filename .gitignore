@@ -12,11 +12,11 @@ dist
 src-tauri/target
 src-tauri/tauri-sign.key
 src-tauri/.env
+.env
+.env.*
+.github/token
 
 # Legacy
 backend/
 _build/
 _install/
-.github/token# test
-# test
-# test
