@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use std::process;
 
 fn main() {
-    dotenvy::dotenv().ok();
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
@@ -121,7 +120,7 @@ fn cmd_cdkey() {
 
 fn cmd_request_cdkey() {
     let api = wiclive_lib::api_url();
-    let url = format!("{}/cdkey/generate", api);
+    let url = format!("{}/cdkey/generate/cli", api);
     println!("POST {}", url);
 
     let rt = tokio::runtime::Runtime::new().unwrap();

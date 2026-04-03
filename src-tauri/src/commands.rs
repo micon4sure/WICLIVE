@@ -169,8 +169,9 @@ pub fn remove_proxy() -> Result<(), String> {
 #[tauri::command]
 pub async fn request_cd_key(
     config: tauri::State<'_, crate::ApiConfig>,
+    source: String,
 ) -> Result<String, String> {
-    let url = format!("{}/cdkey/generate", config.url);
+    let url = format!("{}/cdkey/generate/{}", config.url, source);
     let client = reqwest::Client::new();
     let resp = client.post(&url)
         .send()

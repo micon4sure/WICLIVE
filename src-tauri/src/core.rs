@@ -416,7 +416,10 @@ where
 {
     use futures_util::StreamExt;
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| format!("Client build failed: {}", e))?;
 
     // HEAD first to get Content-Length (GET may use chunked encoding)
     let head = client.head(url).send().await.map_err(|e| format!("HEAD failed: {}", e))?;
@@ -425,7 +428,9 @@ where
         .or_else(|| head.headers().get("content-length")?.to_str().ok()?.parse().ok())
         .unwrap_or(0);
 
-    let response = client.get(url).send().await.map_err(|e| format!("Request failed: {}", e))?;
+    let response = client.get(url)
+        .header("Accept-Encoding", "identity")
+        .send().await.map_err(|e| format!("Request failed: {}", e))?;
     if !response.status().is_success() {
         return Err(format!("HTTP {}", response.status()));
     }

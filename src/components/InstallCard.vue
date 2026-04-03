@@ -95,7 +95,7 @@ async function maybeExtract() {
 
   // Request and set CD key
   try {
-    const key = await invoke<string>('request_cd_key')
+    const key = await invoke<string>('request_cd_key', { source: 'install' })
     await invoke('set_cd_key', { key })
     cdKey.value = key
     cdKeyDone.value = true

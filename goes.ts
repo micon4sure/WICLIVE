@@ -28,14 +28,24 @@ const actions: Record<string, (...args: string[]) => Promise<void>> = {
     await $`bun run tauri dev${flag}`
   },
 
-  async build() {
-    const key = (await Bun.file("src-tauri/tauri-sign.key").text()).trim()
-    setEnv({ TAURI_SIGNING_PRIVATE_KEY: key, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '', API_URL: PROD_API, VITE_API_URL: PROD_API })
-    await $`bun run tauri build`
+  async build(env: string) {
+    const cfg = envs[env]
+    if (!cfg) {
+      console.log(`Usage: bun goes.ts build <${Object.keys(envs).join("|")}>`)
+      process.exit(1)
+    }
+    setEnv({ API_URL: cfg.api, VITE_API_URL: cfg.api })
+    if (cfg.release) {
+      const key = (await Bun.file("src-tauri/tauri-sign.key").text()).trim()
+      setEnv({ TAURI_SIGNING_PRIVATE_KEY: key, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '' })
+      await $`bun run tauri build`
+    } else {
+      await $`bun run tauri build -- --features portable`
+    }
   },
 
   async beta() {
-    await actions.build()
+    await actions.build('production')
     const conf = await Bun.file("src-tauri/tauri.conf.json").json()
     const version = conf.version
     const exe = `src-tauri/target/release/bundle/nsis/WIC LIVE_${version}_x64-setup.exe`

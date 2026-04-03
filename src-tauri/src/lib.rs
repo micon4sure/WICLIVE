@@ -6,10 +6,6 @@ use tauri::Manager;
 pub mod elevation;
 
 pub fn run() {
-    if let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())) {
-        dotenvy::from_path(exe_dir.join(".env")).ok();
-    }
-    dotenvy::dotenv().ok();
 
     // Ensure registry entry is up to date
     if let Some(path) = core::get_install_path() {
@@ -75,7 +71,15 @@ pub struct ApiConfig {
 }
 
 pub fn api_url() -> String {
-    std::env::var("API_URL").unwrap_or_else(|_| "https://wiclive.wicgate.org".into())
+    match std::env::var("API_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            if cfg!(debug_assertions) {
+                panic!("API_URL environment variable is not set");
+            }
+            "https://wiclive.wicgate.org".into()
+        }
+    }
 }
 
 pub fn uninstall() {

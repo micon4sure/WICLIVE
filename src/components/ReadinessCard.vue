@@ -132,7 +132,7 @@ async function runFixes() {
         fixDetail.value[id] = 'Enabled'
       } else if (id === 'cdkey') {
         fixDetail.value[id] = 'Requesting key...'
-        const key = await invoke<string>('request_cd_key')
+        const key = await invoke<string>('request_cd_key', { source: 'existing' })
         await invoke('set_cd_key', { key })
         fixStatus.value[id] = 'fixed'
         fixDetail.value[id] = key
