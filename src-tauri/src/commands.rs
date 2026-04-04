@@ -71,19 +71,19 @@ pub fn check_vcredist() -> bool {
 }
 
 #[tauri::command]
-pub fn check_hooks() -> Result<bool, String> {
+pub fn check_proxy() -> Result<bool, String> {
     let dir = core::require_install_path()?;
     Ok(core::check_proxy(&dir))
 }
 
 #[tauri::command]
-pub fn get_hooks_version() -> Result<String, String> {
+pub fn get_proxy_version() -> Result<String, String> {
     let dir = core::require_install_path()?;
     core::read_proxy_version(&dir)
 }
 
 #[tauri::command]
-pub fn needs_hooks_update(latest: String) -> Result<bool, String> {
+pub fn needs_proxy_update(latest: String) -> Result<bool, String> {
     let dir = core::require_install_path()?;
     core::needs_proxy_update(&dir, &latest)
 }

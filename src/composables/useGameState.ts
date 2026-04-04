@@ -12,6 +12,7 @@ export interface InstallAction {
   detail: string
 }
 
+const initialized = ref(false)
 const installed = ref(false)
 const broken = ref(false)
 const checking = ref(false)
@@ -23,7 +24,8 @@ const readinessActions = ref<Record<string, ReadinessAction>>({
   patch: { need: false, has: false, detail: '' },
   laa: { need: false, has: false, detail: '' },
   cdkey: { need: false, has: false, detail: '' },
-  hooks: { need: false, has: false, detail: '' },
+  proxy_installed: { need: false, has: false, detail: '' },
+  proxy_current: { need: false, has: false, detail: '' },
 })
 
 const installActions = ref<Record<string, InstallAction>>({
@@ -40,13 +42,6 @@ const isReady = computed(() => (!needFix.value || wasFixed.value) && (!needInsta
 
 async function check() {
   checking.value = true
-
-  // Reset
-  for (const a of Object.values(readinessActions.value)) {
-    a.need = false
-    a.has = false
-    a.detail = ''
-  }
 
   const installPath = await invoke<string | null>('get_install_path')
   if (!installPath) {
@@ -92,20 +87,24 @@ async function check() {
   }
 
   try {
-    const ok = await invoke<boolean>('check_hooks')
+    const ok = await invoke<boolean>('check_proxy')
     if (ok) {
-      const ver = await invoke<string>('get_hooks_version')
+      readinessActions.value.proxy_installed = { need: true, has: true, detail: 'Installed' }
+      const ver = await invoke<string>('get_proxy_version')
       const latest = await invoke<string>('get_latest_proxy_version').catch(() => '')
-      const has = !latest || ver.trim() === latest.trim()
-      readinessActions.value.hooks = { need: true, has, detail: has ? ver.trim() : `${ver.trim()} → ${latest.trim()}` }
+      const current = !latest || ver.trim() === latest.trim()
+      readinessActions.value.proxy_current = { need: true, has: current, detail: current ? ver.trim() : `${ver.trim()} → ${latest.trim()}` }
     } else {
-      readinessActions.value.hooks = { need: true, has: false, detail: 'Not installed' }
+      readinessActions.value.proxy_installed = { need: true, has: false, detail: 'Not installed' }
+      readinessActions.value.proxy_current = { need: false, has: false, detail: '' }
     }
   } catch {
-    readinessActions.value.hooks = { need: true, has: false, detail: 'Error' }
+    readinessActions.value.proxy_installed = { need: true, has: false, detail: 'Error' }
+    readinessActions.value.proxy_current = { need: false, has: false, detail: '' }
   }
 
   checking.value = false
+  initialized.value = true
 }
 
 async function onInstalled() {
@@ -116,6 +115,7 @@ async function onInstalled() {
 
 export function useGameState() {
   return {
+    initialized,
     installed,
     broken,
     checking,

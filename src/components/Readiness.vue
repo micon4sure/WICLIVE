@@ -17,7 +17,8 @@ const actions = ref<Action[]>([
   { id: 'vcredist', label: 'VC++ Redist', status: 'checking' },
   { id: 'patch', label: 'Game Patches', status: 'checking' },
   { id: 'cdkey', label: 'CD Key', status: 'checking' },
-  { id: 'hooks', label: 'Proxy (Hooks)', status: 'checking' },
+  { id: 'proxy_installed', label: 'Proxy Installed', status: 'checking' },
+  { id: 'proxy_current', label: 'Proxy Version', status: 'checking' },
 ])
 
 const allReady = ref(false)
@@ -86,21 +87,28 @@ async function runChecks() {
     find('cdkey').detail = String(e)
   }
 
-  // Hooks
+  // Proxy
   try {
-    const installed = await invoke<boolean>('check_hooks')
-    const a = find('hooks')
+    const installed = await invoke<boolean>('check_proxy')
+    const a = find('proxy_installed')
     if (installed) {
-      const version = await invoke<string>('get_hooks_version')
       a.status = 'done'
-      a.detail = version.trim()
+      a.detail = 'Installed'
+      const version = await invoke<string>('get_proxy_version')
+      const latest = await invoke<string>('get_latest_proxy_version').catch(() => '')
+      const b = find('proxy_current')
+      const current = !latest || version.trim() === latest.trim()
+      b.status = current ? 'done' : 'needed'
+      b.detail = current ? version.trim() : `${version.trim()} → ${latest.trim()}`
     } else {
       a.status = 'needed'
       a.detail = 'Not installed'
+      find('proxy_current').status = 'needed'
+      find('proxy_current').detail = ''
     }
   } catch (e) {
-    find('hooks').status = 'error'
-    find('hooks').detail = String(e)
+    find('proxy_installed').status = 'error'
+    find('proxy_installed').detail = String(e)
   }
 
   // All ready?

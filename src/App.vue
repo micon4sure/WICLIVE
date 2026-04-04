@@ -7,7 +7,7 @@ import Config from './components/Config.vue'
 import Maps from './components/Maps.vue'
 import { useGameState } from './composables/useGameState'
 
-const { needInstall, needFix, isReady, wasFixed, wasInstalled } = useGameState()
+const { initialized, needInstall, needFix, isReady, wasFixed, wasInstalled } = useGameState()
 const activeTab = ref<'maps' | 'config'>('maps')
 
 const tabsDetached = ref(false)
@@ -27,10 +27,13 @@ onUnmounted(() => appBody.value?.removeEventListener('scroll', onScroll))
 <template>
   <Titlebar ref="titlebar" />
   <div ref="appBody" class="app-body">
-    <InstallCard v-if="needInstall || wasInstalled" />
+    <div v-if="!initialized" class="init-spinner">
+      <div class="spinner" />
+    </div>
+    <InstallCard v-if="needInstall || wasInstalled" v-show="initialized" />
 
-    <ReadinessCard v-if="(!needInstall && needFix) || wasFixed" />
-    <div v-if="isReady" class="tab-area">
+    <ReadinessCard v-if="(!needInstall && needFix) || wasFixed" v-show="initialized" />
+    <div v-show="initialized && isReady" class="tab-area">
       <div class="tab-nav-sticky" :class="{ detached: tabsDetached }">
         <div class="tab-nav">
           <button class="tab-btn" :class="{ active: activeTab === 'maps' }" @click="activeTab = 'maps'">
@@ -61,6 +64,26 @@ onUnmounted(() => appBody.value?.removeEventListener('scroll', onScroll))
 </template>
 
 <style scoped>
+.init-spinner {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(var(--mid-gray-rgb), 0.3);
+  border-top-color: var(--c-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .app-body {
   flex: 1;
   overflow-y: auto;

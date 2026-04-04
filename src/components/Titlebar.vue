@@ -5,7 +5,7 @@ import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
 import { useGameState } from '../composables/useGameState'
 
-const { readinessActions, checking, installed, isReady, check } = useGameState()
+const { readinessActions, checking, installed, initialized, isReady, check } = useGameState()
 
 const appWindow = getCurrentWindow()
 const version = ref('')
@@ -15,7 +15,8 @@ const labels: Record<string, string> = {
   patch: 'Patches',
   laa: 'LAA',
   cdkey: 'CD Key',
-  hooks: 'Proxy',
+  proxy_installed: 'Proxy',
+  proxy_current: 'Proxy Ver.',
 }
 
 const pills = computed(() =>
@@ -88,7 +89,7 @@ async function copyDebug() {
     <img src="../assets/wiclive.png" alt="WIC LIVE" class="header-logo" />
     <small class="header-version">{{ version }}</small>
 
-    <div v-if="installed" class="status-area">
+    <div v-if="installed && initialized" class="status-area">
       <div v-if="isDev" class="dev-toolbar">
         <button class="dev-btn" @click.stop="undoPatches">undo patches</button>
         <button class="dev-btn" @click.stop="undoLaa">undo laa</button>
@@ -103,12 +104,12 @@ async function copyDebug() {
             <template v-else>&middot;&middot;</template>
           </span>
           <span class="pill-label">{{ pill.label }}</span>
-          <span class="pill-detail" :class="{ 'pill-detail-hidden': !(pill.id === 'patch' || pill.id === 'cdkey' || pill.id === 'hooks') }">{{ pill.detail || '&nbsp;' }}</span>
+          <span class="pill-detail" :class="{ 'pill-detail-hidden': !(pill.id === 'patch' || pill.id === 'cdkey' || pill.id === 'proxy_installed' || pill.id === 'proxy_current') }">{{ pill.detail || '&nbsp;' }}</span>
         </div>
       </div>
     </div>
 
-    <button v-if="installed" class="btn btn-launch header-launch" :disabled="!isReady" @click.stop="launchGame">Start Game</button>
+    <button v-if="installed && initialized" class="btn btn-launch header-launch" :disabled="!isReady" @click.stop="launchGame">Start Game</button>
   </div>
 </template>
 

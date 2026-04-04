@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicollassilva/tauri-v2/main/tooling/cli/schema.json",
   "productName": "WIC LIVE",
-  "version": "4.3.0-beta",
+  "version": "4.3.1-beta",
   "identifier": "wiclive.techtile.media",
   "build": {
     "beforeDevCommand": "bun run dev",
@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "WIC LIVE",
-        "width": 1280,
-        "height": 720,
-        "minWidth": 1280,
-        "minHeight": 720,
+        "width": 1770,
+        "height": 930,
+        "minWidth": 1770,
+        "minHeight": 930,
         "decorations": false,
         "transparent": false,
         "backgroundColor": [5, 10, 15, 255]

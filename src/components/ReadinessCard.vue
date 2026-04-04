@@ -36,9 +36,13 @@ const meta: Record<string, { label: string; desc: string }> = {
     label: 'CD Key',
     desc: 'No valid CD key is set. You need a CD key to play online.',
   },
-  hooks: {
+  proxy_installed: {
     label: 'Multiplayer Proxy',
     desc: 'The multiplayer proxy is not installed. This is required to connect to WiCGate servers.',
+  },
+  proxy_current: {
+    label: 'Proxy Update',
+    desc: 'A newer version of the multiplayer proxy is available.',
   },
 }
 
@@ -136,8 +140,8 @@ async function runFixes() {
         await invoke('set_cd_key', { key })
         fixStatus.value[id] = 'fixed'
         fixDetail.value[id] = key
-      } else if (id === 'hooks') {
-        fixDetail.value[id] = 'Installing...'
+      } else if (id === 'proxy_installed' || id === 'proxy_current') {
+        fixDetail.value[id] = id === 'proxy_current' ? 'Updating...' : 'Installing...'
         const ver = await invoke<string>('install_proxy')
         fixStatus.value[id] = 'fixed'
         fixDetail.value[id] = ver || 'Installed'
@@ -155,8 +159,15 @@ async function runFixes() {
   currentFix.value = ''
   fixing.value = false
 
-  wasFixed.value = true
+  // Set before check() so the card doesn't unmount during re-check
+  wasFixed.value = toFix.every(id => fixStatus.value[id] === 'fixed')
+
   await check()
+
+  // Downgrade if check reveals remaining issues
+  if (Object.values(readinessActions.value).some(a => a.need && !a.has)) {
+    wasFixed.value = false
+  }
 }
 </script>
 
