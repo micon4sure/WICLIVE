@@ -346,6 +346,64 @@ pub fn remove_proxy(install_dir: &str) -> Result<(), String> {
     Ok(())
 }
 
+// ── Legacy Proxy (PBE) ─────────────────────────────────────────────
+
+/// Check if legacy proxy is installed (dbghelp-pbe.dll exists in game dir).
+pub fn check_legacy_proxy(install_dir: &str) -> bool {
+    PathBuf::from(install_dir).join("dbghelp-pbe.dll").exists()
+}
+
+/// Check if legacy proxy is currently active.
+pub fn is_legacy_proxy_active(install_dir: &str) -> bool {
+    let mode_file = PathBuf::from(install_dir).join("wiclive-mode.txt");
+    std::fs::read_to_string(&mode_file)
+        .map(|s| s.trim() == "pbe")
+        .unwrap_or(false)
+}
+
+/// Activate legacy proxy: copy dbghelp-pbe.dll → dbghelp.dll, write mode.
+pub fn activate_legacy_proxy(install_dir: &str) -> Result<(), String> {
+    let dir = PathBuf::from(install_dir);
+    let pbe = dir.join("dbghelp-pbe.dll");
+    let active = dir.join("dbghelp.dll");
+    let mode = dir.join("wiclive-mode.txt");
+
+    if !pbe.exists() {
+        return Err("Legacy proxy not installed".into());
+    }
+
+    // Save current as live backup if not already saved
+    let live = dir.join("dbghelp-live.dll");
+    if active.exists() && !live.exists() {
+        std::fs::copy(&active, &live)
+            .map_err(|e| format!("Failed to backup live proxy: {}", e))?;
+    }
+
+    std::fs::copy(&pbe, &active)
+        .map_err(|e| format!("Failed to activate legacy proxy: {}", e))?;
+    std::fs::write(&mode, "pbe")
+        .map_err(|e| format!("Failed to write mode: {}", e))?;
+    Ok(())
+}
+
+/// Deactivate legacy proxy: copy dbghelp-live.dll → dbghelp.dll, write mode.
+pub fn deactivate_legacy_proxy(install_dir: &str) -> Result<(), String> {
+    let dir = PathBuf::from(install_dir);
+    let live = dir.join("dbghelp-live.dll");
+    let active = dir.join("dbghelp.dll");
+    let mode = dir.join("wiclive-mode.txt");
+
+    if !live.exists() {
+        return Err("Live proxy backup not found".into());
+    }
+
+    std::fs::copy(&live, &active)
+        .map_err(|e| format!("Failed to restore live proxy: {}", e))?;
+    std::fs::write(&mode, "live")
+        .map_err(|e| format!("Failed to write mode: {}", e))?;
+    Ok(())
+}
+
 // ── Soviet Assault detection ───────────────────────────────────────
 
 /// Check if Soviet Assault is installed (assault.dat exists).

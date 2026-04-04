@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use serde::Serialize;
 use tauri::Emitter;
 use crate::core;
@@ -159,6 +160,125 @@ pub async fn get_latest_proxy_version(
     }
     resp.text().await.map_err(|e| e.to_string())
 }
+
+// ── Legacy Proxy (PBE) ────────────────────────────────────────────
+
+#[tauri::command]
+pub fn check_legacy_proxy() -> Result<bool, String> {
+    let dir = core::require_install_path()?;
+    Ok(core::check_legacy_proxy(&dir))
+}
+
+#[tauri::command]
+pub fn is_legacy_proxy_active() -> Result<bool, String> {
+    let dir = core::require_install_path()?;
+    Ok(core::is_legacy_proxy_active(&dir))
+}
+
+#[tauri::command]
+pub async fn download_legacy_proxy(
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    // Fetch version from wicgate.com
+    let version_url = "https://www.wicgate.com/wic_cl_hook-version.txt";
+    let resp = reqwest::get(version_url).await.map_err(|e| e.to_string())?;
+    if !resp.status().is_success() {
+        return Err(format!("Failed to fetch legacy version: HTTP {}", resp.status()));
+    }
+    let version = resp.text().await.map_err(|e| e.to_string())?;
+    let version = version.trim().to_string();
+
+    // Download the update zip
+    let url = format!("https://www.wicgate.com/wicgate_update_{}.zip", version);
+    let tmp_zip = std::env::temp_dir().join("legacy-proxy.zip");
+
+    let app_dl = app.clone();
+    core::download_file(&url, &tmp_zip, move |downloaded, total| {
+        let _ = app_dl.emit("legacy-proxy-progress", PatchProgress {
+            stage: "downloading".into(),
+            downloaded,
+            total,
+            detail: format!("wicgate_update_{}.zip", version),
+        });
+    }).await?;
+
+    Ok(tmp_zip.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+pub async fn install_legacy_proxy(
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    let install_dir = core::require_install_path()?;
+    let dir = PathBuf::from(&install_dir);
+    let tmp_zip = std::env::temp_dir().join("legacy-proxy.zip");
+
+    if !tmp_zip.exists() {
+        return Err("Legacy proxy not downloaded yet".into());
+    }
+
+    // Save current dbghelp.dll as live backup before extraction overwrites it
+    let active = dir.join("dbghelp.dll");
+    let live = dir.join("dbghelp-live.dll");
+    if active.exists() && !live.exists() {
+        std::fs::copy(&active, &live)
+            .map_err(|e| format!("Failed to backup live proxy: {}", e))?;
+    }
+
+    // Extract zip to install dir (overwrites dbghelp.dll with legacy version)
+    let app_ex = app.clone();
+    core::extract_zip(&tmp_zip, &install_dir, move |done, total, name| {
+        let _ = app_ex.emit("legacy-proxy-progress", PatchProgress {
+            stage: "extracting".into(),
+            downloaded: done,
+            total,
+            detail: name.to_string(),
+        });
+    })?;
+
+    // Rename extracted dbghelp.dll to dbghelp-pbe.dll
+    let pbe = dir.join("dbghelp-pbe.dll");
+    if active.exists() {
+        std::fs::copy(&active, &pbe)
+            .map_err(|e| format!("Failed to save PBE proxy: {}", e))?;
+    }
+
+    // Restore live proxy as active
+    if live.exists() {
+        std::fs::copy(&live, &active)
+            .map_err(|e| format!("Failed to restore live proxy: {}", e))?;
+    }
+
+    // Write mode file
+    std::fs::write(dir.join("wiclive-mode.txt"), "live")
+        .map_err(|e| format!("Failed to write mode: {}", e))?;
+
+    // Cleanup
+    let _ = std::fs::remove_file(&tmp_zip);
+
+    let _ = app.emit("legacy-proxy-progress", PatchProgress {
+        stage: "done".into(),
+        downloaded: 0,
+        total: 0,
+        detail: "Legacy proxy installed".into(),
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn activate_legacy_proxy() -> Result<(), String> {
+    let dir = core::require_install_path()?;
+    core::activate_legacy_proxy(&dir)
+}
+
+#[tauri::command]
+pub fn deactivate_legacy_proxy() -> Result<(), String> {
+    let dir = core::require_install_path()?;
+    core::deactivate_legacy_proxy(&dir)
+}
+
+// ── Proxy ─────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub fn remove_proxy() -> Result<(), String> {

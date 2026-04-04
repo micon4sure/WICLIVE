@@ -78,7 +78,7 @@ onUnmounted(() => appBody.value?.removeEventListener('scroll', onScroll))
   left: 80px;
   right: 80px;
   bottom: 80px;
-  background: rgba(var(--t3-rgb), .2);
+  background: rgba(var(--text-tertiary-rgb), .2);
   -webkit-mask: url('./assets/map.svg') no-repeat center center / contain;
   mask: url('./assets/map.svg') no-repeat center center / contain;
   pointer-events: none;
@@ -132,7 +132,7 @@ onUnmounted(() => appBody.value?.removeEventListener('scroll', onScroll))
   display: flex;
   gap: 0;
   background: transparent;
-  border-bottom: 1px solid rgba(var(--mg-rgb), 0.4);
+  border-bottom: 1px solid rgba(var(--mid-gray-rgb), 0.4);
 }
 
 .tab-icon {
@@ -151,7 +151,7 @@ onUnmounted(() => appBody.value?.removeEventListener('scroll', onScroll))
   padding: 12px 24px;
   background: transparent;
   border: none;
-  color: var(--t2);
+  color: var(--text-secondary);
   cursor: pointer;
   position: relative;
   transition: color 0.3s ease, background 0.3s ease;
@@ -164,21 +164,21 @@ onUnmounted(() => appBody.value?.removeEventListener('scroll', onScroll))
   right: 0;
   bottom: -1px;
   height: 2px;
-  background: var(--dl-light);
+  background: var(--c-accent);
   opacity: 0;
   transition: opacity 0.3s ease;
-  box-shadow: 0 -2px 8px rgba(var(--dl-light-rgb), 0.4);
+  box-shadow: 0 -2px 8px rgba(var(--c-accent-rgb), 0.4);
 }
 
 .tab-btn:hover {
-  color: var(--dl-light);
+  color: var(--c-accent);
   background: rgba(255, 255, 255, 0.05);
 }
 
 .tab-btn.active {
   color: #fff;
   font-weight: 600;
-  background: linear-gradient(180deg, #B22222 0%, #8B1A1A 100%);
+  background: linear-gradient(180deg, var(--maroon-light) 0%, var(--maroon) 100%);
 }
 
 .tab-btn.active::after {

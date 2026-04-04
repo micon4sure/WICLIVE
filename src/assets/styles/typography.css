@@ -25,7 +25,7 @@ h3 {
   font-family: 'Rajdhani', sans-serif;
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--sw);
+  color: var(--c-brand);
   letter-spacing: 0.5px;
 }
 
@@ -35,8 +35,8 @@ p {
   line-height: 1.6;
 }
 
-.text-muted { color: var(--t2); }
-.text-dim { color: var(--t3); }
+.text-muted { color: var(--text-secondary); }
+.text-dim { color: var(--text-tertiary); }
 .text-sm { font-size: 0.875rem; }
 .text-xs { font-size: 0.75rem; }
 
@@ -44,8 +44,8 @@ p {
   font-family: 'Oswald', sans-serif;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--sw);
-  text-shadow: 0 0 12px rgba(var(--sw-rgb), 0.45);
+  color: var(--c-brand);
+  text-shadow: 0 0 12px rgba(var(--c-brand-rgb), 0.45);
 }
 
 .mono {

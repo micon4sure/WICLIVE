@@ -61,6 +61,12 @@ pub fn run() {
             commands::download_map,
             commands::download_installer,
             commands::extract_installer,
+            commands::check_legacy_proxy,
+            commands::is_legacy_proxy_active,
+            commands::download_legacy_proxy,
+            commands::install_legacy_proxy,
+            commands::activate_legacy_proxy,
+            commands::deactivate_legacy_proxy,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -75,7 +81,7 @@ pub fn api_url() -> String {
         Ok(url) => url,
         Err(_) => {
             if cfg!(debug_assertions) {
-                panic!("API_URL environment variable is not set");
+                panic!("API_URL not set. Use `bun goes.ts run development` instead of `bun run tauri dev`");
             }
             "https://wiclive.wicgate.org".into()
         }

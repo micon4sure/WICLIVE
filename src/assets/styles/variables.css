@@ -1,77 +1,114 @@
 :root {
-  /* Structural palette */
-  --mg: #1f2f3b;
-  --mg-dark: #101a22;
-  --mg-muted: #344654;
-  --sw: #f37c2b;
-  --sw-light: #f8a85e;
-  --dl: #8b1d14;
-  --graphite: #0f1215;
-  --graphite-dark: #08090b;
-  --graphite-light: #1a1e22;
-  --ink: #0b141a;
+  /* ── Color Palette ────────────────────────────────────── */
 
-  /* RGB helpers */
-  --mg-rgb: 31, 47, 59;
-  --mg-dark-rgb: 16, 26, 34;
-  --mg-muted-rgb: 52, 70, 84;
-  --sw-rgb: 243, 124, 43;
-  --sw-light-rgb: 248, 168, 94;
-  --dl-rgb: 139, 29, 20;
-  --graphite-rgb: 15, 18, 21;
-  --graphite-dark-rgb: 8, 9, 11;
-  --graphite-light-rgb: 26, 30, 34;
-  --ink-rgb: 11, 20, 26;
+  /* Orange */
+  --orange: #f37c2b;
+  --orange-light: #f8a85e;
+  --orange-rgb: 243, 124, 43;
+  --orange-light-rgb: 248, 168, 94;
 
-  /* Backgrounds */
-  --bg: #050a0f;
-  --s1: #0e1a22;
-  --s2: #14222a;
-  --surface-alt: #1f313d;
-  --bg-rgb: 5, 10, 15;
-  --s1-rgb: 14, 26, 34;
-  --s2-rgb: 20, 34, 42;
-  --surface-alt-rgb: 31, 49, 61;
+  /* Red */
+  --red: #dc3545;
+  --red-dark: #c82333;
+  --red-rgb: 220, 53, 69;
+  --red-dark-rgb: 200, 35, 51;
 
-  /* Text */
-  --t: #f3f6f8;
-  --t2: #c5d5e0;
-  --t3: #8a9aa8;
-  --t-rgb: 243, 246, 248;
-  --t2-rgb: 197, 213, 224;
-  --t3-rgb: 138, 154, 168;
+  /* Maroon */
+  --maroon: #8b1d14;
+  --maroon-light: #b22222;
+  --maroon-rgb: 139, 29, 20;
 
-  /* Accents */
-  --g: #7cb342;
-  --g-rgb: 124, 179, 66;
-  --b: #4ea8d9;
-  --b-rgb: 78, 168, 217;
-  --dl-light: #dc3545;
-  --dl-mid: #c82333;
-  --dl-dark: #a71e2a;
-  --dl-light-rgb: 220, 53, 69;
-  --dl-mid-rgb: 200, 35, 51;
-  --dl-dark-rgb: 167, 30, 42;
+  /* Green */
+  --green: #7cb342;
+  --green-rgb: 124, 179, 66;
 
-  /* Gold */
-  --gold: #ffca28;
-  --gold-bright: #ffd54f;
-  --gold-dark: #ffa000;
-  --gold-rgb: 255, 202, 40;
+  /* Silver */
+  --silver: #c0c8d0;
+  --silver-light: #d8dfe5;
+  --silver-dark: #8a95a0;
+  --silver-rgb: 192, 200, 208;
 
   /* Blue */
   --blue: #4ea8d9;
-  --blue-bright: #6ec0e8;
+  --blue-light: #6ec0e8;
   --blue-dark: #2b7fb3;
   --blue-rgb: 78, 168, 217;
 
-  /* Border & effects */
-  --bd: rgba(68, 117, 146, 0.25);
+  /* Gold */
+  --gold: #ffca28;
+  --gold-light: #ffd54f;
+  --gold-dark: #ffa000;
+  --gold-rgb: 255, 202, 40;
+
+  /* Gray */
+  --mid-gray: #1f2f3b;
+  --mid-gray-dark: #101a22;
+  --mid-gray-muted: #344654;
+  --mid-gray-rgb: 31, 47, 59;
+  --mid-gray-dark-rgb: 16, 26, 34;
+  --mid-gray-muted-rgb: 52, 70, 84;
+
+  /* Graphite */
+  --graphite: #0f1215;
+  --graphite-dark: #08090b;
+  --graphite-light: #1a1e22;
+  --graphite-rgb: 15, 18, 21;
+  --graphite-dark-rgb: 8, 9, 11;
+  --graphite-light-rgb: 26, 30, 34;
+
+  /* Ink */
+  --ink: #0b141a;
+  --ink-rgb: 11, 20, 26;
+
+  /* ── Semantic Colors ──────────────────────────────────── */
+
+  /* Status */
+  --c-pending: var(--blue);
+  --c-pending-rgb: var(--blue-rgb);
+  --c-action: var(--gold);
+  --c-action-rgb: var(--gold-rgb);
+  --c-progress: var(--orange);
+  --c-progress-rgb: var(--orange-rgb);
+  --c-success: var(--green);
+  --c-success-rgb: var(--green-rgb);
+  --c-error: var(--red);
+  --c-error-rgb: var(--red-rgb);
+
+  /* CTA */
+  --c-cta: var(--silver);
+  --c-cta-rgb: var(--silver-rgb);
+
+  /* Brand */
+  --c-accent: var(--maroon);
+  --c-accent-rgb: var(--maroon-rgb);
+  --c-brand: var(--orange);
+  --c-brand-rgb: var(--orange-rgb);
+
+  /* ── Surfaces ─────────────────────────────────────────── */
+  --bg: #050a0f;
+  --surface-1: #0e1a22;
+  --surface-2: #14222a;
+  --surface-alt: #1f313d;
+  --bg-rgb: 5, 10, 15;
+  --surface-1-rgb: 14, 26, 34;
+  --surface-2-rgb: 20, 34, 42;
+  --surface-alt-rgb: 31, 49, 61;
+
+  /* ── Text ─────────────────────────────────────────────── */
+  --text-primary: #f3f6f8;
+  --text-secondary: #c5d5e0;
+  --text-tertiary: #8a9aa8;
+  --text-primary-rgb: 243, 246, 248;
+  --text-secondary-rgb: 197, 213, 224;
+  --text-tertiary-rgb: 138, 154, 168;
+
+  /* ── Borders & Effects ────────────────────────────────── */
+  --border-default: rgba(68, 117, 146, 0.25);
   --divider-strong: rgba(68, 117, 146, 0.7);
   --divider-soft: rgba(68, 117, 146, 0.35);
 
   /* Transition */
-  --tr: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 
   /* Gradients */
   --grad-main: linear-gradient(135deg, rgba(30, 52, 66, 0.95) 0%, rgba(11, 21, 27, 0.98) 100%);

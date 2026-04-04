@@ -146,7 +146,7 @@ function statusIcon(status: ActionStatus): string {
 <style scoped>
 .readiness {
   background: var(--grad-card);
-  border: 1px solid var(--bd);
+  border: 1px solid var(--border-default);
   padding: 16px 20px;
   flex-shrink: 0;
 }
@@ -174,7 +174,7 @@ function statusIcon(status: ActionStatus): string {
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  background: rgba(var(--s1-rgb), 0.6);
+  background: rgba(var(--surface-1-rgb), 0.6);
   border-left: 3px solid transparent;
   font-family: 'Rajdhani', sans-serif;
   font-size: 15px;
@@ -182,23 +182,23 @@ function statusIcon(status: ActionStatus): string {
 }
 
 .action-row.status-done {
-  border-left-color: var(--g);
+  border-left-color: var(--c-success);
 }
 
 .action-row.status-needed {
-  border-left-color: var(--sw);
+  border-left-color: var(--c-pending);
 }
 
 .action-row.status-applying {
-  border-left-color: var(--sw);
+  border-left-color: var(--c-progress);
 }
 
 .action-row.status-error {
-  border-left-color: var(--dl-light);
+  border-left-color: var(--c-error);
 }
 
 .action-row.status-checking {
-  border-left-color: var(--t3);
+  border-left-color: var(--text-tertiary);
 }
 
 .action-icon {
@@ -208,11 +208,11 @@ function statusIcon(status: ActionStatus): string {
   font-size: 14px;
 }
 
-.status-done .action-icon { color: var(--g); }
-.status-needed .action-icon { color: var(--sw); }
-.status-applying .action-icon { color: var(--sw); }
-.status-error .action-icon { color: var(--dl-light); }
-.status-checking .action-icon { color: var(--t3); }
+.status-done .action-icon { color: var(--c-success); }
+.status-needed .action-icon { color: var(--c-pending); }
+.status-applying .action-icon { color: var(--c-progress); }
+.status-error .action-icon { color: var(--c-error); }
+.status-checking .action-icon { color: var(--text-tertiary); }
 
 .action-label {
   font-family: 'Oswald', sans-serif;
@@ -224,21 +224,21 @@ function statusIcon(status: ActionStatus): string {
 
 .action-detail {
   margin-left: auto;
-  color: var(--t3);
+  color: var(--text-tertiary);
   font-size: 13px;
 }
 
 .action-progress {
   flex: 1;
   height: 4px;
-  background: rgba(var(--mg-rgb), 0.3);
+  background: rgba(var(--mid-gray-rgb), 0.3);
   margin-left: auto;
   max-width: 200px;
 }
 
 .action-progress-bar {
   height: 100%;
-  background: var(--sw);
+  background: var(--c-progress);
   transition: width 0.3s ease;
 }
 </style>

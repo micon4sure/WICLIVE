@@ -119,7 +119,7 @@ async function copyDebug() {
   justify-content: flex-end;
   height: 32px;
   background: linear-gradient(180deg, var(--graphite-dark) 0%, var(--graphite) 100%);
-  border-bottom: 1px solid rgba(var(--mg-rgb), 0.25);
+  border-bottom: 1px solid rgba(var(--mid-gray-rgb), 0.25);
   flex-shrink: 0;
 }
 
@@ -128,7 +128,7 @@ async function copyDebug() {
   align-items: stretch;
   padding: 0 25px;
   background: rgba(0, 0, 0, 0.75);
-  border-bottom: 2px solid rgba(var(--dl-rgb), 0.45);
+  border-bottom: 2px solid rgba(var(--c-accent-rgb), 0.45);
   flex-shrink: 0;
 }
 
@@ -169,15 +169,15 @@ async function copyDebug() {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 2px 8px;
-  background: rgba(var(--dl-rgb), 0.3);
-  border: 1px solid rgba(var(--dl-rgb), 0.4);
-  color: var(--dl-light);
+  background: rgba(var(--c-accent-rgb), 0.3);
+  border: 1px solid rgba(var(--c-accent-rgb), 0.4);
+  color: var(--c-accent);
   cursor: pointer;
-  transition: var(--tr);
+  transition: var(--transition);
 }
 
 .dev-btn:hover {
-  background: rgba(var(--dl-rgb), 0.6);
+  background: rgba(var(--c-accent-rgb), 0.6);
   color: #fff;
 }
 
@@ -198,7 +198,7 @@ async function copyDebug() {
   text-transform: uppercase;
   letter-spacing: 1px;
   white-space: nowrap;
-  color: var(--t3);
+  color: var(--text-tertiary);
   border-right: none;
   position: relative;
 }
@@ -243,7 +243,7 @@ async function copyDebug() {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.5px;
-  color: var(--t2);
+  color: var(--text-secondary);
   text-transform: none;
   line-height: 1.2;
 }
@@ -254,23 +254,23 @@ async function copyDebug() {
 
 .status-pill.done,
 .status-pill.fixed {
-  color: var(--g);
+  color: var(--c-success);
 }
 
 .status-pill.needed {
-  color: var(--sw);
+  color: var(--c-pending);
 }
 
 .status-pill.applying {
-  color: var(--b);
+  color: var(--c-progress);
 }
 
 .status-pill.error {
-  color: var(--dl-light);
+  color: var(--c-error);
 }
 
 .status-pill.checking {
-  color: var(--t3);
+  color: var(--text-tertiary);
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -291,7 +291,7 @@ async function copyDebug() {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(var(--b-rgb), 0.15);
+  background: rgba(var(--blue-rgb), 0.15);
   pointer-events: none;
   animation: header-pulse 0.8s ease-in-out forwards;
 }
@@ -322,7 +322,7 @@ async function copyDebug() {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  color: var(--t3);
+  color: var(--text-tertiary);
 }
 
 .titlebar-controls {
@@ -338,19 +338,19 @@ async function copyDebug() {
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--t3);
+  color: var(--text-tertiary);
   font-size: 13px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
 
 .titlebar-btn:hover {
-  background: rgba(var(--mg-rgb), 0.4);
-  color: var(--t);
+  background: rgba(var(--mid-gray-rgb), 0.4);
+  color: var(--text-primary);
 }
 
 .titlebar-close:hover {
-  background: rgba(var(--dl-light-rgb), 0.85);
+  background: rgba(var(--c-error-rgb), 0.85);
   color: #fff;
 }
 </style>

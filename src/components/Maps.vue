@@ -405,7 +405,7 @@ onMounted(async () => {
     linear-gradient(180deg, #1a3a5c 0%, #0d1f36 100%);
   background-size: 4px 4px, 100% 100%;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(var(--t3-rgb), 0.2);
+  border-bottom: 1px solid rgba(var(--text-tertiary-rgb), 0.2);
 }
 
 .panel-header-top {
@@ -432,7 +432,7 @@ onMounted(async () => {
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--t2);
+  color: var(--text-secondary);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
@@ -448,11 +448,11 @@ onMounted(async () => {
   text-transform: uppercase;
   letter-spacing: 1px;
   padding: 6px 16px;
-  background: rgba(var(--mg-rgb), 0.4);
+  background: rgba(var(--mid-gray-rgb), 0.4);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  color: var(--t2);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: var(--tr);
+  transition: var(--transition);
 }
 .btn-panel:hover:not(:disabled) {
   background: linear-gradient(0deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.08) 100%);
@@ -464,14 +464,14 @@ onMounted(async () => {
   cursor: default;
 }
 .btn-panel-primary {
-  background: rgba(var(--gold-rgb), 0.15);
-  border-color: rgba(var(--gold-rgb), 0.4);
-  color: var(--gold);
+  background: rgba(var(--c-action-rgb), 0.15);
+  border-color: rgba(var(--c-action-rgb), 0.4);
+  color: var(--c-action);
 }
 .btn-panel-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold-dark) 100%);
+  background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-dark) 100%);
   color: var(--ink);
-  border-color: var(--gold);
+  border-color: var(--c-action);
 }
 
 /* ── Panel empty/loading ─────────────────────────────── */
@@ -480,9 +480,9 @@ onMounted(async () => {
   text-align: center;
   font-family: 'Rajdhani', sans-serif;
   font-size: 14px;
-  color: var(--t3);
+  color: var(--text-tertiary);
 }
-.panel-empty-error { color: var(--dl-light); }
+.panel-empty-error { color: var(--c-error); }
 
 /* ── Table ───────────────────────────────────────────── */
 .map-table {
@@ -494,13 +494,13 @@ onMounted(async () => {
 .table-header th {
   padding: 8px 0;
   background: linear-gradient(180deg, rgba(31, 49, 61, 0.5) 0%, rgba(18, 30, 39, 0.5) 100%);
-  border-bottom: 1px solid rgba(var(--mg-rgb), 0.25);
+  border-bottom: 1px solid rgba(var(--mid-gray-rgb), 0.25);
   font-family: 'Oswald', sans-serif;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--t2);
+  color: var(--text-secondary);
   text-align: left;
 }
 
@@ -519,7 +519,7 @@ onMounted(async () => {
   height: 40px;
   vertical-align: middle;
   background: linear-gradient(90deg, rgba(24, 38, 48, 0.5) 0%, rgba(14, 24, 31, 0.5) 100%);
-  border-bottom: 1px solid rgba(var(--mg-rgb), 0.15);
+  border-bottom: 1px solid rgba(var(--mid-gray-rgb), 0.15);
   transition: background 0.2s;
 }
 
@@ -541,15 +541,15 @@ onMounted(async () => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--t3);
+  background: var(--text-tertiary);
 }
 
-.is-current .status-dot { background: var(--g); }
-.is-missing .status-dot { background: var(--t3); }
-.is-outdated .status-dot { background: var(--sw); }
-.is-loading .status-dot { background: var(--b); }
-.is-pending .status-dot { background: var(--t3); }
-.is-error .status-dot { background: var(--dl-light); }
+.is-current .status-dot { background: var(--c-success); }
+.is-missing .status-dot { background: var(--text-tertiary); }
+.is-outdated .status-dot { background: var(--c-pending); }
+.is-loading .status-dot { background: var(--c-progress); }
+.is-pending .status-dot { background: var(--text-tertiary); }
+.is-error .status-dot { background: var(--c-error); }
 
 /* ── Cells ───────────────────────────────────────────── */
 .cell-name {
@@ -568,7 +568,7 @@ onMounted(async () => {
   margin-left: 6px;
   font-size: 11px;
   font-weight: 400;
-  color: var(--t3);
+  color: var(--text-tertiary);
 }
 
 .cell-size,
@@ -576,7 +576,7 @@ onMounted(async () => {
 .cell-date {
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
-  color: var(--t3);
+  color: var(--text-tertiary);
   white-space: nowrap;
   padding: 0 8px;
 }
@@ -584,7 +584,7 @@ onMounted(async () => {
 .cell-file {
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
-  color: var(--t2);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -594,7 +594,7 @@ onMounted(async () => {
 .cell-type {
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
-  color: var(--t3);
+  color: var(--text-tertiary);
   white-space: nowrap;
 }
 
@@ -604,13 +604,13 @@ onMounted(async () => {
 
 .action-check {
   font-size: 14px;
-  color: var(--g);
+  color: var(--c-success);
   font-weight: 700;
 }
 
 .action-pending {
   font-size: 14px;
-  color: var(--t3);
+  color: var(--text-tertiary);
   letter-spacing: 2px;
 }
 
@@ -622,16 +622,16 @@ onMounted(async () => {
   font-weight: 600;
   text-transform: uppercase;
   padding: 0;
-  background: rgba(var(--gold-rgb), 0.12);
-  color: var(--gold);
-  border: 1px solid rgba(var(--gold-rgb), 0.25);
+  background: rgba(var(--c-action-rgb), 0.12);
+  color: var(--c-action);
+  border: 1px solid rgba(var(--c-action-rgb), 0.25);
   cursor: pointer;
-  transition: var(--tr);
+  transition: var(--transition);
 }
 .btn-download:hover:not(:disabled) {
-  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold-dark) 100%);
+  background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-dark) 100%);
   color: var(--ink);
-  border-color: var(--gold);
+  border-color: var(--c-action);
 }
 .btn-download:disabled {
   opacity: 0.4;
@@ -643,7 +643,7 @@ onMounted(async () => {
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: var(--dl-light);
+  color: var(--c-error);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -663,18 +663,18 @@ onMounted(async () => {
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: var(--b);
+  color: var(--c-progress);
 }
 
 .progress-track {
   width: 100%;
   height: 4px;
-  background: rgba(var(--mg-rgb), 0.4);
+  background: rgba(var(--mid-gray-rgb), 0.4);
   overflow: hidden;
 }
 .progress-fill {
   height: 100%;
-  background: var(--b);
+  background: var(--c-progress);
   transition: width 0.15s linear;
 }
 
@@ -702,7 +702,7 @@ onMounted(async () => {
   justify-content: space-between;
   padding: 14px 20px;
   background: linear-gradient(180deg, #1a3a5c 0%, #0d1f36 100%);
-  border-bottom: 1px solid rgba(var(--t3-rgb), 0.2);
+  border-bottom: 1px solid rgba(var(--text-tertiary-rgb), 0.2);
 }
 
 .modal-title {
@@ -717,7 +717,7 @@ onMounted(async () => {
 .modal-close {
   background: none;
   border: none;
-  color: var(--t3);
+  color: var(--text-tertiary);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -738,7 +738,7 @@ onMounted(async () => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--t2);
+  color: var(--text-secondary);
 }
 
 .file-hidden {
@@ -747,45 +747,45 @@ onMounted(async () => {
 
 .file-pick {
   padding: 8px 12px;
-  background: rgba(var(--mg-rgb), 0.2);
-  border: 1px solid rgba(var(--mg-rgb), 0.4);
+  background: rgba(var(--mid-gray-rgb), 0.2);
+  border: 1px solid rgba(var(--mid-gray-rgb), 0.4);
   cursor: pointer;
   transition: border-color 0.2s;
 }
 .file-pick:hover {
-  border-color: rgba(var(--b-rgb), 0.6);
+  border-color: rgba(var(--blue-rgb), 0.6);
 }
 
 .file-name {
   font-family: 'Rajdhani', sans-serif;
   font-size: 14px;
-  color: var(--t);
+  color: var(--text-primary);
 }
 
 .file-placeholder {
   font-family: 'Rajdhani', sans-serif;
   font-size: 14px;
-  color: var(--t3);
+  color: var(--text-tertiary);
 }
 
 .field-input {
   font-family: 'Rajdhani', sans-serif;
   font-size: 14px;
   padding: 8px 12px;
-  background: rgba(var(--mg-rgb), 0.2);
-  border: 1px solid rgba(var(--mg-rgb), 0.4);
-  color: var(--t);
+  background: rgba(var(--mid-gray-rgb), 0.2);
+  border: 1px solid rgba(var(--mid-gray-rgb), 0.4);
+  color: var(--text-primary);
   outline: none;
   transition: border-color 0.2s;
 }
 .field-input:focus {
-  border-color: rgba(var(--b-rgb), 0.6);
+  border-color: rgba(var(--blue-rgb), 0.6);
 }
 
 .upload-status {
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
-  color: var(--t3);
+  color: var(--text-tertiary);
 }
 
 .modal-footer {
@@ -793,6 +793,6 @@ onMounted(async () => {
   justify-content: flex-end;
   gap: 8px;
   padding: 14px 20px;
-  border-top: 1px solid rgba(var(--mg-rgb), 0.25);
+  border-top: 1px solid rgba(var(--mid-gray-rgb), 0.25);
 }
 </style>

@@ -1,25 +1,25 @@
 /* ── Card shell ──────────────────────────────────────── */
 .action-card {
   margin-top: 16px;
-  border: 1px solid rgba(var(--sw-rgb), 0.3);
+  border: 1px solid rgba(var(--c-pending-rgb), 0.3);
   background: rgba(var(--bg-rgb), 0.6);
   transition: border-color 0.6s ease;
 }
 
 .action-card.is-done {
-  border-color: rgba(var(--g-rgb), 0.3);
+  border-color: rgba(var(--c-success-rgb), 0.3);
 }
 
 /* ── Header ──────────────────────────────────────────── */
 .readiness-header {
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(var(--sw-rgb), 0.2);
+  border-bottom: 1px solid rgba(var(--c-pending-rgb), 0.2);
   transition: padding 0.5s ease, border-color 0.6s ease;
 }
 
 .is-done .readiness-header {
   padding: 10px 20px;
-  border-color: rgba(var(--g-rgb), 0.2);
+  border-color: rgba(var(--c-success-rgb), 0.2);
 }
 
 .header-title {
@@ -36,7 +36,7 @@
 }
 
 .title-done {
-  color: var(--g);
+  color: var(--c-success);
 }
 
 .header-sub {
@@ -49,7 +49,7 @@
 .header-sub p {
   margin: 0;
   font-size: 15px;
-  color: var(--t2);
+  color: var(--text-secondary);
 }
 
 /* ── Body ────────────────────────────────────────────── */
@@ -69,7 +69,7 @@
 /* ── Items ────────────────────────────────────────────── */
 .readiness-item {
   padding: 12px 16px;
-  border-left: 3px solid var(--t3);
+  border-left: 3px solid var(--text-tertiary);
   background: rgba(255, 255, 255, 0.03);
   transition: padding 0.5s ease, border-color 0.4s ease;
 }
@@ -129,7 +129,7 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--t3);
+  color: var(--text-tertiary);
   transition: font-size 0.5s ease, color 0.4s ease;
 }
 
@@ -150,22 +150,25 @@
 }
 
 /* ── Status colors ───────────────────────────────────── */
-.status-needed { border-left-color: var(--sw); }
-.status-applying { border-left-color: var(--b); }
-.status-done { border-left-color: var(--t3); opacity: 0.6; }
-.status-fixed { border-left-color: var(--g); }
-.status-error { border-left-color: var(--dl-light); }
+/* pending=blue, action=gold, in-progress=orange, success=green, error=red */
+.status-needed { border-left-color: var(--c-pending); }
+.status-applying { border-left-color: var(--c-progress); }
+.status-done { border-left-color: var(--text-tertiary); opacity: 0.6; }
+.status-fixed { border-left-color: var(--c-success); }
+.status-error { border-left-color: var(--c-error); }
 
-.status-applying .item-status { color: var(--b); }
-.status-done .item-status { color: var(--t3); }
-.status-fixed .item-status { color: var(--g); }
-.status-fixed .item-label { color: var(--g); }
+.status-needed .item-status { color: var(--c-pending); }
+.status-applying .item-status { color: var(--c-progress); }
+.status-done .item-status { color: var(--text-tertiary); }
+.status-fixed .item-status { color: var(--c-success); }
+.status-fixed .item-label { color: var(--c-success); }
+.status-error .item-status { color: var(--c-error); }
 
 /* ── Detail text ─────────────────────────────────────── */
 .item-desc {
   display: block;
   font-size: 14px;
-  color: var(--t2);
+  color: var(--text-secondary);
   line-height: 1.4;
 }
 
@@ -173,11 +176,11 @@
   display: block;
   margin-top: 4px;
   font-size: 13px;
-  color: var(--t3);
+  color: var(--text-tertiary);
 }
 
-.item-fixed { color: var(--g); }
-.item-error { color: var(--dl-light); }
+.item-fixed { color: var(--c-success); }
+.item-error { color: var(--c-error); }
 
 /* ── Progress bar ────────────────────────────────────── */
 .progress-area {
@@ -187,8 +190,8 @@
 .progress-track {
   position: relative;
   height: 22px;
-  background: rgba(var(--mg-rgb), 0.5);
-  border: 1px solid rgba(var(--mg-rgb), 0.6);
+  background: rgba(var(--mid-gray-rgb), 0.5);
+  border: 1px solid rgba(var(--mid-gray-rgb), 0.6);
   overflow: hidden;
 }
 
@@ -204,9 +207,9 @@
 .progress-fill-ex {
   background:
     repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255, 255, 255, 0.08) 8px, rgba(255, 255, 255, 0.08) 16px),
-    linear-gradient(180deg, rgba(var(--b-rgb), 0.95) 0%, rgba(var(--b-rgb), 0.7) 100%);
+    linear-gradient(180deg, rgba(var(--c-progress-rgb), 0.95) 0%, rgba(var(--c-progress-rgb), 0.7) 100%);
   background-size: 22.6px 100%, 100% 100%;
-  box-shadow: 0 0 12px rgba(var(--b-rgb), 0.3);
+  box-shadow: 0 0 12px rgba(var(--c-progress-rgb), 0.3);
 }
 
 .progress-fill::after {
@@ -248,5 +251,5 @@
   margin-top: 4px;
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
-  color: var(--t3);
+  color: var(--text-tertiary);
 }

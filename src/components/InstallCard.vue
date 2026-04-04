@@ -259,39 +259,39 @@ async function startDownload() {
 <style src="../assets/styles/card.css"></style>
 <style scoped>
 .is-missing {
-  border-color: rgba(var(--dl-light-rgb), 0.5);
+  border-color: rgba(var(--c-pending-rgb), 0.5);
 }
 
 .is-missing .readiness-header {
-  border-bottom-color: rgba(var(--dl-light-rgb), 0.3);
+  border-bottom-color: rgba(var(--c-pending-rgb), 0.3);
 }
 
 .is-installing {
-  border-color: rgba(var(--b-rgb), 0.5);
+  border-color: rgba(var(--c-progress-rgb), 0.5);
 }
 
 .is-installing .readiness-header {
-  border-bottom-color: rgba(var(--b-rgb), 0.3);
+  border-bottom-color: rgba(var(--c-progress-rgb), 0.3);
 }
 
 .is-done {
-  border-color: rgba(var(--g-rgb), 0.3);
+  border-color: rgba(var(--c-success-rgb), 0.3);
 }
 
 .is-done .readiness-header {
-  border-bottom-color: rgba(var(--g-rgb), 0.2);
+  border-bottom-color: rgba(var(--c-success-rgb), 0.2);
 }
 
 .title-missing {
-  color: var(--dl-light);
+  color: var(--c-pending);
 }
 
 .title-install {
-  color: var(--b);
+  color: var(--c-progress);
 }
 
 .missing-hint {
-  color: var(--t3) !important;
+  color: var(--text-tertiary) !important;
   font-size: 13px !important;
 }
 
@@ -310,9 +310,9 @@ async function startDownload() {
   padding: 6px 10px;
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
-  color: var(--t);
-  background: rgba(var(--mg-rgb), 0.5);
-  border: 1px solid rgba(var(--mg-rgb), 0.6);
+  color: var(--text-primary);
+  background: rgba(var(--mid-gray-rgb), 0.5);
+  border: 1px solid rgba(var(--mid-gray-rgb), 0.6);
   cursor: pointer;
 }
 
@@ -325,11 +325,11 @@ async function startDownload() {
 }
 
 .dir-input::placeholder {
-  color: var(--t3);
+  color: var(--text-tertiary);
 }
 
 .dir-sep {
-  color: var(--t3);
+  color: var(--text-tertiary);
   font-family: 'Rajdhani', sans-serif;
   font-size: 14px;
   flex-shrink: 0;
@@ -342,14 +342,14 @@ async function startDownload() {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 6px 12px;
-  background: rgba(var(--mg-rgb), 0.5);
-  border: 1px solid rgba(var(--mg-rgb), 0.6);
-  color: var(--t2);
+  background: rgba(var(--mid-gray-rgb), 0.5);
+  border: 1px solid rgba(var(--mid-gray-rgb), 0.6);
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
 .btn-browse:hover {
-  background: rgba(var(--mg-rgb), 0.8);
+  background: rgba(var(--mid-gray-rgb), 0.8);
 }
 
 .install-confirm-row {
@@ -365,7 +365,7 @@ async function startDownload() {
   font-family: 'Rajdhani', sans-serif;
   font-size: 15px;
   font-weight: 600;
-  color: var(--t);
+  color: var(--text-primary);
 }
 
 .missing-buttons {
@@ -388,25 +388,25 @@ async function startDownload() {
 }
 
 .btn-gold {
-  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold-dark) 100%);
-  border: 1px solid var(--gold-bright);
-  box-shadow: 0 4px 16px rgba(var(--gold-rgb), 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-dark) 100%);
+  border: 1px solid var(--gold-light);
+  box-shadow: 0 4px 16px rgba(var(--c-action-rgb), 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .btn-gold:hover {
-  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%);
-  box-shadow: 0 6px 24px rgba(var(--gold-rgb), 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold) 100%);
+  box-shadow: 0 6px 24px rgba(var(--c-action-rgb), 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
 }
 
 .btn-blue {
-  background: linear-gradient(180deg, var(--blue-bright) 0%, var(--blue-dark) 100%);
-  border: 1px solid var(--blue-bright);
+  background: linear-gradient(180deg, var(--blue-light) 0%, var(--blue-dark) 100%);
+  border: 1px solid var(--blue-light);
   box-shadow: 0 4px 16px rgba(var(--blue-rgb), 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .btn-blue:hover {
-  background: linear-gradient(180deg, var(--blue-bright) 0%, var(--blue) 100%);
+  background: linear-gradient(180deg, var(--blue-light) 0%, var(--blue) 100%);
   box-shadow: 0 6px 24px rgba(var(--blue-rgb), 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
 }
@@ -415,6 +415,6 @@ async function startDownload() {
   display: block;
   margin-top: 10px;
   font-size: 13px;
-  color: var(--dl-light);
+  color: var(--c-error);
 }
 </style>

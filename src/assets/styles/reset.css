@@ -13,7 +13,7 @@ html, body {
 
 body {
   font-family: 'Rajdhani', system-ui, -apple-system, sans-serif;
-  color: var(--t);
+  color: var(--text-primary);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -28,7 +28,7 @@ body {
 }
 
 a {
-  color: var(--sw);
+  color: var(--c-brand);
   text-decoration: none;
 }
 
@@ -51,10 +51,10 @@ button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--mg-muted);
+  background: var(--mid-gray-muted);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--mg);
+  background: var(--mid-gray);
 }

@@ -170,7 +170,7 @@ async function runFixes() {
           <span class="title-text title-done" :class="{ 'title-hidden': !allFixed }">Game Readiness: All Set</span>
         </h3>
         <div class="header-btn-wrap" :class="{ 'btn-hidden': allFixed }">
-          <button class="btn btn-sm btn-primary" :disabled="fixing" @click="runFixes">Fix</button>
+          <button class="btn btn-sm btn-cta" :disabled="fixing" @click="runFixes">Fix</button>
         </div>
       </div>
       <div class="header-sub" :class="{ 'sub-hidden': allFixed }">
@@ -247,35 +247,35 @@ async function runFixes() {
 <style src="../assets/styles/card.css"></style>
 <style scoped>
 .readiness-card {
-  border-color: rgba(var(--dl-light-rgb), 0.5);
+  border-color: rgba(var(--c-pending-rgb), 0.5);
 }
 
 .readiness-card .readiness-header {
-  border-bottom-color: rgba(var(--dl-light-rgb), 0.3);
+  border-bottom-color: rgba(var(--c-pending-rgb), 0.3);
 }
 
 .readiness-card.is-fixing {
-  border-color: rgba(var(--b-rgb), 0.5);
+  border-color: rgba(var(--c-progress-rgb), 0.5);
 }
 
 .readiness-card.is-fixing .readiness-header {
-  border-bottom-color: rgba(var(--b-rgb), 0.3);
+  border-bottom-color: rgba(var(--c-progress-rgb), 0.3);
 }
 
 .readiness-card.is-done {
-  border-color: rgba(var(--g-rgb), 0.3);
+  border-color: rgba(var(--c-success-rgb), 0.3);
 }
 
 .readiness-card.is-done .readiness-header {
-  border-bottom-color: rgba(var(--g-rgb), 0.2);
+  border-bottom-color: rgba(var(--c-success-rgb), 0.2);
 }
 
 .title-pending {
-  color: var(--dl-light);
+  color: var(--c-pending);
 }
 
 .title-fixing {
-  color: var(--b);
+  color: var(--c-progress);
   position: absolute;
   left: 0;
   top: 0;
@@ -304,7 +304,6 @@ async function runFixes() {
 }
 
 .header-btn-wrap {
-  overflow: hidden;
   max-width: 120px;
   opacity: 1;
   transition: max-width 0.4s ease, opacity 0.3s ease;
@@ -313,6 +312,7 @@ async function runFixes() {
 .header-btn-wrap.btn-hidden {
   max-width: 0;
   opacity: 0;
+  overflow: hidden;
 }
 
 .header-sub.sub-hidden {
@@ -335,14 +335,14 @@ async function runFixes() {
   height: 16px;
   font-size: 10px;
   font-weight: 700;
-  border: 1px solid var(--t3);
-  color: var(--t3);
+  border: 1px solid var(--text-tertiary);
+  color: var(--text-tertiary);
   transition: border-color 0.3s, color 0.3s;
 }
 
 .stage-icon.stage-done {
-  border-color: var(--g);
-  color: var(--g);
+  border-color: var(--c-success);
+  color: var(--c-success);
 }
 
 .stage-label {
@@ -351,6 +351,6 @@ async function runFixes() {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--t2);
+  color: var(--text-secondary);
 }
 </style>
