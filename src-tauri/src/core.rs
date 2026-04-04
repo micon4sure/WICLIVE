@@ -911,6 +911,129 @@ pub fn set_competitive_settings(enabled: bool) -> Result<(), String> {
     write_autoexec(&contents)
 }
 
+// ── WiCGate user settings ─────────────────────────────────────────
+
+const WICGATE_CONFIG: &str = "wicgate.txt";
+
+const WICGATE_CONFIG_DEFAULTS: &str = "\
+; WiCGate Client Proxy Configuration\r\n\
+; Delete this file to regenerate defaults. Changes require game restart.\r\n\
+\r\n\
+[camera_fix]\r\n\
+; Prevent camera fly-to when changing drop zone mid-game\r\n\
+camera_fix=1\r\n\
+\r\n\
+[hilite_own]\r\n\
+; Highlight your own units with a distinct color\r\n\
+; Presets: amber, azure, coral, cyan, gold, lime, magenta, orange,\r\n\
+;   pink, silver, white, yellow\r\n\
+; Or RRGGBB hex (e.g. CFB408 = amber). Leave empty to disable.\r\n\
+hilite_own_color=orange\r\n\
+\r\n\
+[ignore_alt_tab]\r\n\
+; Prevent game from going idle when alt-tabbed\r\n\
+ignore_alt_tab=0\r\n\
+\r\n\
+[no_cursor_speed]\r\n\
+; Disable Windows cursor acceleration in-game\r\n\
+no_cursor_speed=1\r\n\
+\r\n\
+[nuke_warning]\r\n\
+; Show HUD notification when enemy nuke is launched\r\n\
+nuke_warning=1\r\n";
+
+fn wicgate_config_path() -> Result<PathBuf, String> {
+    let base = get_base_directory()?;
+    Ok(base.join(WICGATE_CONFIG))
+}
+
+fn ensure_wicgate_config() -> Result<PathBuf, String> {
+    let path = wicgate_config_path()?;
+    if !path.exists() {
+        std::fs::write(&path, WICGATE_CONFIG_DEFAULTS).map_err(|e| e.to_string())?;
+    }
+    Ok(path)
+}
+
+fn parse_wicgate_value(contents: &str, key: &str) -> Option<String> {
+    for line in contents.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with(';') || trimmed.starts_with('[') || trimmed.is_empty() {
+            continue;
+        }
+        if let Some((k, v)) = trimmed.split_once('=') {
+            if k.trim() == key {
+                return Some(v.trim().to_string());
+            }
+        }
+    }
+    None
+}
+
+#[derive(serde::Serialize)]
+pub struct WicgateSettings {
+    pub camera_fix: bool,
+    pub hilite_own_color: String,
+    pub ignore_alt_tab: bool,
+    pub no_cursor_speed: bool,
+    pub nuke_warning: bool,
+}
+
+pub fn get_wicgate_settings() -> Result<WicgateSettings, String> {
+    let path = ensure_wicgate_config()?;
+    let contents = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+
+    Ok(WicgateSettings {
+        camera_fix: parse_wicgate_value(&contents, "camera_fix")
+            .map(|v| v == "1")
+            .unwrap_or(true),
+        hilite_own_color: parse_wicgate_value(&contents, "hilite_own_color")
+            .unwrap_or_default(),
+        ignore_alt_tab: parse_wicgate_value(&contents, "ignore_alt_tab")
+            .map(|v| v == "1")
+            .unwrap_or(false),
+        no_cursor_speed: parse_wicgate_value(&contents, "no_cursor_speed")
+            .map(|v| v == "1")
+            .unwrap_or(true),
+        nuke_warning: parse_wicgate_value(&contents, "nuke_warning")
+            .map(|v| v == "1")
+            .unwrap_or(true),
+    })
+}
+
+pub fn set_wicgate_setting(key: &str, value: &str) -> Result<(), String> {
+    let path = ensure_wicgate_config()?;
+    let contents = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+
+    let mut found = false;
+    let mut new_lines: Vec<String> = Vec::new();
+
+    for line in contents.lines() {
+        let trimmed = line.trim();
+        if !trimmed.starts_with(';') && !trimmed.starts_with('[') && !trimmed.is_empty() {
+            if let Some((k, _)) = trimmed.split_once('=') {
+                if k.trim() == key {
+                    new_lines.push(format!("{}={}", key, value));
+                    found = true;
+                    continue;
+                }
+            }
+        }
+        new_lines.push(line.to_string());
+    }
+
+    if !found {
+        return Err(format!("Unknown setting: {}", key));
+    }
+
+    let mut result = new_lines.join("\r\n");
+    if !result.ends_with("\r\n") {
+        result.push_str("\r\n");
+    }
+
+    std::fs::write(&path, result).map_err(|e| e.to_string())
+}
+
 // ── Game launch ────────────────────────────────────────────────────
 
 /// Launch wic.exe from given path.

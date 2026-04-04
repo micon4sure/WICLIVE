@@ -54,6 +54,8 @@ pub fn run() {
             commands::get_autoexec_state,
             commands::set_live_settings,
             commands::set_competitive_settings,
+            commands::get_wicgate_settings,
+            commands::set_wicgate_setting,
             commands::get_debug_info,
             commands::list_map_files,
             commands::delete_all_maps,

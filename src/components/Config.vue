@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
@@ -94,9 +94,109 @@ async function toggleCompetitive() {
   }
 }
 
+// User settings (wicgate.txt)
+interface WicgateSettings {
+  camera_fix: boolean
+  hilite_own_color: string
+  ignore_alt_tab: boolean
+  no_cursor_speed: boolean
+  nuke_warning: boolean
+}
+
+const userSettings = ref<WicgateSettings>({
+  camera_fix: true,
+  hilite_own_color: 'orange',
+  ignore_alt_tab: false,
+  no_cursor_speed: true,
+  nuke_warning: true,
+})
+const userError = ref('')
+
+type BoolKey = 'camera_fix' | 'ignore_alt_tab' | 'no_cursor_speed' | 'nuke_warning'
+
+const boolSettings: { key: BoolKey; name: string; desc: string }[] = [
+  { key: 'camera_fix', name: 'Camera Fix', desc: 'No fly-to on drop zone change' },
+  { key: 'ignore_alt_tab', name: 'Ignore Alt-Tab', desc: 'Prevent idle when alt-tabbed' },
+  { key: 'no_cursor_speed', name: 'No Cursor Speed', desc: 'Disable cursor acceleration' },
+  { key: 'nuke_warning', name: 'Nuke Warning', desc: 'HUD alert on enemy nuke' },
+]
+
+const colorPresets = [
+  { name: 'amber', hex: '#CFB408' },
+  { name: 'azure', hex: '#57B9FF' },
+  { name: 'coral', hex: '#FF7F50' },
+  { name: 'cyan', hex: '#00FFFF' },
+  { name: 'gold', hex: '#FFD700' },
+  { name: 'lime', hex: '#88FF00' },
+  { name: 'magenta', hex: '#FF00FF' },
+  { name: 'orange', hex: '#FF8800' },
+  { name: 'pink', hex: '#FF69B4' },
+  { name: 'silver', hex: '#C0C0C0' },
+  { name: 'white', hex: '#FFFFFF' },
+  { name: 'yellow', hex: '#FFFF00' },
+]
+
+const highlightLabel = computed(() => {
+  const val = userSettings.value.hilite_own_color
+  if (!val) return 'Disabled'
+  const preset = colorPresets.find(c => c.name === val)
+  if (preset) return preset.name.charAt(0).toUpperCase() + preset.name.slice(1)
+  return '#' + val
+})
+
+const currentColorHex = computed(() => {
+  const val = userSettings.value.hilite_own_color
+  if (!val) return '#FF8800'
+  const preset = colorPresets.find(c => c.name === val)
+  if (preset) return preset.hex
+  return '#' + val
+})
+
+async function loadUserSettings() {
+  userError.value = ''
+  try {
+    userSettings.value = await invoke<WicgateSettings>('get_wicgate_settings')
+  } catch (e) {
+    userError.value = String(e)
+  }
+}
+
+async function toggleUserSetting(key: BoolKey) {
+  userError.value = ''
+  const target = !userSettings.value[key]
+  try {
+    await invoke('set_wicgate_setting', { key, value: target ? '1' : '0' })
+    userSettings.value[key] = target
+  } catch (e) {
+    userError.value = String(e)
+  }
+}
+
+async function setHighlightColor(color: string) {
+  userError.value = ''
+  try {
+    await invoke('set_wicgate_setting', { key: 'hilite_own_color', value: color })
+    userSettings.value.hilite_own_color = color
+  } catch (e) {
+    userError.value = String(e)
+  }
+}
+
+function toggleHighlight() {
+  setHighlightColor(userSettings.value.hilite_own_color ? '' : 'orange')
+}
+
+function handleColorWheel(event: Event) {
+  const hex = (event.target as HTMLInputElement).value.replace('#', '').toUpperCase()
+  if (/^[0-9A-F]{6}$/.test(hex)) {
+    setHighlightColor(hex)
+  }
+}
+
 onMounted(async () => {
   loadState()
   loadLegacyState()
+  loadUserSettings()
   listen<{ stage: string; downloaded: number; total: number }>('legacy-proxy-progress', (e) => {
     if (e.payload.stage === 'downloading' && e.payload.total > 0) {
       legacyProgress.value = Math.round((e.payload.downloaded / e.payload.total) * 100)
@@ -197,6 +297,61 @@ onMounted(async () => {
           <div class="detail-grid">
             <span class="bind-key">Fog</span><span class="bind-val">Disabled</span>
             <span class="bind-key">Clouds</span><span class="bind-val">Disabled</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Settings -->
+      <div class="config-card" :class="{ active: userSettings.camera_fix || !!userSettings.hilite_own_color || userSettings.ignore_alt_tab || userSettings.no_cursor_speed || userSettings.nuke_warning }">
+        <div class="user-settings-header">
+          <span class="card-title">User Settings</span>
+          <span class="card-desc">wicgate.txt — requires restart</span>
+        </div>
+        <div v-if="userError" class="config-error">{{ userError }}</div>
+        <div class="card-detail">
+          <!-- Highlight color (top) -->
+          <div class="setting-row" @click="toggleHighlight">
+            <div class="toggle-track" :class="{ on: !!userSettings.hilite_own_color }">
+              <div class="toggle-thumb" />
+            </div>
+            <div class="setting-text">
+              <span class="setting-name">Unit Highlight</span>
+              <span class="setting-desc">{{ highlightLabel }}</span>
+            </div>
+          </div>
+          <div v-if="userSettings.hilite_own_color" class="color-picker">
+            <div class="color-grid">
+              <button
+                v-for="c in colorPresets"
+                :key="c.name"
+                class="color-swatch"
+                :class="{ active: userSettings.hilite_own_color === c.name }"
+                :style="{ backgroundColor: c.hex }"
+                :title="c.name.charAt(0).toUpperCase() + c.name.slice(1)"
+                @click="setHighlightColor(c.name)"
+              />
+            </div>
+            <div class="color-custom-row">
+              <input
+                type="color"
+                :value="currentColorHex"
+                class="color-input-native"
+                title="Custom color"
+                @input="handleColorWheel"
+              />
+              <span class="color-hex-label">{{ currentColorHex.toUpperCase() }}</span>
+            </div>
+          </div>
+          <div v-if="userSettings.hilite_own_color" class="detail-sep" />
+          <!-- Boolean toggles -->
+          <div v-for="s in boolSettings" :key="s.key" class="setting-row" @click="toggleUserSetting(s.key)">
+            <div class="toggle-track" :class="{ on: userSettings[s.key] }">
+              <div class="toggle-thumb" />
+            </div>
+            <div class="setting-text">
+              <span class="setting-name">{{ s.name }}</span>
+              <span class="setting-desc">{{ s.desc }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -346,7 +501,7 @@ onMounted(async () => {
 
 .config-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
 }
 
@@ -443,5 +598,100 @@ onMounted(async () => {
 .toggle-track.on .toggle-thumb {
   transform: translateX(18px);
   background: #fff;
+}
+/* User settings */
+.user-settings-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+.setting-row:hover {
+  background: rgba(var(--mid-gray-rgb), 0.15);
+}
+
+.setting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.setting-name {
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+.setting-desc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* Color picker */
+.color-picker {
+  padding: 6px 0 2px;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.color-swatch {
+  aspect-ratio: 1;
+  width: 100%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+.color-swatch:hover {
+  border-color: rgba(var(--mid-gray-muted-rgb), 0.8);
+}
+.color-swatch.active {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 4px rgba(var(--text-primary-rgb), 0.4);
+}
+
+.color-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.color-input-native {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+}
+.color-input-native::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+.color-input-native::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+.color-hex-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: monospace;
 }
 </style>

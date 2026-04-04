@@ -408,6 +408,18 @@ pub fn set_competitive_settings(enabled: bool) -> Result<(), String> {
     core::set_competitive_settings(enabled)
 }
 
+// ── WiCGate user settings ──────────────────────────────────────
+
+#[tauri::command]
+pub fn get_wicgate_settings() -> Result<core::WicgateSettings, String> {
+    core::get_wicgate_settings()
+}
+
+#[tauri::command]
+pub fn set_wicgate_setting(key: String, value: String) -> Result<(), String> {
+    core::set_wicgate_setting(&key, &value)
+}
+
 // ── Debug info ───────────────────────────────────────────────────
 
 #[tauri::command]
