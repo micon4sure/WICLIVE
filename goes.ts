@@ -24,8 +24,11 @@ const actions: Record<string, (...args: string[]) => Promise<void>> = {
       process.exit(1)
     }
     setEnv({ API_URL: cfg.api, VITE_API_URL: cfg.api })
-    const flag = cfg.release ? " --release" : ""
-    await $`bun run tauri dev${flag}`
+    if (cfg.release) {
+      await $`bun run tauri dev --release`
+    } else {
+      await $`bun run tauri dev`
+    }
   },
 
   async build(env: string) {

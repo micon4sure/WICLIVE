@@ -49,6 +49,7 @@ async function check() {
     installed.value = false
     broken.value = hasRegistry
     checking.value = false
+    initialized.value = true
     return
   }
 
