@@ -90,6 +90,19 @@ jobs:
             --prerelease `
             "src-tauri/target/release/wiclive.exe#wiclive.exe"
 
+      - name: Rename bundle artifacts
+        if: steps.version.outputs.exists == 'false' && steps.version.outputs.prerelease == 'false'
+        shell: pwsh
+        run: |
+          # Tauri v2 NSIS bundler emits "<productName>_<ver>_x64-setup.*" using the
+          # productName from tauri.conf.json ("WIC LIVE" with a space). Rename to
+          # lowercase "wiclive_*" so all downstream steps (and v1 client URLs) are clean.
+          $version = "${{ steps.version.outputs.version }}"
+          $bundleDir = "src-tauri/target/release/bundle/nsis"
+          Rename-Item "$bundleDir/WIC LIVE_${version}_x64-setup.exe" "wiclive_${version}_x64-setup.exe"
+          Rename-Item "$bundleDir/WIC LIVE_${version}_x64-setup.nsis.zip" "wiclive_${version}_x64-setup.nsis.zip"
+          Rename-Item "$bundleDir/WIC LIVE_${version}_x64-setup.nsis.zip.sig" "wiclive_${version}_x64-setup.nsis.zip.sig"
+
       - name: Create stable release
         if: steps.version.outputs.exists == 'false' && steps.version.outputs.prerelease == 'false'
         shell: pwsh
@@ -97,13 +110,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          # Tauri v2 NSIS bundler hardcodes filenames to "<productName>_<ver>_x64-setup".
-          # productName is "WIC LIVE" with a space. We rename to lowercase "wiclive"
-          # on upload so the released URLs match what v1 (3.3.x) clients expect.
           $bundleDir = "src-tauri/target/release/bundle/nsis"
-          $nsis = "$bundleDir/WIC LIVE_${version}_x64-setup.exe"
-          $nsisZip = "$bundleDir/WIC LIVE_${version}_x64-setup.nsis.zip"
-          $nsisZipSig = "${nsisZip}.sig"
+          $nsis = "$bundleDir/wiclive_${version}_x64-setup.exe"
+          $nsisZip = "$bundleDir/wiclive_${version}_x64-setup.nsis.zip"
+          $nsisZipSig = "$bundleDir/wiclive_${version}_x64-setup.nsis.zip.sig"
           $sig = Get-Content $nsisZipSig
 
           # Build version.json for Tauri auto-updater
@@ -121,7 +131,7 @@ jobs:
           gh release create $version `
             --title "Release $version" `
             --notes "${{ steps.changelog.outputs.notes }}" `
-            "${nsis}#wiclive_${version}_x64-setup.exe" `
-            "${nsisZip}#wiclive_${version}_x64-setup.nsis.zip" `
-            "${nsisZipSig}#wiclive_${version}_x64-setup.nsis.zip.sig" `
+            "$nsis" `
+            "$nsisZip" `
+            "$nsisZipSig" `
             "version.json"
