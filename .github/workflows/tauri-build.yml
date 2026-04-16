@@ -108,7 +108,6 @@ jobs:
             notes = "${{ steps.changelog.outputs.notes }}"
             platforms = @{
               "windows-x86_64" = @{
-                installMode = "passive"
                 signature = $sig
                 url = "https://github.com/${{ github.repository }}/releases/download/${version}/wiclive_${version}_x64-setup.nsis.zip"
               }

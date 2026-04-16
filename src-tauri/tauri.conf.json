@@ -29,6 +29,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -39,6 +40,17 @@
     "windows": {
       "nsis": {
         "displayLanguageSelector": false
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVEN0UwOTY0NUJCMTM0N0YKUldSL05MRmJaQWwrWFhOWUErQTdnMUc1NDV3QlhoTGM5K1hIbmxiMXRKMFlheWVoQ05BeHN6aGEK",
+      "endpoints": [
+        "https://github.com/micon4sure/WICLIVE/releases/latest/download/version.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }
