@@ -6,6 +6,9 @@ const host = process.env.TAURI_DEV_HOST
 export default defineConfig({
   plugins: [vue()],
   clearScreen: false,
+  build: {
+    target: 'esnext',
+  },
   server: {
     port: 1421,
     strictPort: true,
