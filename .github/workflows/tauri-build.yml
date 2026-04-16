@@ -97,8 +97,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          $nsis = "src-tauri/target/release/bundle/nsis/wiclive_${version}_x64-setup.exe"
-          $nsisZip = "src-tauri/target/release/bundle/nsis/wiclive_${version}_x64-setup.nsis.zip"
+          # Tauri v2 NSIS bundler hardcodes filenames to "<productName>_<ver>_x64-setup".
+          # productName is "WIC LIVE" with a space. We rename to lowercase "wiclive"
+          # on upload so the released URLs match what v1 (3.3.x) clients expect.
+          $bundleDir = "src-tauri/target/release/bundle/nsis"
+          $nsis = "$bundleDir/WIC LIVE_${version}_x64-setup.exe"
+          $nsisZip = "$bundleDir/WIC LIVE_${version}_x64-setup.nsis.zip"
           $nsisZipSig = "${nsisZip}.sig"
           $sig = Get-Content $nsisZipSig
 
