@@ -97,8 +97,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          $nsis = "src-tauri/target/release/bundle/nsis/WIC LIVE_${version}_x64-setup.exe"
-          $nsisZip = "src-tauri/target/release/bundle/nsis/WIC LIVE_${version}_x64-setup.nsis.zip"
+          $nsis = "src-tauri/target/release/bundle/nsis/wiclive_${version}_x64-setup.exe"
+          $nsisZip = "src-tauri/target/release/bundle/nsis/wiclive_${version}_x64-setup.nsis.zip"
           $nsisZipSig = "${nsisZip}.sig"
           $sig = Get-Content $nsisZipSig
 
