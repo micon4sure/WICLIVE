@@ -38,6 +38,8 @@ pub fn run() {
             commands::get_cd_key,
             commands::set_cd_key,
             commands::check_vcredist,
+            commands::check_dx9,
+            commands::install_dx9,
             commands::check_proxy,
             commands::get_proxy_version,
             commands::needs_proxy_update,

@@ -8,7 +8,7 @@ function setEnv(vars: Record<string, string>) {
 }
 
 const PROD_API = "https://wiclive.wicgate.org"
-const LOCAL_API = "http://localhost:3243"
+const LOCAL_API = "http://192.168.122.1:3243"
 
 const envs: Record<string, { api: string, release: boolean }> = {
   development: { api: LOCAL_API, release: false },

@@ -15,6 +15,7 @@ interface Action {
 const actions = ref<Action[]>([
   { id: 'laa', label: 'LAA Flag', status: 'checking' },
   { id: 'vcredist', label: 'VC++ Redist', status: 'checking' },
+  { id: 'dx9', label: 'DirectX 9', status: 'checking' },
   { id: 'patch', label: 'Game Patches', status: 'checking' },
   { id: 'cdkey', label: 'CD Key', status: 'checking' },
   { id: 'proxy_installed', label: 'Proxy Installed', status: 'checking' },
@@ -60,6 +61,17 @@ async function runChecks() {
   } catch (e) {
     find('vcredist').status = 'error'
     find('vcredist').detail = String(e)
+  }
+
+  // DirectX 9
+  try {
+    const installed = await invoke<boolean>('check_dx9')
+    const a = find('dx9')
+    a.status = installed ? 'done' : 'needed'
+    a.detail = installed ? 'Installed' : 'Missing'
+  } catch (e) {
+    find('dx9').status = 'error'
+    find('dx9').detail = String(e)
   }
 
   // Game version (patches)

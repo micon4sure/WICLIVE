@@ -24,6 +24,10 @@ const meta: Record<string, { label: string; desc: string }> = {
     label: 'VC++ Redistributable',
     desc: 'The Visual Studio C++ Redistributable is missing. This is required to run the game.',
   },
+  dx9: {
+    label: 'DirectX 9 Runtime',
+    desc: 'The DirectX 9 June 2010 runtime is missing. This is required to run the game.',
+  },
   patch: {
     label: 'Game Patches',
     desc: 'Your game version is outdated and needs to be patched to play online.',
@@ -140,6 +144,12 @@ async function runFixes() {
         await invoke('set_cd_key', { key })
         fixStatus.value[id] = 'fixed'
         fixDetail.value[id] = key
+      } else if (id === 'dx9') {
+        currentStage.value = 'downloading'
+        fixDetail.value[id] = 'Downloading...'
+        await invoke('install_dx9')
+        fixStatus.value[id] = 'fixed'
+        fixDetail.value[id] = 'Installed'
       } else if (id === 'proxy_installed' || id === 'proxy_current') {
         fixDetail.value[id] = id === 'proxy_current' ? 'Updating...' : 'Installing...'
         const ver = await invoke<string>('install_proxy')

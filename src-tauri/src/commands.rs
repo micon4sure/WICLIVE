@@ -71,6 +71,45 @@ pub fn check_vcredist() -> bool {
 }
 
 #[tauri::command]
+pub fn check_dx9() -> bool {
+    core::check_dx9()
+}
+
+#[tauri::command]
+pub async fn install_dx9(
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    let url = "https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe";
+    let tmp = std::env::temp_dir().join("dxwebsetup.exe");
+
+    let app_dl = app.clone();
+    core::download_file(url, &tmp, move |downloaded, total| {
+        let _ = app_dl.emit("dx9-progress", PatchProgress {
+            stage: "downloading".into(),
+            downloaded,
+            total,
+            detail: "dxwebsetup.exe".into(),
+        });
+    }).await?;
+
+    let installer = tmp.clone();
+    tokio::task::spawn_blocking(move || core::run_dx9_installer(&installer))
+        .await
+        .map_err(|e| e.to_string())??;
+
+    let _ = std::fs::remove_file(&tmp);
+
+    let _ = app.emit("dx9-progress", PatchProgress {
+        stage: "done".into(),
+        downloaded: 0,
+        total: 0,
+        detail: "DirectX 9 installed".into(),
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn check_proxy() -> Result<bool, String> {
     let dir = core::require_install_path()?;
     Ok(core::check_proxy(&dir))
@@ -474,6 +513,9 @@ pub async fn get_debug_info(
 
     // VC++
     lines.push(format!("VC++ Redist: {}", if core::check_vcredist() { "installed" } else { "missing" }));
+
+    // DirectX 9
+    lines.push(format!("DirectX 9: {}", if core::check_dx9() { "installed" } else { "missing" }));
 
     // CD Key
     match core::read_cd_key() {

@@ -21,6 +21,7 @@ const wasInstalled = ref(false)
 
 const readinessActions = ref<Record<string, ReadinessAction>>({
   vcredist: { need: false, has: false, detail: '' },
+  dx9: { need: false, has: false, detail: '' },
   patch: { need: false, has: false, detail: '' },
   laa: { need: false, has: false, detail: '' },
   cdkey: { need: false, has: false, detail: '' },
@@ -61,6 +62,13 @@ async function check() {
     readinessActions.value.vcredist = { need: true, has, detail: has ? 'Installed' : 'Missing' }
   } catch {
     readinessActions.value.vcredist = { need: true, has: false, detail: 'Error' }
+  }
+
+  try {
+    const has = await invoke<boolean>('check_dx9')
+    readinessActions.value.dx9 = { need: true, has, detail: has ? 'Installed' : 'Missing' }
+  } catch {
+    readinessActions.value.dx9 = { need: true, has: false, detail: 'Error' }
   }
 
   try {

@@ -313,6 +313,61 @@ pub fn check_vcredist() -> bool {
     hklm.open_subkey(r"SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\X86").is_ok()
 }
 
+// ── DirectX 9 Runtime ──────────────────────────────────────────────
+
+/// Check if the DirectX 9 June 2010 runtime is installed (d3dx9_43.dll
+/// present in SysWOW64 or System32). Vanilla Windows does not ship this.
+pub fn check_dx9() -> bool {
+    let sysroot = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
+    let base = PathBuf::from(&sysroot);
+    base.join("SysWOW64").join("d3dx9_43.dll").exists()
+        || base.join("System32").join("d3dx9_43.dll").exists()
+}
+
+/// Launch the DirectX web installer elevated and wait for it to exit.
+#[cfg(windows)]
+pub fn run_dx9_installer(installer_path: &std::path::Path) -> Result<(), String> {
+    use std::mem;
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::UI::Shell::{ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW};
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+    use windows::Win32::System::Threading::WaitForSingleObject;
+    use windows::core::PCWSTR;
+
+    let file_wide: Vec<u16> = installer_path
+        .to_string_lossy()
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let verb: Vec<u16> = "runas\0".encode_utf16().collect();
+    let params: Vec<u16> = "/Q\0".encode_utf16().collect();
+
+    unsafe {
+        let mut info: SHELLEXECUTEINFOW = mem::zeroed();
+        info.cbSize = mem::size_of::<SHELLEXECUTEINFOW>() as u32;
+        info.fMask = SEE_MASK_NOCLOSEPROCESS;
+        info.lpVerb = PCWSTR(verb.as_ptr());
+        info.lpFile = PCWSTR(file_wide.as_ptr());
+        info.lpParameters = PCWSTR(params.as_ptr());
+        info.nShow = SW_SHOWNORMAL.0;
+
+        ShellExecuteExW(&mut info)
+            .map_err(|e| format!("Failed to launch DirectX installer: {}", e))?;
+
+        if !info.hProcess.is_invalid() {
+            WaitForSingleObject(info.hProcess, u32::MAX);
+            let _ = CloseHandle(info.hProcess);
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(not(windows))]
+pub fn run_dx9_installer(_installer_path: &std::path::Path) -> Result<(), String> {
+    Err("DirectX install is only supported on Windows".into())
+}
+
 // ── Hooks / Proxy ──────────────────────────────────────────────────
 
 /// Check if proxy is installed (version file exists in game dir).

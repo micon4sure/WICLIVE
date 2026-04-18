@@ -23,6 +23,13 @@ const exTotal = ref(0)
 const installDir = ref('')
 const installSubdir = ref('World in Conflict')
 const installDirSet = ref(false)
+const dx9Checking = ref(false)
+const dx9Needed = ref(false)
+const dx9Installing = ref(false)
+const dx9Done = ref(false)
+const dx9Error = ref('')
+const dx9DlProgress = ref(0)
+const dx9DlTotal = ref(0)
 
 const fullInstallPath = computed(() => {
   if (!installDir.value) return ''
@@ -38,6 +45,54 @@ function dlPercent(): number {
 function exPercent(): number {
   if (exTotal.value === 0) return 0
   return Math.round((exProgress.value / exTotal.value) * 100)
+}
+
+function dx9Percent(): number {
+  if (dx9DlTotal.value === 0) return 0
+  return Math.round((dx9DlProgress.value / dx9DlTotal.value) * 100)
+}
+
+async function checkAndInstallDx9() {
+  dx9Checking.value = true
+  try {
+    const installed = await invoke<boolean>('check_dx9')
+    if (installed) {
+      dx9Done.value = true
+      dx9Checking.value = false
+      return
+    }
+  } catch (e) {
+    dx9Error.value = String(e)
+    dx9Checking.value = false
+    return
+  }
+
+  dx9Checking.value = false
+  dx9Needed.value = true
+  dx9Installing.value = true
+
+  const unlisten = await listen<{
+    stage: string
+    downloaded: number
+    total: number
+    detail: string
+  }>('dx9-progress', (event) => {
+    const p = event.payload
+    if (p.stage === 'downloading') {
+      dx9DlProgress.value = p.downloaded
+      dx9DlTotal.value = p.total
+    }
+  })
+
+  try {
+    await invoke('install_dx9')
+    dx9Done.value = true
+  } catch (e) {
+    dx9Error.value = String(e)
+  }
+
+  unlisten()
+  dx9Installing.value = false
 }
 
 function formatBytes(bytes: number): string {
@@ -99,11 +154,13 @@ async function maybeExtract() {
     await invoke('set_cd_key', { key })
     cdKey.value = key
     cdKeyDone.value = true
-    setTimeout(() => onInstalled(), 1000)
   } catch (e) {
     cdKeyError.value = String(e)
-    setTimeout(() => onInstalled(), 1000)
   }
+
+  await checkAndInstallDx9()
+
+  setTimeout(() => onInstalled(), 1000)
 }
 
 async function startDownload() {
@@ -149,11 +206,11 @@ async function startDownload() {
 </script>
 
 <template>
-  <div class="action-card" :class="{ 'is-done': cdKeyDone, 'is-installing': downloading || dlDone, 'is-missing': !downloading && !dlDone && !cdKeyDone }">
+  <div class="action-card" :class="{ 'is-done': cdKeyDone && dx9Done, 'is-installing': downloading || dlDone, 'is-missing': !downloading && !dlDone && !cdKeyDone }">
     <div class="readiness-header">
       <h3 class="header-title">
-        <span class="title-text" :class="cdKeyDone ? 'title-done' : (downloading || dlDone) ? 'title-install' : 'title-missing'">
-          {{ cdKeyDone ? 'Installation Complete' : (downloading || dlDone) ? 'Installing' : 'Game Not Installed' }}
+        <span class="title-text" :class="cdKeyDone && dx9Done ? 'title-done' : (downloading || dlDone) ? 'title-install' : 'title-missing'">
+          {{ cdKeyDone && dx9Done ? 'Installation Complete' : (downloading || dlDone) ? 'Installing' : 'Game Not Installed' }}
         </span>
       </h3>
       <div v-if="!downloading && !dlDone" class="header-sub">
@@ -236,6 +293,33 @@ async function startDownload() {
         <div class="item-detail-wrap">
           <span v-if="cdKeyDone" class="item-detail item-fixed">{{ cdKey }}</span>
           <span v-else-if="cdKeyError" class="item-detail item-error">{{ cdKeyError }}</span>
+        </div>
+      </div>
+
+      <!-- DirectX 9 -->
+      <div v-if="cdKeyDone || cdKeyError" class="readiness-item"
+        :class="[dx9Done ? 'status-fixed' : dx9Error ? 'status-error' : 'status-applying', { 'item-collapsed': dx9Done }]">
+        <div class="item-row">
+          <span class="item-label">DirectX 9 Runtime</span>
+          <span class="item-status">
+            <template v-if="dx9Done">done</template>
+            <template v-else-if="dx9Error">failed</template>
+            <template v-else-if="dx9Installing">installing...</template>
+            <template v-else>checking...</template>
+          </span>
+        </div>
+        <div class="item-detail-wrap">
+          <span v-if="dx9Done" class="item-detail item-fixed">{{ dx9Needed ? 'Installed' : 'Already installed' }}</span>
+          <span v-else-if="dx9Error" class="item-detail item-error">{{ dx9Error }}</span>
+        </div>
+        <div v-if="dx9Installing && dx9DlTotal > 0" class="progress-area">
+          <div class="progress-track">
+            <div class="progress-fill progress-fill-dl" :style="{ width: dx9Percent() + '%' }" />
+            <span class="progress-label">{{ dx9Percent() }}%</span>
+          </div>
+          <div class="progress-meta">
+            <span>{{ formatBytes(dx9DlProgress) }} / {{ formatBytes(dx9DlTotal) }}</span>
+          </div>
         </div>
       </div>
 
