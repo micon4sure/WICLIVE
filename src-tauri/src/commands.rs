@@ -166,6 +166,15 @@ pub async fn install_proxy(
         });
     }).await?;
 
+    // Preserve original game dbghelp.dll on first install
+    let dir = PathBuf::from(&install_dir);
+    let active = dir.join("dbghelp.dll");
+    let old = dir.join("dbghelp_old.dll");
+    if active.exists() && !old.exists() {
+        std::fs::rename(&active, &old)
+            .map_err(|e| format!("Failed to back up original dbghelp.dll: {}", e))?;
+    }
+
     let app_ex = app.clone();
     let count = core::extract_zip(&tmp_zip, &install_dir, move |done, total, name| {
         let _ = app_ex.emit("proxy-progress", PatchProgress {

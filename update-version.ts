@@ -6,6 +6,11 @@ const version = process.argv[2];
 // read cargo.toml
 const cargoTomlPath = './src-tauri/Cargo.toml';
 const cargoTomlContent = fs.readFileSync(cargoTomlPath, 'utf-8');
+if (!version) {
+  const match = cargoTomlContent.match(/version = "(.*?)"/);
+  console.log('Current version is', match ? match[1] : 'unknown');
+  process.exit();
+}
 
 // regex replace the version line
 const updatedCargoTomlContent = cargoTomlContent.replace(/version = "(.*?)"/, `version = "${version}"`);
