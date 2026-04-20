@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
 const GAME_EXE: &str = "wic_online.exe";
+const BASE_EXE: &str = "wic.exe";
+const LAUNCHABLE_EXES: &[&str] = &[BASE_EXE, GAME_EXE];
 
 // ── Install detection ──────────────────────────────────────────────
 
@@ -91,6 +93,28 @@ pub fn require_exe_path() -> Result<PathBuf, String> {
         return Err(format!("{} not found", GAME_EXE));
     }
     Ok(exe)
+}
+
+/// Paths of all launchable wic executables that exist in the install dir.
+pub fn existing_launchable_exes(install_dir: &str) -> Vec<PathBuf> {
+    let dir = PathBuf::from(install_dir);
+    LAUNCHABLE_EXES
+        .iter()
+        .map(|name| dir.join(name))
+        .filter(|p| p.exists())
+        .collect()
+}
+
+/// Resolve which exe to launch. Prefers wic.exe, falls back to wic_online.exe.
+pub fn resolve_launch_exe(install_dir: &str) -> Result<PathBuf, String> {
+    let dir = PathBuf::from(install_dir);
+    for name in LAUNCHABLE_EXES {
+        let p = dir.join(name);
+        if p.exists() {
+            return Ok(p);
+        }
+    }
+    Err("No wic.exe or wic_online.exe found".into())
 }
 
 // ── Game version (PE header) ───────────────────────────────────────
@@ -230,6 +254,45 @@ pub fn apply_laa(path: &str) -> Result<bool, String> {
     file.seek(SeekFrom::Start(char_offset)).map_err(|e| e.to_string())?;
     file.write_all(&characteristics.to_le_bytes()).map_err(|e| e.to_string())?;
 
+    Ok(true)
+}
+
+/// Check LAA across all existing launchable exes. Returns Ok(true) only if every
+/// existing exe has the flag set. Errors if none exist.
+pub fn check_laa_all(install_dir: &str) -> Result<bool, String> {
+    let exes = existing_launchable_exes(install_dir);
+    if exes.is_empty() {
+        return Err("No wic.exe or wic_online.exe found".into());
+    }
+    for exe in &exes {
+        if !check_laa(exe.to_str().unwrap())? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// Apply LAA to all existing launchable exes. Errors if none exist.
+pub fn apply_laa_all(install_dir: &str) -> Result<bool, String> {
+    let exes = existing_launchable_exes(install_dir);
+    if exes.is_empty() {
+        return Err("No wic.exe or wic_online.exe found".into());
+    }
+    for exe in &exes {
+        apply_laa(exe.to_str().unwrap())?;
+    }
+    Ok(true)
+}
+
+/// Clear LAA on all existing launchable exes. Errors if none exist.
+pub fn unset_laa_all(install_dir: &str) -> Result<bool, String> {
+    let exes = existing_launchable_exes(install_dir);
+    if exes.is_empty() {
+        return Err("No wic.exe or wic_online.exe found".into());
+    }
+    for exe in &exes {
+        unset_laa(exe.to_str().unwrap())?;
+    }
     Ok(true)
 }
 

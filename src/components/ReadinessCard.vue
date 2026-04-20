@@ -191,12 +191,11 @@ async function runFixes() {
           <span class="title-text title-done" :class="{ 'title-hidden': !allFixed }">Game Readiness: All Set</span>
         </h3>
         <div class="header-btn-wrap" :class="{ 'btn-hidden': allFixed }">
-          <button class="btn btn-sm btn-cta" :disabled="fixing" @click="runFixes">Fix</button>
+          <button class="btn btn-primary" :disabled="fixing" @click="runFixes">Fix</button>
         </div>
       </div>
       <div class="header-sub" :class="{ 'sub-hidden': allFixed }">
-        <p v-if="fixing">Fixing issues...</p>
-        <p v-else>The following issues need to be resolved before you can play.</p>
+        <p v-if="!fixing">The following issues need to be resolved before you can play.</p>
       </div>
     </div>
     <div class="readiness-body">

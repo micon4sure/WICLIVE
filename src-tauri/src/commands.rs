@@ -39,20 +39,20 @@ pub fn get_game_version_registry() -> Option<String> {
 
 #[tauri::command]
 pub fn get_laa_flag() -> Result<bool, String> {
-    let exe = core::require_exe_path()?;
-    core::check_laa(exe.to_str().unwrap())
+    let dir = core::require_install_path()?;
+    core::check_laa_all(&dir)
 }
 
 #[tauri::command]
 pub fn set_laa_flag() -> Result<bool, String> {
-    let exe = core::require_exe_path()?;
-    core::apply_laa(exe.to_str().unwrap())
+    let dir = core::require_install_path()?;
+    core::apply_laa_all(&dir)
 }
 
 #[tauri::command]
 pub fn unset_laa_flag() -> Result<bool, String> {
-    let exe = core::require_exe_path()?;
-    core::unset_laa(exe.to_str().unwrap())
+    let dir = core::require_install_path()?;
+    core::unset_laa_all(&dir)
 }
 
 #[tauri::command]
@@ -136,7 +136,8 @@ pub fn is_soviet_assault() -> bool {
 
 #[tauri::command]
 pub fn start_game() -> Result<(), String> {
-    let exe = core::require_exe_path()?;
+    let dir = core::require_install_path()?;
+    let exe = core::resolve_launch_exe(&dir)?;
     core::launch_game(exe.to_str().unwrap())
 }
 
@@ -502,13 +503,21 @@ pub async fn get_debug_info(
                 Ok(v) => lines.push(format!("Game Version: {}", v)),
                 Err(e) => lines.push(format!("Game Version: error ({})", e)),
             }
-            match core::check_laa(&exe_str) {
-                Ok(true) => lines.push("LAA: enabled".into()),
-                Ok(false) => lines.push("LAA: disabled".into()),
-                Err(e) => lines.push(format!("LAA: error ({})", e)),
-            }
         }
         Err(e) => lines.push(format!("Exe Path: {}", e)),
+    }
+
+    // LAA per launchable exe
+    if let Ok(dir) = core::require_install_path() {
+        for exe in core::existing_launchable_exes(&dir) {
+            let exe_str = exe.to_string_lossy();
+            let name = exe.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            match core::check_laa(&exe_str) {
+                Ok(true) => lines.push(format!("LAA ({}): enabled", name)),
+                Ok(false) => lines.push(format!("LAA ({}): disabled", name)),
+                Err(e) => lines.push(format!("LAA ({}): error ({})", name, e)),
+            }
+        }
     }
 
     // VC++

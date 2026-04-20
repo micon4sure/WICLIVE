@@ -63,12 +63,12 @@
   /* ── Semantic Colors ──────────────────────────────────── */
 
   /* Status */
-  --c-pending: var(--blue);
-  --c-pending-rgb: var(--blue-rgb);
+  --c-pending: var(--orange);
+  --c-pending-rgb: var(--orange-rgb);
   --c-action: var(--gold);
   --c-action-rgb: var(--gold-rgb);
-  --c-progress: var(--orange);
-  --c-progress-rgb: var(--orange-rgb);
+  --c-progress: var(--blue);
+  --c-progress-rgb: var(--blue-rgb);
   --c-success: var(--green);
   --c-success-rgb: var(--green-rgb);
   --c-error: var(--red);

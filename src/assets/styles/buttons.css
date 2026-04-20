@@ -26,23 +26,37 @@
   transform: translateY(0);
 }
 
-/* Primary — gold action */
+/* Primary — gold button, silver pulse glow until hover */
 .btn-primary {
-  background: linear-gradient(180deg, rgba(var(--c-action-rgb), 0.9) 0%, rgba(var(--c-action-rgb), 0.7) 100%);
-  border-color: rgba(var(--c-action-rgb), 0.85);
+  background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-dark) 100%);
+  border-color: var(--gold-light);
   color: var(--ink);
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.2);
-  box-shadow:
-    0 6px 20px rgba(var(--c-action-rgb), 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  animation: btn-primary-pulse 2s ease-in-out infinite;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(180deg, rgba(var(--c-action-rgb), 1) 0%, rgba(var(--c-action-rgb), 0.75) 100%);
+  background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold) 100%);
+  animation: none;
   box-shadow:
-    0 10px 28px rgba(var(--c-action-rgb), 0.45),
-    0 0 24px rgba(var(--c-action-rgb), 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    0 10px 32px rgba(var(--c-action-rgb), 0.6),
+    0 0 32px rgba(var(--c-action-rgb), 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+@keyframes btn-primary-pulse {
+  0%, 100% {
+    box-shadow:
+      0 6px 20px rgba(var(--c-cta-rgb), 0.3),
+      0 0 0 rgba(var(--c-cta-rgb), 0),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 8px 28px rgba(var(--c-cta-rgb), 0.6),
+      0 0 28px rgba(var(--c-cta-rgb), 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
 }
 
 /* CTA — silver */
@@ -125,6 +139,7 @@
   text-shadow: none;
   transform: none !important;
   pointer-events: none;
+  animation: none;
 }
 
 /* Outline — tactical border */
