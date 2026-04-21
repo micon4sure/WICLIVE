@@ -105,9 +105,9 @@ interface WicgateSettings {
 
 const userSettings = ref<WicgateSettings>({
   camera_fix: true,
-  hilite_own_color: 'orange',
+  hilite_own_color: '',
   ignore_alt_tab: false,
-  no_cursor_speed: true,
+  no_cursor_speed: false,
   nuke_warning: true,
 })
 const userError = ref('')

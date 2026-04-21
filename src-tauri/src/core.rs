@@ -1046,7 +1046,7 @@ camera_fix=1\r\n\
 ; Presets: amber, azure, coral, cyan, gold, lime, magenta, orange,\r\n\
 ;   pink, silver, white, yellow\r\n\
 ; Or RRGGBB hex (e.g. CFB408 = amber). Leave empty to disable.\r\n\
-hilite_own_color=orange\r\n\
+hilite_own_color=\r\n\
 \r\n\
 [ignore_alt_tab]\r\n\
 ; Prevent game from going idle when alt-tabbed\r\n\
@@ -1054,7 +1054,7 @@ ignore_alt_tab=0\r\n\
 \r\n\
 [no_cursor_speed]\r\n\
 ; Disable Windows cursor acceleration in-game\r\n\
-no_cursor_speed=1\r\n\
+no_cursor_speed=0\r\n\
 \r\n\
 [nuke_warning]\r\n\
 ; Show HUD notification when enemy nuke is launched\r\n\
@@ -1112,7 +1112,7 @@ pub fn get_wicgate_settings() -> Result<WicgateSettings, String> {
             .unwrap_or(false),
         no_cursor_speed: parse_wicgate_value(&contents, "no_cursor_speed")
             .map(|v| v == "1")
-            .unwrap_or(true),
+            .unwrap_or(false),
         nuke_warning: parse_wicgate_value(&contents, "nuke_warning")
             .map(|v| v == "1")
             .unwrap_or(true),
