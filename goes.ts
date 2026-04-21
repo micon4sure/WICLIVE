@@ -43,15 +43,17 @@ const actions: Record<string, (...args: string[]) => Promise<void>> = {
       setEnv({ TAURI_SIGNING_PRIVATE_KEY: key, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '' })
       await $`bun run tauri build`
     } else {
-      await $`bun run tauri build -- --features portable`
+      await $`bun run tauri build --no-bundle -- --features portable`
     }
   },
 
   async beta() {
-    await actions.build('production')
+    setEnv({ API_URL: PROD_API, VITE_API_URL: PROD_API })
+    await $`bun run tauri build --no-bundle -- --features portable`
+
     const conf = await Bun.file("src-tauri/tauri.conf.json").json()
     const version = conf.version
-    const exe = `src-tauri/target/release/bundle/nsis/WIC LIVE_${version}_x64-setup.exe`
+    const exe = `src-tauri/target/release/wiclive.exe`
 
     try { await $`gh release delete ${version} --yes` } catch {}
     try { await $`git push origin :refs/tags/${version}` } catch {}

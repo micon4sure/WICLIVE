@@ -52,7 +52,7 @@ jobs:
         if: steps.version.outputs.exists == 'false' && steps.version.outputs.prerelease == 'true'
         env:
           API_URL: https://wiclive.techtile.media
-        run: bun run tauri build -- --features portable
+        run: bun run tauri build --no-bundle -- --features portable
 
       - name: Build Tauri app (installer)
         if: steps.version.outputs.exists == 'false' && steps.version.outputs.prerelease == 'false'
