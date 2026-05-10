@@ -112,9 +112,13 @@ jobs:
           $version = "${{ steps.version.outputs.version }}"
           $bundleDir = "src-tauri/target/release/bundle/nsis"
           $nsis = "$bundleDir/wiclive_${version}_x64-setup.exe"
+          $stableNsis = "$bundleDir/wiclive_x64-setup.exe"
           $nsisZip = "$bundleDir/wiclive_${version}_x64-setup.nsis.zip"
           $nsisZipSig = "$bundleDir/wiclive_${version}_x64-setup.nsis.zip.sig"
           $sig = Get-Content $nsisZipSig
+
+          # Keep a stable installer asset name for website and GitHub Pages links.
+          Copy-Item $nsis $stableNsis -Force
 
           # Build version.json for Tauri auto-updater
           @{
@@ -132,6 +136,7 @@ jobs:
             --title "Release $version" `
             --notes "${{ steps.changelog.outputs.notes }}" `
             "$nsis" `
+            "$stableNsis" `
             "$nsisZip" `
             "$nsisZipSig" `
             "version.json"
