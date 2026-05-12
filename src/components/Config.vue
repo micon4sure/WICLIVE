@@ -1,19 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
 
 const live = ref(false)
 const competitive = ref(false)
 const loading = ref(true)
 const error = ref('')
-
-// Legacy proxy state (cl_hook = "current" environment)
-const legacyInstalled = ref(false)
-const legacyActive = ref(false)
-const legacyDownloading = ref(false)
-const legacyProgress = ref(0)
-const legacyError = ref('')
 
 async function loadState() {
   loading.value = true
@@ -26,50 +18,6 @@ async function loadState() {
     error.value = String(e)
   }
   loading.value = false
-}
-
-async function loadLegacyState() {
-  try {
-    legacyInstalled.value = await invoke<boolean>('check_legacy_proxy')
-    if (legacyInstalled.value) {
-      legacyActive.value = await invoke<boolean>('is_legacy_proxy_active')
-    }
-  } catch (_) {}
-}
-
-async function switchToCurrent() {
-  legacyError.value = ''
-  if (!legacyInstalled.value) {
-    legacyDownloading.value = true
-    legacyProgress.value = 0
-    try {
-      await invoke('download_legacy_proxy')
-      await invoke('install_legacy_proxy')
-      legacyInstalled.value = true
-    } catch (e) {
-      legacyError.value = String(e)
-      legacyDownloading.value = false
-      return
-    }
-    legacyDownloading.value = false
-  }
-  try {
-    await invoke('activate_legacy_proxy')
-    legacyActive.value = true
-  } catch (e) {
-    legacyError.value = String(e)
-  }
-}
-
-async function switchToPbe() {
-  if (!legacyActive.value) return
-  legacyError.value = ''
-  try {
-    await invoke('deactivate_legacy_proxy')
-    legacyActive.value = false
-  } catch (e) {
-    legacyError.value = String(e)
-  }
 }
 
 async function toggleLive() {
@@ -195,53 +143,12 @@ function handleColorWheel(event: Event) {
 
 onMounted(async () => {
   loadState()
-  loadLegacyState()
   loadUserSettings()
-  listen<{ stage: string; downloaded: number; total: number }>('legacy-proxy-progress', (e) => {
-    if (e.payload.stage === 'downloading' && e.payload.total > 0) {
-      legacyProgress.value = Math.round((e.payload.downloaded / e.payload.total) * 100)
-    }
-  })
 })
 </script>
 
 <template>
   <div class="config-section">
-    <!-- Server Toggle -->
-    <div class="config-header">
-      <h3>Server</h3>
-      <span class="config-sub">Switch between <em>current</em> and <em>public beta environment</em> (PBE)</span>
-    </div>
-
-    <div v-if="legacyError" class="config-error">{{ legacyError }}</div>
-
-    <div class="server-toggle">
-      <button
-        class="server-btn server-btn-live"
-        :class="{ active: legacyActive, switching: legacyDownloading }"
-        :disabled="legacyDownloading"
-        @click="switchToCurrent"
-      >
-        <div class="server-btn-glow" />
-        <div class="server-btn-content">
-          <span class="server-label">CURRENT</span>
-          <span class="server-desc">{{ legacyDownloading ? `Downloading ${legacyProgress}%` : 'Live environment' }}</span>
-        </div>
-      </button>
-      <button
-        class="server-btn server-btn-pbe"
-        :class="{ active: !legacyActive, switching: legacyDownloading }"
-        :disabled="legacyDownloading"
-        @click="switchToPbe"
-      >
-        <div class="server-btn-glow" />
-        <div class="server-btn-content">
-          <span class="server-label">PBE</span>
-          <span class="server-desc">Public beta environment</span>
-        </div>
-      </button>
-    </div>
-
     <!-- Autoexec Config -->
     <div class="config-header">
       <h3>wicautoexec.txt</h3>
