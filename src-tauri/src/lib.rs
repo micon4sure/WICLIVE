@@ -6,12 +6,6 @@ use tauri::Manager;
 pub mod elevation;
 
 pub fn run() {
-
-    // Ensure registry entry is up to date
-    if let Some(path) = core::get_install_path() {
-        let _ = core::register_install(&path);
-    }
-
     let api_url = api_url();
 
     tauri::Builder::default()
