@@ -1154,9 +1154,18 @@ pub fn set_wicgate_setting(key: &str, value: &str) -> Result<(), String> {
 
 // ── Game launch ────────────────────────────────────────────────────
 
-/// Launch wic.exe from given path.
+/// Launch a game executable from its installation directory.
 pub fn launch_game(exe_path: &str) -> Result<(), String> {
-    std::process::Command::new(exe_path)
+    let exe = PathBuf::from(exe_path);
+    let install_dir = exe.parent().ok_or_else(|| {
+        format!(
+            "Could not determine install directory for {}",
+            exe.display()
+        )
+    })?;
+
+    std::process::Command::new(&exe)
+        .current_dir(install_dir)
         .spawn()
         .map_err(|e| e.to_string())?;
     Ok(())
@@ -1167,6 +1176,26 @@ pub fn launch_game(exe_path: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── launch executable resolution ───────────────────────────
+
+    #[test]
+    fn resolve_launch_exe_prefers_wic_and_falls_back_to_online() {
+        let dir =
+            std::env::temp_dir().join(format!("wiclive-launch-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let online = dir.join(GAME_EXE);
+        std::fs::write(&online, []).unwrap();
+        assert_eq!(resolve_launch_exe(dir.to_str().unwrap()).unwrap(), online);
+
+        let base = dir.join(BASE_EXE);
+        std::fs::write(&base, []).unwrap();
+        assert_eq!(resolve_launch_exe(dir.to_str().unwrap()).unwrap(), base);
+
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 
     // ── has_block ──────────────────────────────────────────────
 

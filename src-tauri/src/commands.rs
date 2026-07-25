@@ -473,9 +473,13 @@ pub fn set_wicgate_setting(key: String, value: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn get_debug_info(
+    app: tauri::AppHandle,
     config: tauri::State<'_, crate::ApiConfig>,
 ) -> Result<String, String> {
     let mut lines: Vec<String> = vec!["=== WIC LIVE Debug Info ===".into()];
+
+    // Launcher version
+    lines.push(format!("WIC LIVE Version: {}", app.package_info().version));
 
     // API URL
     lines.push(format!("API URL: {}", config.url));
