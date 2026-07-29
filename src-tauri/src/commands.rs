@@ -341,8 +341,11 @@ pub async fn request_cd_key(
     source: String,
 ) -> Result<String, String> {
     let url = format!("{}/cdkey/generate/{}", config.url, source);
+    let product = core::installed_product_id()?;
     let client = reqwest::Client::new();
-    let resp = client.post(&url)
+    let resp = client
+        .post(&url)
+        .json(&serde_json::json!({ "product": product }))
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -352,7 +355,9 @@ pub async fn request_cd_key(
         return Err(format!("HTTP {}: {}", status, body));
     }
     #[derive(serde::Deserialize)]
-    struct KeyResponse { key: String }
+    struct KeyResponse {
+        key: String,
+    }
     let data: KeyResponse = resp.json().await.map_err(|e| e.to_string())?;
     Ok(data.key)
 }

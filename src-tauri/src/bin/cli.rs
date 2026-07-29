@@ -121,12 +121,24 @@ fn cmd_cdkey() {
 fn cmd_request_cdkey() {
     let api = wiclive_lib::api_url();
     let url = format!("{}/cdkey/generate/cli", api);
-    println!("POST {}", url);
+    let product = match core::installed_product_id() {
+        Ok(product) => product,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            process::exit(1);
+        }
+    };
+    println!("POST {} (product {})", url, product);
 
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let client = reqwest::Client::new();
-        let resp = client.post(&url).send().await.unwrap();
+        let resp = client
+            .post(&url)
+            .json(&serde_json::json!({ "product": product }))
+            .send()
+            .await
+            .unwrap();
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
         println!("HTTP {}", status);

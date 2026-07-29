@@ -524,9 +524,22 @@ pub fn deactivate_legacy_proxy(install_dir: &str) -> Result<(), String> {
 
 // ── Soviet Assault detection ───────────────────────────────────────
 
+pub const PRODUCT_ID_WIC07_STANDARD_KEY: u8 = 1;
+pub const PRODUCT_ID_WIC08_STANDARD_KEY: u8 = 3;
+
 /// Check if Soviet Assault is installed (assault.dat exists).
 pub fn is_soviet_assault(install_dir: &str) -> bool {
     PathBuf::from(install_dir).join("assault.dat").exists()
+}
+
+/// Return the Massgate CD-key product matching the installed game edition.
+pub fn installed_product_id() -> Result<u8, String> {
+    let install_dir = require_install_path()?;
+    Ok(if is_soviet_assault(&install_dir) {
+        PRODUCT_ID_WIC08_STANDARD_KEY
+    } else {
+        PRODUCT_ID_WIC07_STANDARD_KEY
+    })
 }
 
 // ── Reset exe to variant ───────────────────────────────────────────
