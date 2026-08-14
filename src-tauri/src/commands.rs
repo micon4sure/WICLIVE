@@ -56,6 +56,18 @@ pub fn unset_laa_flag() -> Result<bool, String> {
 }
 
 #[tauri::command]
+pub fn get_skip_launcher_flag() -> Result<bool, String> {
+    let dir = core::require_install_path()?;
+    core::check_skip_launcher(&dir)
+}
+
+#[tauri::command]
+pub fn set_skip_launcher_flag(enabled: bool) -> Result<bool, String> {
+    let dir = core::require_install_path()?;
+    core::set_skip_launcher(&dir, enabled)
+}
+
+#[tauri::command]
 pub fn get_cd_key() -> Result<String, String> {
     core::read_cd_key()
 }
@@ -138,7 +150,8 @@ pub fn is_soviet_assault() -> bool {
 pub fn start_game() -> Result<(), String> {
     let dir = core::require_install_path()?;
     let exe = core::resolve_launch_exe(&dir)?;
-    core::launch_game(exe.to_str().unwrap())
+    let settings = core::get_wicgate_settings()?;
+    core::launch_game(exe.to_str().unwrap(), settings.nointro, settings.playonline)
 }
 
 #[tauri::command]

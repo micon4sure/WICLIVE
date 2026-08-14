@@ -29,6 +29,8 @@ pub fn run() {
             commands::get_laa_flag,
             commands::set_laa_flag,
             commands::unset_laa_flag,
+            commands::get_skip_launcher_flag,
+            commands::set_skip_launcher_flag,
             commands::get_cd_key,
             commands::set_cd_key,
             commands::check_vcredist,

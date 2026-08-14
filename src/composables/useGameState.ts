@@ -18,6 +18,10 @@ const broken = ref(false)
 const checking = ref(false)
 const wasFixed = ref(false)
 const wasInstalled = ref(false)
+const skipLauncher = ref(false)
+const skipLauncherAvailable = ref(false)
+const skipLauncherBusy = ref(true)
+const skipLauncherError = ref('')
 
 const readinessActions = ref<Record<string, ReadinessAction>>({
   vcredist: { need: false, has: false, detail: '' },
@@ -41,6 +45,38 @@ const needInstall = computed(() => !installed.value)
 const needFix = computed(() => installed.value && Object.values(readinessActions.value).some(a => a.need && !a.has))
 const isReady = computed(() => (!needFix.value || wasFixed.value) && (!needInstall.value || wasInstalled.value))
 
+async function refreshSkipLauncher() {
+  skipLauncherBusy.value = true
+  skipLauncherError.value = ''
+  try {
+    skipLauncher.value = await invoke<boolean>('get_skip_launcher_flag')
+    skipLauncherAvailable.value = true
+  } catch (e) {
+    skipLauncher.value = false
+    skipLauncherAvailable.value = false
+    skipLauncherError.value = String(e)
+  } finally {
+    skipLauncherBusy.value = false
+  }
+}
+
+async function setSkipLauncher(enabled: boolean): Promise<boolean> {
+  if (!skipLauncherAvailable.value || skipLauncherBusy.value) return false
+
+  skipLauncherBusy.value = true
+  skipLauncherError.value = ''
+  try {
+    skipLauncher.value = await invoke<boolean>('set_skip_launcher_flag', { enabled })
+    skipLauncherAvailable.value = true
+    return true
+  } catch (e) {
+    skipLauncherError.value = String(e)
+    return false
+  } finally {
+    skipLauncherBusy.value = false
+  }
+}
+
 async function check() {
   checking.value = true
 
@@ -49,6 +85,10 @@ async function check() {
     const hasRegistry = await invoke<boolean>('has_registry_install_path')
     installed.value = false
     broken.value = hasRegistry
+    skipLauncher.value = false
+    skipLauncherAvailable.value = false
+    skipLauncherBusy.value = false
+    skipLauncherError.value = ''
     checking.value = false
     initialized.value = true
     return
@@ -86,6 +126,8 @@ async function check() {
   } catch {
     readinessActions.value.laa = { need: true, has: false, detail: 'Error' }
   }
+
+  await refreshSkipLauncher()
 
   try {
     const key = await invoke<string>('get_cd_key')
@@ -130,12 +172,18 @@ export function useGameState() {
     checking,
     wasFixed,
     wasInstalled,
+    skipLauncher,
+    skipLauncherAvailable,
+    skipLauncherBusy,
+    skipLauncherError,
     readinessActions,
     installActions,
     needInstall,
     needFix,
     isReady,
     check,
+    refreshSkipLauncher,
+    setSkipLauncher,
     onInstalled,
   }
 }

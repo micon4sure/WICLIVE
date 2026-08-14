@@ -1,11 +1,24 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useGameState } from '../composables/useGameState'
 
 const live = ref(false)
 const competitive = ref(false)
 const loading = ref(true)
 const error = ref('')
+const {
+  skipLauncher,
+  skipLauncherAvailable,
+  skipLauncherBusy,
+  skipLauncherError,
+  setSkipLauncher,
+} = useGameState()
+
+async function toggleSkipLauncher() {
+  if (!skipLauncherAvailable.value || skipLauncherBusy.value) return
+  await setSkipLauncher(!skipLauncher.value)
+}
 
 async function loadState() {
   loading.value = true
@@ -44,6 +57,8 @@ async function toggleCompetitive() {
 
 // User settings (wicgate.txt)
 interface WicgateSettings {
+  nointro: boolean
+  playonline: boolean
   camera_fix: boolean
   hilite_own_color: string
   ignore_alt_tab: boolean
@@ -52,6 +67,8 @@ interface WicgateSettings {
 }
 
 const userSettings = ref<WicgateSettings>({
+  nointro: false,
+  playonline: false,
   camera_fix: true,
   hilite_own_color: '',
   ignore_alt_tab: false,
@@ -59,8 +76,11 @@ const userSettings = ref<WicgateSettings>({
   nuke_warning: true,
 })
 const userError = ref('')
+const launchError = ref('')
+const settingsLoading = ref(true)
 
 type BoolKey = 'camera_fix' | 'ignore_alt_tab' | 'no_cursor_speed' | 'nuke_warning'
+type LaunchBoolKey = 'nointro' | 'playonline'
 
 const boolSettings: { key: BoolKey; name: string; desc: string }[] = [
   { key: 'camera_fix', name: 'Camera Fix', desc: 'No fly-to on drop zone change' },
@@ -101,11 +121,29 @@ const currentColorHex = computed(() => {
 })
 
 async function loadUserSettings() {
+  settingsLoading.value = true
   userError.value = ''
+  launchError.value = ''
   try {
     userSettings.value = await invoke<WicgateSettings>('get_wicgate_settings')
   } catch (e) {
     userError.value = String(e)
+    launchError.value = String(e)
+  } finally {
+    settingsLoading.value = false
+  }
+}
+
+async function toggleLaunchSetting(key: LaunchBoolKey) {
+  if (settingsLoading.value) return
+
+  launchError.value = ''
+  const target = !userSettings.value[key]
+  try {
+    await invoke('set_wicgate_setting', { key, value: target ? '1' : '0' })
+    userSettings.value[key] = target
+  } catch (e) {
+    launchError.value = String(e)
   }
 }
 
@@ -149,6 +187,84 @@ onMounted(async () => {
 
 <template>
   <div class="config-section">
+    <!-- Executable Config -->
+    <div class="config-header">
+      <h3>Game Startup</h3>
+      <span class="config-sub">Launch options — changes apply on next launch</span>
+    </div>
+
+    <div
+      class="config-card startup-card"
+      :class="{ active: skipLauncher || userSettings.nointro || userSettings.playonline }"
+    >
+      <div
+        class="card-top"
+        :class="{ disabled: !skipLauncherAvailable || skipLauncherBusy }"
+        role="switch"
+        :aria-checked="skipLauncher"
+        :aria-disabled="!skipLauncherAvailable || skipLauncherBusy"
+        :tabindex="skipLauncherAvailable && !skipLauncherBusy ? 0 : -1"
+        @click="toggleSkipLauncher"
+        @keydown.enter.prevent="toggleSkipLauncher"
+        @keydown.space.prevent="toggleSkipLauncher"
+      >
+        <div class="toggle-track" :class="{ on: skipLauncher }">
+          <div class="toggle-thumb" />
+        </div>
+        <div class="card-title-area">
+          <span class="card-title">Skip Welcome Launcher</span>
+          <span class="card-desc">
+            <template v-if="skipLauncherBusy">Checking installed executable...</template>
+            <template v-else-if="!skipLauncherAvailable">Unavailable for this game executable</template>
+            <template v-else-if="skipLauncher">Start World in Conflict directly</template>
+            <template v-else>Show the Start Game window</template>
+          </span>
+        </div>
+      </div>
+      <div class="card-detail">
+        <div
+          class="setting-row"
+          :class="{ disabled: settingsLoading }"
+          role="switch"
+          :aria-checked="userSettings.nointro"
+          :aria-disabled="settingsLoading"
+          :tabindex="settingsLoading ? -1 : 0"
+          @click="toggleLaunchSetting('nointro')"
+          @keydown.enter.prevent="toggleLaunchSetting('nointro')"
+          @keydown.space.prevent="toggleLaunchSetting('nointro')"
+        >
+          <div class="toggle-track" :class="{ on: userSettings.nointro }">
+            <div class="toggle-thumb" />
+          </div>
+          <div class="setting-text">
+            <span class="setting-name">Skip Intro Videos</span>
+            <span class="setting-desc">Skip publisher logos and intro movie (-nointro)</span>
+          </div>
+        </div>
+        <div
+          class="setting-row"
+          :class="{ disabled: settingsLoading }"
+          role="switch"
+          :aria-checked="userSettings.playonline"
+          :aria-disabled="settingsLoading"
+          :tabindex="settingsLoading ? -1 : 0"
+          @click="toggleLaunchSetting('playonline')"
+          @keydown.enter.prevent="toggleLaunchSetting('playonline')"
+          @keydown.space.prevent="toggleLaunchSetting('playonline')"
+        >
+          <div class="toggle-track" :class="{ on: userSettings.playonline }">
+            <div class="toggle-thumb" />
+          </div>
+          <div class="setting-text">
+            <span class="setting-name">Straight to Multiplayer</span>
+            <span class="setting-desc">Open the multiplayer login screen (-playonline)</span>
+          </div>
+        </div>
+      </div>
+      <div v-if="skipLauncherError" class="config-error startup-error">{{ skipLauncherError }}</div>
+      <div v-if="launchError" class="config-error startup-error">{{ launchError }}</div>
+    </div>
+
     <!-- Autoexec Config -->
     <div class="config-header">
       <h3>wicautoexec.txt</h3>
@@ -387,15 +503,17 @@ onMounted(async () => {
 .config-header h3 {
   margin: 0 0 4px;
   font-family: 'Oswald', sans-serif;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-primary);
 }
 .config-sub {
-  font-size: 14px;
-  color: var(--text-tertiary);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text-secondary);
 }
 
 .config-error {
@@ -430,6 +548,15 @@ onMounted(async () => {
   transition: background 0.2s ease;
 }
 .card-top:hover { background: rgba(var(--mid-gray-rgb), 0.2); }
+.card-top.disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.card-top.disabled:hover { background: transparent; }
+
+.startup-error {
+  border-width: 1px 0 0;
+}
 
 .card-title-area {
   display: flex;
@@ -438,15 +565,17 @@ onMounted(async () => {
 }
 .card-title {
   font-family: 'Oswald', sans-serif;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-primary);
 }
 .card-desc {
-  font-size: 13px;
-  color: var(--text-tertiary);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text-secondary);
 }
 
 .card-detail {
@@ -457,8 +586,10 @@ onMounted(async () => {
 .detail-grid {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 3px 10px;
-  font-size: 13px;
+  gap: 5px 12px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
 }
 
 .detail-sep {
@@ -469,7 +600,7 @@ onMounted(async () => {
 
 .bind-key {
   font-family: 'Rajdhani', sans-serif;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--c-brand);
   text-align: right;
 }
@@ -518,32 +649,41 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 0;
+  padding: 8px 0;
   cursor: pointer;
 }
 .setting-row:hover {
   background: rgba(var(--mid-gray-rgb), 0.15);
 }
+.setting-row.disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.setting-row.disabled:hover {
+  background: transparent;
+}
 
 .setting-text {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
   min-width: 0;
 }
 
 .setting-name {
   font-family: 'Oswald', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-primary);
 }
 
 .setting-desc {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text-secondary);
 }
 
 /* Color picker */
@@ -597,8 +737,9 @@ onMounted(async () => {
 }
 
 .color-hex-label {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
   font-family: monospace;
 }
 </style>

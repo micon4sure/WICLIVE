@@ -329,6 +329,187 @@ pub fn unset_laa(path: &str) -> Result<bool, String> {
     Ok(true)
 }
 
+// ── Welcome launcher flag ─────────────────────────────────────────
+
+const LAUNCHER_SHOW_OPCODE: u8 = 0x75; // JNE
+const LAUNCHER_SKIP_OPCODE: u8 = 0xEB; // JMP
+const LAUNCHER_SIGNATURE_LEN: usize = 42;
+
+#[derive(Debug)]
+struct LauncherFlagSite {
+    path: PathBuf,
+    offset: u64,
+    opcode: u8,
+}
+
+/// Find the conditional branch that opens the post-1.10 welcome launcher.
+///
+/// The surrounding instructions are shared by `wic.exe` and
+/// `wic_online.exe`, while their file offsets and absolute addresses differ.
+/// Matching the complete instruction sequence keeps this safe across the
+/// known 1.10 and 1.11 layouts without writing to an unrecognised binary.
+fn find_launcher_flag_offset(bytes: &[u8]) -> Result<usize, String> {
+    if bytes.len() < LAUNCHER_SIGNATURE_LEN {
+        return Err("welcome launcher flag signature not found".into());
+    }
+
+    let mut found = None;
+    for start in 0..=bytes.len() - LAUNCHER_SIGNATURE_LEN {
+        let opcode = bytes[start + 6];
+        let global = &bytes[start + 2..start + 6];
+        let matches = bytes[start] == 0x39
+            && bytes[start + 1] == 0x1D
+            && matches!(opcode, LAUNCHER_SHOW_OPCODE | LAUNCHER_SKIP_OPCODE)
+            && bytes[start + 7] == 0x10
+            && bytes[start + 8] == 0xE8
+            && bytes[start + 13..start + 18] == [0x83, 0xF8, 0x01, 0x75, 0x06]
+            && bytes[start + 18] == 0x89
+            && bytes[start + 19] == 0x3D
+            && &bytes[start + 20..start + 24] == global
+            && bytes[start + 24] == 0xE8
+            && bytes[start + 29] == 0xE8
+            && bytes[start + 34] == 0x39
+            && bytes[start + 35] == 0x1D
+            && &bytes[start + 36..start + 40] == global
+            && bytes[start + 40] == 0x75
+            && bytes[start + 41] == 0x39;
+
+        if matches {
+            if found.is_some() {
+                return Err("multiple welcome launcher flag signatures found".into());
+            }
+            found = Some(start + 6);
+        }
+    }
+
+    found.ok_or_else(|| "welcome launcher flag signature not found".into())
+}
+
+fn inspect_launcher_flag(path: &std::path::Path) -> Result<LauncherFlagSite, String> {
+    let bytes =
+        std::fs::read(path).map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+    let offset =
+        find_launcher_flag_offset(&bytes).map_err(|e| format!("{}: {}", path.display(), e))?;
+
+    Ok(LauncherFlagSite {
+        path: path.to_path_buf(),
+        offset: offset as u64,
+        opcode: bytes[offset],
+    })
+}
+
+fn write_launcher_opcode(
+    site: &LauncherFlagSite,
+    expected: u8,
+    replacement: u8,
+) -> Result<(), String> {
+    use std::fs::OpenOptions;
+    use std::io::{Read, Seek, SeekFrom, Write};
+
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&site.path)
+        .map_err(|e| format!("Failed to open {}: {}", site.path.display(), e))?;
+
+    file.seek(SeekFrom::Start(site.offset))
+        .map_err(|e| format!("Failed to seek {}: {}", site.path.display(), e))?;
+    let mut current = [0u8; 1];
+    file.read_exact(&mut current)
+        .map_err(|e| format!("Failed to verify {}: {}", site.path.display(), e))?;
+    if current[0] != expected {
+        return Err(format!(
+            "{} changed while updating its welcome launcher flag",
+            site.path.display()
+        ));
+    }
+
+    file.seek(SeekFrom::Start(site.offset))
+        .map_err(|e| format!("Failed to seek {}: {}", site.path.display(), e))?;
+    file.write_all(&[replacement])
+        .map_err(|e| format!("Failed to update {}: {}", site.path.display(), e))?;
+    file.sync_data()
+        .map_err(|e| format!("Failed to flush {}: {}", site.path.display(), e))?;
+
+    file.seek(SeekFrom::Start(site.offset))
+        .map_err(|e| format!("Failed to seek {}: {}", site.path.display(), e))?;
+    file.read_exact(&mut current)
+        .map_err(|e| format!("Failed to verify {}: {}", site.path.display(), e))?;
+    if current[0] != replacement {
+        return Err(format!(
+            "Failed to verify the welcome launcher flag in {}",
+            site.path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+/// Check every launchable executable in the install. The setting is considered
+/// enabled only when all existing executables skip the welcome launcher.
+pub fn check_skip_launcher(install_dir: &str) -> Result<bool, String> {
+    let exes = existing_launchable_exes(install_dir);
+    if exes.is_empty() {
+        return Err("No wic.exe or wic_online.exe found".into());
+    }
+
+    let sites = exes
+        .iter()
+        .map(|path| inspect_launcher_flag(path))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(sites
+        .iter()
+        .all(|site| site.opcode == LAUNCHER_SKIP_OPCODE))
+}
+
+/// Set the launcher behaviour on every executable that exists in the install.
+/// All targets are validated before the first byte is changed. If a later write
+/// fails, earlier changes are rolled back to keep the executables consistent.
+pub fn set_skip_launcher(install_dir: &str, enabled: bool) -> Result<bool, String> {
+    let exes = existing_launchable_exes(install_dir);
+    if exes.is_empty() {
+        return Err("No wic.exe or wic_online.exe found".into());
+    }
+
+    let sites = exes
+        .iter()
+        .map(|path| inspect_launcher_flag(path))
+        .collect::<Result<Vec<_>, _>>()?;
+    let replacement = if enabled {
+        LAUNCHER_SKIP_OPCODE
+    } else {
+        LAUNCHER_SHOW_OPCODE
+    };
+
+    let mut changed: Vec<&LauncherFlagSite> = Vec::new();
+    for site in &sites {
+        if site.opcode == replacement {
+            continue;
+        }
+        if let Err(error) = write_launcher_opcode(site, site.opcode, replacement) {
+            let mut rollback_errors = Vec::new();
+            for previous in changed.iter().rev() {
+                if let Err(rollback_error) =
+                    write_launcher_opcode(previous, replacement, previous.opcode)
+                {
+                    rollback_errors.push(rollback_error);
+                }
+            }
+            if rollback_errors.is_empty() {
+                return Err(error);
+            }
+            return Err(format!(
+                "{}; rollback also failed: {}",
+                error,
+                rollback_errors.join("; ")
+            ));
+        }
+        changed.push(site);
+    }
+
+    check_skip_launcher(install_dir)
+}
+
 // ── CD Key ─────────────────────────────────────────────────────────
 
 /// Read CD key from HKCU registry.
@@ -1049,6 +1230,13 @@ const WICGATE_CONFIG: &str = "wicgate.txt";
 const WICGATE_CONFIG_DEFAULTS: &str = "\
 ; WiCGate Client Proxy Configuration\r\n\
 ; Delete this file to regenerate defaults. Changes require game restart.\r\n\
+; The [launcher] section is used by WIC LIVE and ignored by the proxy.\r\n\
+\r\n\
+[launcher]\r\n\
+; Skip publisher logos and the intro movie\r\n\
+nointro=0\r\n\
+; Open the multiplayer login screen after launch\r\n\
+playonline=0\r\n\
 \r\n\
 [camera_fix]\r\n\
 ; Prevent camera fly-to when changing drop zone mid-game\r\n\
@@ -1082,8 +1270,41 @@ fn ensure_wicgate_config() -> Result<PathBuf, String> {
     let path = wicgate_config_path()?;
     if !path.exists() {
         std::fs::write(&path, WICGATE_CONFIG_DEFAULTS).map_err(|e| e.to_string())?;
+        return Ok(path);
+    }
+
+    let contents = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    if contents
+        .bytes()
+        .all(|byte| byte == 0 || byte.is_ascii_whitespace())
+    {
+        std::fs::write(&path, WICGATE_CONFIG_DEFAULTS).map_err(|e| e.to_string())?;
+    } else if let Some(updated) = add_missing_launcher_settings(&contents) {
+        std::fs::write(&path, updated).map_err(|e| e.to_string())?;
     }
     Ok(path)
+}
+
+fn add_missing_launcher_settings(contents: &str) -> Option<String> {
+    let missing_nointro = parse_wicgate_value(contents, "nointro").is_none();
+    let missing_playonline = parse_wicgate_value(contents, "playonline").is_none();
+    if !missing_nointro && !missing_playonline {
+        return None;
+    }
+
+    let mut result = contents.trim_end_matches(['\r', '\n']).to_string();
+    if !result.is_empty() {
+        result.push_str("\r\n\r\n");
+    }
+    result.push_str("[launcher]\r\n");
+    result.push_str("; WIC LIVE launch options (ignored by the client proxy)\r\n");
+    if missing_nointro {
+        result.push_str("nointro=0\r\n");
+    }
+    if missing_playonline {
+        result.push_str("playonline=0\r\n");
+    }
+    Some(result)
 }
 
 fn parse_wicgate_value(contents: &str, key: &str) -> Option<String> {
@@ -1103,6 +1324,8 @@ fn parse_wicgate_value(contents: &str, key: &str) -> Option<String> {
 
 #[derive(serde::Serialize)]
 pub struct WicgateSettings {
+    pub nointro: bool,
+    pub playonline: bool,
     pub camera_fix: bool,
     pub hilite_own_color: String,
     pub ignore_alt_tab: bool,
@@ -1115,6 +1338,12 @@ pub fn get_wicgate_settings() -> Result<WicgateSettings, String> {
     let contents = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
 
     Ok(WicgateSettings {
+        nointro: parse_wicgate_value(&contents, "nointro")
+            .map(|v| v == "1")
+            .unwrap_or(false),
+        playonline: parse_wicgate_value(&contents, "playonline")
+            .map(|v| v == "1")
+            .unwrap_or(false),
         camera_fix: parse_wicgate_value(&contents, "camera_fix")
             .map(|v| v == "1")
             .unwrap_or(true),
@@ -1167,8 +1396,19 @@ pub fn set_wicgate_setting(key: &str, value: &str) -> Result<(), String> {
 
 // ── Game launch ────────────────────────────────────────────────────
 
+fn launch_arguments(nointro: bool, playonline: bool) -> Vec<&'static str> {
+    let mut arguments = Vec::new();
+    if nointro {
+        arguments.push("-nointro");
+    }
+    if playonline {
+        arguments.push("-playonline");
+    }
+    arguments
+}
+
 /// Launch a game executable from its installation directory.
-pub fn launch_game(exe_path: &str) -> Result<(), String> {
+pub fn launch_game(exe_path: &str, nointro: bool, playonline: bool) -> Result<(), String> {
     let exe = PathBuf::from(exe_path);
     let install_dir = exe.parent().ok_or_else(|| {
         format!(
@@ -1179,6 +1419,7 @@ pub fn launch_game(exe_path: &str) -> Result<(), String> {
 
     std::process::Command::new(&exe)
         .current_dir(install_dir)
+        .args(launch_arguments(nointro, playonline))
         .spawn()
         .map_err(|e| e.to_string())?;
     Ok(())
@@ -1206,6 +1447,142 @@ mod tests {
         let base = dir.join(BASE_EXE);
         std::fs::write(&base, []).unwrap();
         assert_eq!(resolve_launch_exe(dir.to_str().unwrap()).unwrap(), base);
+
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn launch_arguments_follow_saved_options() {
+        assert_eq!(launch_arguments(false, false), Vec::<&str>::new());
+        assert_eq!(launch_arguments(true, false), vec!["-nointro"]);
+        assert_eq!(launch_arguments(false, true), vec!["-playonline"]);
+        assert_eq!(
+            launch_arguments(true, true),
+            vec!["-nointro", "-playonline"]
+        );
+    }
+
+    #[test]
+    fn launcher_settings_are_added_without_replacing_existing_config() {
+        let original = "[camera_fix]\r\ncamera_fix=0\r\n";
+        let updated = add_missing_launcher_settings(original).unwrap();
+
+        assert!(updated.starts_with(original));
+        assert_eq!(parse_wicgate_value(&updated, "camera_fix").unwrap(), "0");
+        assert_eq!(parse_wicgate_value(&updated, "nointro").unwrap(), "0");
+        assert_eq!(parse_wicgate_value(&updated, "playonline").unwrap(), "0");
+        assert!(add_missing_launcher_settings(&updated).is_none());
+    }
+
+    #[test]
+    fn launcher_settings_migration_adds_only_missing_keys() {
+        let original = "[launcher]\r\nnointro=1\r\n";
+        let updated = add_missing_launcher_settings(original).unwrap();
+
+        assert_eq!(updated.matches("nointro=").count(), 1);
+        assert_eq!(parse_wicgate_value(&updated, "nointro").unwrap(), "1");
+        assert_eq!(parse_wicgate_value(&updated, "playonline").unwrap(), "0");
+    }
+
+    // ── welcome launcher flag ─────────────────────────────────
+
+    fn launcher_fixture(opcode: u8) -> Vec<u8> {
+        let mut bytes = vec![0x90; 11];
+        bytes.extend_from_slice(&[
+            0x39, 0x1D, 0xE8, 0x81, 0xDB, 0x00, opcode, 0x10, 0xE8, 0x10, 0x42, 0x05, 0x00, 0x83,
+            0xF8, 0x01, 0x75, 0x06, 0x89, 0x3D, 0xE8, 0x81, 0xDB, 0x00, 0xE8, 0xC0, 0xEA, 0xFF,
+            0xFF, 0xE8, 0x0B, 0x06, 0xFD, 0xFF, 0x39, 0x1D, 0xE8, 0x81, 0xDB, 0x00, 0x75, 0x39,
+        ]);
+        bytes.extend_from_slice(&[0x90; 7]);
+        bytes
+    }
+
+    fn launcher_test_dir(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("wiclive-launcher-{}-{}", name, std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn finds_both_launcher_flag_states() {
+        assert_eq!(
+            find_launcher_flag_offset(&launcher_fixture(LAUNCHER_SHOW_OPCODE)).unwrap(),
+            17
+        );
+        assert_eq!(
+            find_launcher_flag_offset(&launcher_fixture(LAUNCHER_SKIP_OPCODE)).unwrap(),
+            17
+        );
+    }
+
+    #[test]
+    fn rejects_missing_or_ambiguous_launcher_signatures() {
+        assert!(find_launcher_flag_offset(&[0x90; 64]).is_err());
+
+        let mut ambiguous = launcher_fixture(LAUNCHER_SHOW_OPCODE);
+        ambiguous.extend_from_slice(&launcher_fixture(LAUNCHER_SKIP_OPCODE));
+        assert!(find_launcher_flag_offset(&ambiguous).is_err());
+    }
+
+    #[test]
+    fn launcher_flag_supports_online_only_installs() {
+        let dir = launcher_test_dir("online-only");
+        let online = dir.join(GAME_EXE);
+        let original = launcher_fixture(LAUNCHER_SHOW_OPCODE);
+        std::fs::write(&online, &original).unwrap();
+
+        assert!(!check_skip_launcher(dir.to_str().unwrap()).unwrap());
+        assert!(set_skip_launcher(dir.to_str().unwrap(), true).unwrap());
+
+        let enabled = std::fs::read(&online).unwrap();
+        let differences: Vec<_> = original
+            .iter()
+            .zip(&enabled)
+            .enumerate()
+            .filter(|(_, (before, after))| before != after)
+            .collect();
+        assert_eq!(differences.len(), 1);
+        assert_eq!(differences[0].0, 17);
+        assert_eq!(enabled[17], LAUNCHER_SKIP_OPCODE);
+
+        assert!(!set_skip_launcher(dir.to_str().unwrap(), false).unwrap());
+        assert_eq!(std::fs::read(&online).unwrap(), original);
+
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn launcher_flag_reads_off_if_either_exe_is_off_and_updates_both() {
+        let dir = launcher_test_dir("mixed-state");
+        let base = dir.join(BASE_EXE);
+        let online = dir.join(GAME_EXE);
+        std::fs::write(&base, launcher_fixture(LAUNCHER_SKIP_OPCODE)).unwrap();
+        std::fs::write(&online, launcher_fixture(LAUNCHER_SHOW_OPCODE)).unwrap();
+
+        assert!(!check_skip_launcher(dir.to_str().unwrap()).unwrap());
+        assert!(set_skip_launcher(dir.to_str().unwrap(), true).unwrap());
+        assert_eq!(std::fs::read(&base).unwrap()[17], LAUNCHER_SKIP_OPCODE);
+        assert_eq!(std::fs::read(&online).unwrap()[17], LAUNCHER_SKIP_OPCODE);
+
+        std::fs::write(&base, launcher_fixture(LAUNCHER_SHOW_OPCODE)).unwrap();
+        assert!(!check_skip_launcher(dir.to_str().unwrap()).unwrap());
+
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn launcher_flag_validates_all_exes_before_writing() {
+        let dir = launcher_test_dir("prevalidate");
+        let base = dir.join(BASE_EXE);
+        let online = dir.join(GAME_EXE);
+        let original = launcher_fixture(LAUNCHER_SHOW_OPCODE);
+        std::fs::write(&base, &original).unwrap();
+        std::fs::write(&online, [0x90; 64]).unwrap();
+
+        assert!(set_skip_launcher(dir.to_str().unwrap(), true).is_err());
+        assert_eq!(std::fs::read(&base).unwrap(), original);
 
         std::fs::remove_dir_all(dir).unwrap();
     }
