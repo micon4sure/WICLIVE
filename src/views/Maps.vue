@@ -6,12 +6,13 @@ import { onMounted, ref, type Ref } from 'vue'
 import iconDownload from '@fortawesome/fontawesome-free/svgs/solid/download.svg';
 
 
+const apiUrl = 'https://wiclive.wicgate.org'
 const _maps = ref([] as any[])
 const _sort: Ref<string> = ref('date')
 const _sortDirection: Ref<'asc' | 'desc'> = ref('desc')
 
 onMounted(async () => {
-  const response = await axios.get('https://techtile.media:3243/maps/data')
+  const response = await axios.get(`${apiUrl}/maps/data`)
 
   _maps.value = response.data
 
@@ -50,7 +51,7 @@ const setSort = (sort: string) => {
         '↓' }}</span></th>
     </tr>
     <tr v-for="map in _maps" :key="map.id">
-      <td><a :href="'https://techtile.media:3243/maps/download/' + map.name" class="cta small">
+      <td><a :href="`${apiUrl}/maps/download/${map.name}`" class="cta small">
           <iconDownload class="icon" />
           Download
         </a></td>
