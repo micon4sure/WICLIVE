@@ -13,11 +13,20 @@ const {
   skipLauncherBusy,
   skipLauncherError,
   setSkipLauncher,
+  compatibilityProxy,
+  proxySwitchBusy,
+  proxySwitchError,
+  setCompatibilityProxy,
 } = useGameState()
 
 async function toggleSkipLauncher() {
   if (!skipLauncherAvailable.value || skipLauncherBusy.value) return
   await setSkipLauncher(!skipLauncher.value)
+}
+
+async function toggleCompatibilityProxy() {
+  if (proxySwitchBusy.value) return
+  await setCompatibilityProxy(!compatibilityProxy.value)
 }
 
 async function loadState() {
@@ -187,6 +196,45 @@ onMounted(async () => {
 
 <template>
   <div class="config-section">
+    <!-- Proxy Config -->
+    <div class="config-header">
+      <h3>Multiplayer Proxy</h3>
+      <span class="config-sub">Changing this option downloads and installs the selected proxy immediately</span>
+    </div>
+
+    <div class="config-card" :class="{ active: compatibilityProxy }">
+      <div
+        class="card-top"
+        :class="{ disabled: proxySwitchBusy }"
+        role="switch"
+        :aria-checked="compatibilityProxy"
+        :aria-disabled="proxySwitchBusy"
+        :tabindex="proxySwitchBusy ? -1 : 0"
+        @click="toggleCompatibilityProxy"
+        @keydown.enter.prevent="toggleCompatibilityProxy"
+        @keydown.space.prevent="toggleCompatibilityProxy"
+      >
+        <div class="toggle-track" :class="{ on: compatibilityProxy }">
+          <div class="toggle-thumb" />
+        </div>
+        <div class="card-title-area">
+          <span class="card-title">Compatibility Proxy</span>
+          <span class="card-desc">
+            <template v-if="proxySwitchBusy">
+              Installing {{ compatibilityProxy ? 'standard' : 'compatibility' }} proxy...
+            </template>
+            <template v-else-if="compatibilityProxy">
+              Server redirect and high-core-count fix only
+            </template>
+            <template v-else>
+              Standard proxy with all client fixes
+            </template>
+          </span>
+        </div>
+      </div>
+      <div v-if="proxySwitchError" class="config-error startup-error">{{ proxySwitchError }}</div>
+    </div>
+
     <!-- Executable Config -->
     <div class="config-header">
       <h3>Game Startup</h3>

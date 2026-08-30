@@ -7,7 +7,7 @@ import Config from './components/Config.vue'
 import Maps from './components/Maps.vue'
 import { useGameState } from './composables/useGameState'
 
-const { initialized, needInstall, needFix, isReady, wasFixed, wasInstalled } = useGameState()
+const { initialized, needInstall, needFix, hasWarnings, isReady, wasFixed, wasInstalled } = useGameState()
 const activeTab = ref<'maps' | 'config'>('maps')
 
 const tabsDetached = ref(false)
@@ -32,8 +32,8 @@ onUnmounted(() => appBody.value?.removeEventListener('scroll', onScroll))
     </div>
     <InstallCard v-if="needInstall || wasInstalled" v-show="initialized" />
 
-    <ReadinessCard v-if="(!needInstall && needFix) || wasFixed" v-show="initialized" />
-    <div v-show="initialized && isReady" class="tab-area">
+    <ReadinessCard v-if="(!needInstall && (needFix || hasWarnings)) || wasFixed" v-show="initialized" />
+    <div v-show="initialized && isReady && !hasWarnings" class="tab-area">
       <div class="tab-nav-sticky" :class="{ detached: tabsDetached }">
         <div class="tab-nav">
           <button class="tab-btn" :class="{ active: activeTab === 'maps' }" @click="activeTab = 'maps'">

@@ -5,6 +5,7 @@ export interface ReadinessAction {
   need: boolean
   has: boolean
   detail: string
+  warning?: boolean
 }
 
 export interface InstallAction {
@@ -22,8 +23,12 @@ const skipLauncher = ref(false)
 const skipLauncherAvailable = ref(false)
 const skipLauncherBusy = ref(true)
 const skipLauncherError = ref('')
+const compatibilityProxy = ref(false)
+const proxySwitchBusy = ref(false)
+const proxySwitchError = ref('')
 
 const readinessActions = ref<Record<string, ReadinessAction>>({
+  documents: { need: false, has: false, detail: '' },
   vcredist: { need: false, has: false, detail: '' },
   dx9: { need: false, has: false, detail: '' },
   patch: { need: false, has: false, detail: '' },
@@ -42,7 +47,8 @@ const installActions = ref<Record<string, InstallAction>>({
 })
 
 const needInstall = computed(() => !installed.value)
-const needFix = computed(() => installed.value && Object.values(readinessActions.value).some(a => a.need && !a.has))
+const needFix = computed(() => installed.value && Object.values(readinessActions.value).some(a => a.need && !a.has && !a.warning))
+const hasWarnings = computed(() => installed.value && Object.values(readinessActions.value).some(a => a.need && !a.has && a.warning))
 const isReady = computed(() => (!needFix.value || wasFixed.value) && (!needInstall.value || wasInstalled.value))
 
 async function refreshSkipLauncher() {
@@ -98,6 +104,13 @@ async function check() {
   broken.value = false
 
   try {
+    await invoke<[boolean, boolean]>('get_autoexec_state')
+    readinessActions.value.documents = { need: true, has: true, detail: 'Found' }
+  } catch {
+    readinessActions.value.documents = { need: true, has: false, detail: 'Not found', warning: true }
+  }
+
+  try {
     const has = await invoke<boolean>('check_vcredist')
     readinessActions.value.vcredist = { need: true, has, detail: has ? 'Installed' : 'Missing' }
   } catch {
@@ -138,11 +151,18 @@ async function check() {
   }
 
   try {
-    const ok = await invoke<boolean>('check_proxy')
+    compatibilityProxy.value = await invoke<boolean>('is_compatibility_proxy')
+  } catch {
+    compatibilityProxy.value = false
+  }
+
+  try {
+    const compatibility = compatibilityProxy.value
+    const ok = await invoke<boolean>('check_proxy', { compatibility })
     if (ok) {
       readinessActions.value.proxy_installed = { need: true, has: true, detail: 'Installed' }
-      const ver = await invoke<string>('get_proxy_version')
-      const latest = await invoke<string>('get_latest_proxy_version').catch(() => '')
+      const ver = await invoke<string>('get_proxy_version', { compatibility })
+      const latest = await invoke<string>('get_latest_proxy_version', { compatibility }).catch(() => '')
       const current = !latest || ver.trim() === latest.trim()
       readinessActions.value.proxy_current = { need: true, has: current, detail: current ? ver.trim() : `${ver.trim()} → ${latest.trim()}` }
     } else {
@@ -156,6 +176,25 @@ async function check() {
 
   checking.value = false
   initialized.value = true
+}
+
+async function setCompatibilityProxy(enabled: boolean): Promise<boolean> {
+  if (proxySwitchBusy.value || enabled === compatibilityProxy.value) return false
+
+  proxySwitchBusy.value = true
+  proxySwitchError.value = ''
+  try {
+    await invoke<string>('install_proxy', { compatibility: enabled })
+    compatibilityProxy.value = enabled
+    await check()
+    return true
+  } catch (e) {
+    proxySwitchError.value = String(e)
+    await check().catch(() => {})
+    return false
+  } finally {
+    proxySwitchBusy.value = false
+  }
 }
 
 async function onInstalled() {
@@ -176,14 +215,19 @@ export function useGameState() {
     skipLauncherAvailable,
     skipLauncherBusy,
     skipLauncherError,
+    compatibilityProxy,
+    proxySwitchBusy,
+    proxySwitchError,
     readinessActions,
     installActions,
     needInstall,
     needFix,
+    hasWarnings,
     isReady,
     check,
     refreshSkipLauncher,
     setSkipLauncher,
+    setCompatibilityProxy,
     onInstalled,
   }
 }

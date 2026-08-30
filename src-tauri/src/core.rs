@@ -614,28 +614,63 @@ pub fn run_dx9_installer(_installer_path: &std::path::Path) -> Result<(), String
 
 // ── Hooks / Proxy ──────────────────────────────────────────────────
 
-/// Check if proxy is installed (version file exists in game dir).
-pub fn check_proxy(install_dir: &str) -> bool {
-    PathBuf::from(install_dir).join("wicgate-proxy-version.txt").exists()
+const PROXY_VERSION_FILE: &str = "wicgate-proxy-version.txt";
+const COMPAT_PROXY_VERSION_FILE: &str = "wicgate-compat-proxy-version.txt";
+
+fn proxy_version_file(compatibility: bool) -> &'static str {
+    if compatibility {
+        COMPAT_PROXY_VERSION_FILE
+    } else {
+        PROXY_VERSION_FILE
+    }
 }
 
-/// Get installed proxy version string.
-pub fn read_proxy_version(install_dir: &str) -> Result<String, String> {
-    let version_file = PathBuf::from(install_dir).join("wicgate-proxy-version.txt");
+/// Check if the selected proxy is installed (its version file exists in game dir).
+pub fn check_proxy(install_dir: &str, compatibility: bool) -> bool {
+    PathBuf::from(install_dir)
+        .join(proxy_version_file(compatibility))
+        .exists()
+}
+
+/// Return whether the compatibility proxy is the installed proxy variant.
+pub fn is_compatibility_proxy(install_dir: &str) -> bool {
+    check_proxy(install_dir, true)
+}
+
+/// Get the selected installed proxy's version string.
+pub fn read_proxy_version(install_dir: &str, compatibility: bool) -> Result<String, String> {
+    let version_file = PathBuf::from(install_dir).join(proxy_version_file(compatibility));
     std::fs::read_to_string(&version_file).map_err(|e| e.to_string())
 }
 
 /// Check if proxy needs updating by comparing installed vs latest version.
-pub fn needs_proxy_update(install_dir: &str, latest: &str) -> Result<bool, String> {
-    let version_file = PathBuf::from(install_dir).join("wicgate-proxy-version.txt");
+pub fn needs_proxy_update(
+    install_dir: &str,
+    latest: &str,
+    compatibility: bool,
+) -> Result<bool, String> {
+    let version_file = PathBuf::from(install_dir).join(proxy_version_file(compatibility));
     let installed = std::fs::read_to_string(&version_file).unwrap_or_default();
     Ok(installed.trim() != latest.trim())
+}
+
+/// Remove the other proxy's version marker after switching variants.
+pub fn remove_other_proxy_marker(
+    install_dir: &str,
+    compatibility: bool,
+) -> Result<(), String> {
+    let other = PathBuf::from(install_dir).join(proxy_version_file(!compatibility));
+    if other.exists() {
+        std::fs::remove_file(&other)
+            .map_err(|e| format!("Failed to remove {}: {}", other.display(), e))?;
+    }
+    Ok(())
 }
 
 /// Remove proxy files from install directory.
 pub fn remove_proxy(install_dir: &str) -> Result<(), String> {
     let dir = PathBuf::from(install_dir);
-    for name in &["dbghelp.dll", "wicgate-proxy-version.txt"] {
+    for name in &["dbghelp.dll", PROXY_VERSION_FILE, COMPAT_PROXY_VERSION_FILE] {
         let path = dir.join(name);
         if path.exists() {
             std::fs::remove_file(&path)
@@ -1430,6 +1465,31 @@ pub fn launch_game(exe_path: &str, nointro: bool, playonline: bool) -> Result<()
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn proxy_variant_markers_select_and_switch_the_installed_proxy() {
+        let dir =
+            std::env::temp_dir().join(format!("wiclive-proxy-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        std::fs::write(dir.join(PROXY_VERSION_FILE), "standard-1").unwrap();
+        assert!(check_proxy(dir.to_str().unwrap(), false));
+        assert!(!check_proxy(dir.to_str().unwrap(), true));
+        assert!(!is_compatibility_proxy(dir.to_str().unwrap()));
+
+        std::fs::write(dir.join(COMPAT_PROXY_VERSION_FILE), "compat-1").unwrap();
+        remove_other_proxy_marker(dir.to_str().unwrap(), true).unwrap();
+        assert!(!check_proxy(dir.to_str().unwrap(), false));
+        assert!(check_proxy(dir.to_str().unwrap(), true));
+        assert!(is_compatibility_proxy(dir.to_str().unwrap()));
+        assert_eq!(
+            read_proxy_version(dir.to_str().unwrap(), true).unwrap(),
+            "compat-1"
+        );
+
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 
     // ── launch executable resolution ───────────────────────────
 

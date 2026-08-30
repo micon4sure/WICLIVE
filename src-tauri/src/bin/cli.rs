@@ -171,8 +171,8 @@ fn cmd_vcredist() {
 
 fn cmd_proxy(args: &[String]) {
     let dir = resolve_dir(args);
-    if core::check_proxy(&dir) {
-        match core::read_proxy_version(&dir) {
+    if core::check_proxy(&dir, false) {
+        match core::read_proxy_version(&dir, false) {
             Ok(ver) => println!("Proxy: {}", ver.trim()),
             Err(_) => println!("Proxy: installed (version unknown)"),
         }
@@ -251,8 +251,8 @@ fn cmd_check_all(args: &[String]) {
     }
 
     // Proxy
-    if core::check_proxy(&dir) {
-        match core::read_proxy_version(&dir) {
+    if core::check_proxy(&dir, false) {
+        match core::read_proxy_version(&dir, false) {
             Ok(ver) => println!("Proxy:    {}", ver.trim()),
             Err(_) => println!("Proxy:    installed"),
         }

@@ -37,6 +37,7 @@ pub fn run() {
             commands::check_dx9,
             commands::install_dx9,
             commands::check_proxy,
+            commands::is_compatibility_proxy,
             commands::get_proxy_version,
             commands::needs_proxy_update,
             commands::is_soviet_assault,

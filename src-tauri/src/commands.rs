@@ -122,21 +122,27 @@ pub async fn install_dx9(
 }
 
 #[tauri::command]
-pub fn check_proxy() -> Result<bool, String> {
+pub fn check_proxy(compatibility: bool) -> Result<bool, String> {
     let dir = core::require_install_path()?;
-    Ok(core::check_proxy(&dir))
+    Ok(core::check_proxy(&dir, compatibility))
 }
 
 #[tauri::command]
-pub fn get_proxy_version() -> Result<String, String> {
+pub fn is_compatibility_proxy() -> Result<bool, String> {
     let dir = core::require_install_path()?;
-    core::read_proxy_version(&dir)
+    Ok(core::is_compatibility_proxy(&dir))
 }
 
 #[tauri::command]
-pub fn needs_proxy_update(latest: String) -> Result<bool, String> {
+pub fn get_proxy_version(compatibility: bool) -> Result<String, String> {
     let dir = core::require_install_path()?;
-    core::needs_proxy_update(&dir, &latest)
+    core::read_proxy_version(&dir, compatibility)
+}
+
+#[tauri::command]
+pub fn needs_proxy_update(latest: String, compatibility: bool) -> Result<bool, String> {
+    let dir = core::require_install_path()?;
+    core::needs_proxy_update(&dir, &latest, compatibility)
 }
 
 #[tauri::command]
@@ -150,8 +156,10 @@ pub fn is_soviet_assault() -> bool {
 pub fn start_game() -> Result<(), String> {
     let dir = core::require_install_path()?;
     let exe = core::resolve_launch_exe(&dir)?;
-    let settings = core::get_wicgate_settings()?;
-    core::launch_game(exe.to_str().unwrap(), settings.nointro, settings.playonline)
+    let (nointro, playonline) = core::get_wicgate_settings()
+        .map(|settings| (settings.nointro, settings.playonline))
+        .unwrap_or((false, false));
+    core::launch_game(exe.to_str().unwrap(), nointro, playonline)
 }
 
 #[tauri::command]
@@ -164,18 +172,25 @@ pub fn reset_game(variant: String) -> Result<(), String> {
 pub async fn install_proxy(
     app: tauri::AppHandle,
     config: tauri::State<'_, crate::ApiConfig>,
+    compatibility: bool,
 ) -> Result<String, String> {
     let install_dir = core::require_install_path()?;
-    let url = format!("{}/proxy/download", config.url);
-    let tmp_zip = std::env::temp_dir().join("proxy.zip");
+    let (route, archive_name) = if compatibility {
+        ("proxy/compat/download", "proxy-compat.zip")
+    } else {
+        ("proxy/download", "proxy.zip")
+    };
+    let url = format!("{}/{}", config.url, route);
+    let tmp_zip = std::env::temp_dir().join(archive_name);
 
     let app_dl = app.clone();
+    let progress_name = archive_name.to_string();
     core::download_file(&url, &tmp_zip, move |downloaded, total| {
         let _ = app_dl.emit("proxy-progress", PatchProgress {
             stage: "downloading".into(),
             downloaded,
             total,
-            detail: "proxy.zip".into(),
+            detail: progress_name.clone(),
         });
     }).await?;
 
@@ -207,15 +222,23 @@ pub async fn install_proxy(
         detail: format!("{} files extracted", count),
     });
 
-    let ver = core::read_proxy_version(&install_dir).unwrap_or_default();
+    let ver = core::read_proxy_version(&install_dir, compatibility)
+        .map_err(|_| format!("{} did not contain its version marker", archive_name))?;
+    core::remove_other_proxy_marker(&install_dir, compatibility)?;
     Ok(ver.trim().to_string())
 }
 
 #[tauri::command]
 pub async fn get_latest_proxy_version(
     config: tauri::State<'_, crate::ApiConfig>,
+    compatibility: bool,
 ) -> Result<String, String> {
-    let url = format!("{}/proxy/version", config.url);
+    let route = if compatibility {
+        "proxy/compat/version"
+    } else {
+        "proxy/version"
+    };
+    let url = format!("{}/{}", config.url, route);
     let resp = reqwest::get(&url).await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
         return Err(format!("HTTP {}", resp.status()));
@@ -573,9 +596,14 @@ pub async fn get_debug_info(
     // Proxy
     match core::require_install_path() {
         Ok(dir) => {
-            if core::check_proxy(&dir) {
-                match core::read_proxy_version(&dir) {
-                    Ok(v) => lines.push(format!("Proxy: {}", v.trim())),
+            let compatibility = core::is_compatibility_proxy(&dir);
+            if core::check_proxy(&dir, compatibility) {
+                match core::read_proxy_version(&dir, compatibility) {
+                    Ok(v) => lines.push(format!(
+                        "Proxy: {}{}",
+                        v.trim(),
+                        if compatibility { " (compatibility)" } else { "" }
+                    )),
                     Err(_) => lines.push("Proxy: installed (version unknown)".into()),
                 }
             } else {

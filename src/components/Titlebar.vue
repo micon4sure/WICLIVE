@@ -11,6 +11,7 @@ const appWindow = getCurrentWindow()
 const version = ref('')
 
 const labels: Record<string, string> = {
+  documents: 'Documents',
   vcredist: 'VC++',
   patch: 'Patches',
   laa: 'LAA',
@@ -24,6 +25,7 @@ const pills = computed(() =>
     let status: string
     if (checking.value && !a.need) status = 'checking'
     else if (a.has) status = 'done'
+    else if (a.warning) status = 'warning'
     else if (a.need) status = 'needed'
     else status = 'checking'
     return { id, label: labels[id] || id, status, detail: a.detail }
@@ -38,8 +40,20 @@ function minimize() { appWindow.minimize() }
 function toggleMaximize() { appWindow.toggleMaximize() }
 function close() { appWindow.close() }
 
+const launching = ref(false)
+const launchError = ref('')
+
 async function launchGame() {
-  await invoke('start_game')
+  if (launching.value) return
+  launching.value = true
+  launchError.value = ''
+  try {
+    await invoke('start_game')
+  } catch (e) {
+    launchError.value = String(e)
+  } finally {
+    launching.value = false
+  }
 }
 
 const isDev = import.meta.env.DEV
@@ -100,6 +114,7 @@ async function copyDebug() {
         <div v-for="pill in pills" :key="pill.id" class="status-pill" :class="pill.status">
           <span class="pill-icon">
             <template v-if="pill.status === 'done'">&#x2713;</template>
+            <template v-else-if="pill.status === 'warning'">!</template>
             <template v-else-if="pill.status === 'needed'">&#x25CB;</template>
             <template v-else>&middot;&middot;</template>
           </span>
@@ -109,8 +124,11 @@ async function copyDebug() {
       </div>
     </div>
 
-    <button v-if="installed && initialized" class="btn btn-launch header-launch" :disabled="!isReady" @click.stop="launchGame">Start Game</button>
+    <button v-if="installed && initialized" class="btn btn-launch header-launch" :disabled="!isReady || launching" @click.stop="launchGame">
+      {{ launching ? 'Starting...' : 'Start Game' }}
+    </button>
   </div>
+  <div v-if="launchError" class="launch-error">Could not start World in Conflict: {{ launchError }}</div>
 </template>
 
 <style scoped>
@@ -262,6 +280,10 @@ async function copyDebug() {
   color: var(--c-pending);
 }
 
+.status-pill.warning {
+  color: var(--c-action);
+}
+
 .status-pill.applying {
   color: var(--c-progress);
 }
@@ -277,6 +299,15 @@ async function copyDebug() {
 
 .header-launch {
   align-self: center;
+}
+
+.launch-error {
+  padding: 9px 20px;
+  background: rgba(var(--c-error-rgb), 0.15);
+  border-bottom: 1px solid rgba(var(--c-error-rgb), 0.4);
+  color: var(--c-error);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .header:hover {

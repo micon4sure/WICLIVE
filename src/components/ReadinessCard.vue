@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useGameState } from '../composables/useGameState'
 
-const { readinessActions, wasFixed, check } = useGameState()
+const { readinessActions, wasFixed, check, compatibilityProxy } = useGameState()
 
 const fixing = ref(false)
 const currentFix = ref('')
@@ -20,6 +20,10 @@ const fixStatus = ref<Record<string, 'applying' | 'fixed' | 'error'>>({})
 const fixDetail = ref<Record<string, string>>({})
 
 const meta: Record<string, { label: string; desc: string }> = {
+  documents: {
+    label: 'Game Documents Directory',
+    desc: 'The World in Conflict directory was not found in Documents. Start the game once so it can create the directory, then restart WIC LIVE.',
+  },
   vcredist: {
     label: 'VC++ Redistributable',
     desc: 'The Visual Studio C++ Redistributable is missing. This is required to run the game.',
@@ -57,9 +61,17 @@ const visibleItems = computed(() =>
       id,
       label: meta[id]?.label || id,
       desc: meta[id]?.desc || '',
-      status: fixStatus.value[id] || 'needed',
+      status: fixStatus.value[id] || (a.warning ? 'warning' : 'needed'),
       detail: fixDetail.value[id] || a.detail,
     }))
+)
+
+const hasFixableItems = computed(() =>
+  Object.values(readinessActions.value).some(a => a.need && !a.has && !a.warning)
+)
+
+const onlyWarnings = computed(() =>
+  !hasFixableItems.value && Object.values(readinessActions.value).some(a => a.need && !a.has && a.warning)
 )
 
 const allFixed = computed(() =>
@@ -88,7 +100,7 @@ async function runFixes() {
   fixing.value = true
 
   const toFix = Object.entries(readinessActions.value)
-    .filter(([, a]) => a.need && !a.has)
+    .filter(([, a]) => a.need && !a.has && !a.warning)
     .map(([id]) => id)
 
   const unlisten = await listen<{
@@ -152,7 +164,7 @@ async function runFixes() {
         fixDetail.value[id] = 'Installed'
       } else if (id === 'proxy_installed' || id === 'proxy_current') {
         fixDetail.value[id] = id === 'proxy_current' ? 'Updating...' : 'Installing...'
-        const ver = await invoke<string>('install_proxy')
+        const ver = await invoke<string>('install_proxy', { compatibility: compatibilityProxy.value })
         fixStatus.value[id] = 'fixed'
         fixDetail.value[id] = ver || 'Installed'
       } else {
@@ -175,7 +187,7 @@ async function runFixes() {
   await check()
 
   // Downgrade if check reveals remaining issues
-  if (Object.values(readinessActions.value).some(a => a.need && !a.has)) {
+  if (Object.values(readinessActions.value).some(a => a.need && !a.has && !a.warning)) {
     wasFixed.value = false
   }
 }
@@ -186,15 +198,15 @@ async function runFixes() {
     <div class="readiness-header">
       <div class="readiness-header-row">
         <h3 class="header-title">
-          <span class="title-text title-pending" :class="{ 'title-hidden': allFixed || fixing }">Game Readiness</span>
+          <span class="title-text title-pending" :class="{ 'title-hidden': allFixed || fixing, 'title-warning': onlyWarnings }">Game Readiness</span>
           <span class="title-text title-fixing" :class="{ 'title-hidden': !fixing || allFixed }">Fixing Issues</span>
           <span class="title-text title-done" :class="{ 'title-hidden': !allFixed }">Game Readiness: All Set</span>
         </h3>
-        <div class="header-btn-wrap" :class="{ 'btn-hidden': allFixed }">
+        <div class="header-btn-wrap" :class="{ 'btn-hidden': allFixed || !hasFixableItems }">
           <button class="btn btn-primary" :disabled="fixing" @click="runFixes">Fix</button>
         </div>
       </div>
-      <div class="header-sub" :class="{ 'sub-hidden': allFixed }">
+      <div class="header-sub" :class="{ 'sub-hidden': allFixed || onlyWarnings }">
         <p v-if="!fixing">The following issues need to be resolved before you can play.</p>
       </div>
     </div>
@@ -207,6 +219,7 @@ async function runFixes() {
             <template v-if="item.status === 'applying'">fixing...</template>
             <template v-else-if="item.status === 'fixed'">fixed</template>
             <template v-else-if="item.status === 'error'">failed</template>
+            <template v-else-if="item.status === 'warning'">warning</template>
             <template v-else>pending</template>
           </span>
         </div>
@@ -292,6 +305,18 @@ async function runFixes() {
 
 .title-pending {
   color: var(--c-pending);
+}
+
+.title-warning {
+  color: var(--c-action);
+}
+
+:deep(.status-warning) {
+  border-left-color: var(--c-action);
+}
+
+:deep(.status-warning .item-status) {
+  color: var(--c-action);
 }
 
 .title-fixing {
