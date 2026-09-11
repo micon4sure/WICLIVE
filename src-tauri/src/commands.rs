@@ -68,6 +68,18 @@ pub fn set_skip_launcher_flag(enabled: bool) -> Result<bool, String> {
 }
 
 #[tauri::command]
+pub fn get_dx9_reset() -> Result<crate::dx9_reset::ResetState, String> {
+    let dir = core::require_install_path()?;
+    crate::dx9_reset::get_state(&core::resolve_launch_exe(&dir)?)
+}
+
+#[tauri::command]
+pub fn set_dx9_reset(enabled: bool) -> Result<crate::dx9_reset::ResetState, String> {
+    let dir = core::require_install_path()?;
+    crate::dx9_reset::set_enabled(&core::resolve_launch_exe(&dir)?, enabled)
+}
+
+#[tauri::command]
 pub fn get_cd_key() -> Result<String, String> {
     core::read_cd_key()
 }

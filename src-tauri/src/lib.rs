@@ -1,5 +1,6 @@
 mod commands;
 mod cdkey;
+mod dx9_reset;
 pub mod core;
 
 use tauri::Manager;
@@ -32,6 +33,8 @@ pub fn run() {
             commands::unset_laa_flag,
             commands::get_skip_launcher_flag,
             commands::set_skip_launcher_flag,
+            commands::get_dx9_reset,
+            commands::set_dx9_reset,
             commands::get_cd_key,
             commands::check_cd_key,
             commands::set_cd_key,

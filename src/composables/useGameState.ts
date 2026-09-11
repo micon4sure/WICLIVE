@@ -23,6 +23,10 @@ const skipLauncher = ref(false)
 const skipLauncherAvailable = ref(false)
 const skipLauncherBusy = ref(true)
 const skipLauncherError = ref('')
+const dx9Reset = ref(false)
+const dx9ResetAvailable = ref(false)
+const dx9ResetBusy = ref(true)
+const dx9ResetError = ref('')
 const compatibilityProxy = ref(false)
 const proxySwitchBusy = ref(false)
 const proxySwitchError = ref('')
@@ -83,6 +87,41 @@ async function setSkipLauncher(enabled: boolean): Promise<boolean> {
   }
 }
 
+interface Dx9ResetState { available: boolean; enabled: boolean }
+
+async function refreshDx9Reset() {
+  dx9ResetBusy.value = true
+  dx9ResetError.value = ''
+  try {
+    const result = await invoke<Dx9ResetState>('get_dx9_reset')
+    dx9Reset.value = result.enabled
+    dx9ResetAvailable.value = result.available
+  } catch (e) {
+    dx9Reset.value = false
+    dx9ResetAvailable.value = false
+    dx9ResetError.value = String(e)
+  } finally {
+    dx9ResetBusy.value = false
+  }
+}
+
+async function setDx9Reset(enabled: boolean): Promise<boolean> {
+  if (!dx9ResetAvailable.value || dx9ResetBusy.value) return false
+  dx9ResetBusy.value = true
+  dx9ResetError.value = ''
+  try {
+    const result = await invoke<Dx9ResetState>('set_dx9_reset', { enabled })
+    dx9Reset.value = result.enabled
+    dx9ResetAvailable.value = result.available
+    return true
+  } catch (e) {
+    dx9ResetError.value = String(e)
+    return false
+  } finally {
+    dx9ResetBusy.value = false
+  }
+}
+
 async function check() {
   checking.value = true
 
@@ -95,6 +134,10 @@ async function check() {
     skipLauncherAvailable.value = false
     skipLauncherBusy.value = false
     skipLauncherError.value = ''
+    dx9Reset.value = false
+    dx9ResetAvailable.value = false
+    dx9ResetBusy.value = false
+    dx9ResetError.value = ''
     checking.value = false
     initialized.value = true
     return
@@ -141,6 +184,7 @@ async function check() {
   }
 
   await refreshSkipLauncher()
+  await refreshDx9Reset()
 
   try {
     const result = await invoke<{ valid: boolean; detail: string }>('check_cd_key')
@@ -214,6 +258,10 @@ export function useGameState() {
     skipLauncherAvailable,
     skipLauncherBusy,
     skipLauncherError,
+    dx9Reset,
+    dx9ResetAvailable,
+    dx9ResetBusy,
+    dx9ResetError,
     compatibilityProxy,
     proxySwitchBusy,
     proxySwitchError,
@@ -226,6 +274,7 @@ export function useGameState() {
     check,
     refreshSkipLauncher,
     setSkipLauncher,
+    setDx9Reset,
     setCompatibilityProxy,
     onInstalled,
   }

@@ -13,7 +13,13 @@ const {
   skipLauncherBusy,
   skipLauncherError,
   setSkipLauncher,
+  dx9Reset,
+  dx9ResetAvailable,
+  dx9ResetBusy,
+  dx9ResetError,
+  setDx9Reset,
   compatibilityProxy,
+  checking,
   proxySwitchBusy,
   proxySwitchError,
   setCompatibilityProxy,
@@ -27,6 +33,10 @@ async function toggleSkipLauncher() {
 async function toggleCompatibilityProxy() {
   if (proxySwitchBusy.value) return
   await setCompatibilityProxy(!compatibilityProxy.value)
+}
+
+async function toggleDx9Reset() {
+  await setDx9Reset(!dx9Reset.value)
 }
 
 async function loadState() {
@@ -87,6 +97,9 @@ const userSettings = ref<WicgateSettings>({
 const userError = ref('')
 const launchError = ref('')
 const settingsLoading = ref(true)
+const proxySettingsDisabled = computed(() =>
+  compatibilityProxy.value || proxySwitchBusy.value || checking.value || settingsLoading.value,
+)
 
 type BoolKey = 'camera_fix' | 'ignore_alt_tab' | 'no_cursor_speed' | 'nuke_warning'
 type LaunchBoolKey = 'nointro' | 'playonline'
@@ -157,6 +170,7 @@ async function toggleLaunchSetting(key: LaunchBoolKey) {
 }
 
 async function toggleUserSetting(key: BoolKey) {
+  if (proxySettingsDisabled.value) return
   userError.value = ''
   const target = !userSettings.value[key]
   try {
@@ -168,6 +182,7 @@ async function toggleUserSetting(key: BoolKey) {
 }
 
 async function setHighlightColor(color: string) {
+  if (proxySettingsDisabled.value) return
   userError.value = ''
   try {
     await invoke('set_wicgate_setting', { key: 'hilite_own_color', value: color })
@@ -233,6 +248,10 @@ onMounted(async () => {
         </div>
       </div>
       <div v-if="proxySwitchError" class="config-error startup-error">{{ proxySwitchError }}</div>
+      <div v-if="compatibilityProxy" class="config-warning" role="status">
+        <span class="warning-badge">Warning</span>
+        <span>Only server redirect and the CPU core-limit fix are active. Standard-proxy fixes and user settings are unavailable.</span>
+      </div>
     </div>
 
     <!-- Executable Config -->
@@ -243,7 +262,7 @@ onMounted(async () => {
 
     <div
       class="config-card startup-card"
-      :class="{ active: skipLauncher || userSettings.nointro || userSettings.playonline }"
+      :class="{ active: skipLauncher || dx9Reset || userSettings.nointro || userSettings.playonline }"
     >
       <div
         class="card-top"
@@ -270,6 +289,33 @@ onMounted(async () => {
         </div>
       </div>
       <div class="card-detail">
+        <div
+          class="setting-row"
+          :class="{ disabled: !dx9ResetAvailable || dx9ResetBusy }"
+          role="switch"
+          :aria-checked="dx9Reset"
+          :aria-disabled="!dx9ResetAvailable || dx9ResetBusy"
+          :tabindex="dx9ResetAvailable && !dx9ResetBusy ? 0 : -1"
+          @click="toggleDx9Reset"
+          @keydown.enter.prevent="toggleDx9Reset"
+          @keydown.space.prevent="toggleDx9Reset"
+        >
+          <div class="toggle-track" :class="{ on: dx9Reset }"><div class="toggle-thumb" /></div>
+          <div class="setting-text">
+            <span class="setting-name">Suppress DX10</span>
+            <span class="setting-desc">
+              <template v-if="dx9ResetBusy">Checking DirectX preference...</template>
+              <template v-else-if="!dx9ResetAvailable">Unavailable for this game executable</template>
+              <template v-else-if="dx9Reset">Reset the saved DirectX preference to DX9 (GOG default)</template>
+              <template v-else>Remember the chosen DX9/DX10 setting</template>
+              <template v-if="dx9ResetAvailable && !dx9ResetBusy">. Close the game before changing this option.</template>
+            </span>
+          </div>
+        </div>
+        <div v-if="dx9ResetAvailable && !dx9Reset" class="config-warning" role="status">
+          <span class="warning-badge">Warning</span>
+          <span>DX10 can be buggy in this game.</span>
+        </div>
         <div
           class="setting-row"
           :class="{ disabled: settingsLoading }"
@@ -310,6 +356,7 @@ onMounted(async () => {
         </div>
       </div>
       <div v-if="skipLauncherError" class="config-error startup-error">{{ skipLauncherError }}</div>
+      <div v-if="dx9ResetError" class="config-error startup-error">{{ dx9ResetError }}</div>
       <div v-if="launchError" class="config-error startup-error">{{ launchError }}</div>
     </div>
 
@@ -373,15 +420,25 @@ onMounted(async () => {
       </div>
 
       <!-- User Settings -->
-      <div class="config-card" :class="{ active: userSettings.camera_fix || !!userSettings.hilite_own_color || userSettings.ignore_alt_tab || userSettings.no_cursor_speed || userSettings.nuke_warning }">
+      <div class="config-card" :class="{ 'proxy-settings-disabled': proxySettingsDisabled, active: !proxySettingsDisabled && (userSettings.camera_fix || !!userSettings.hilite_own_color || userSettings.ignore_alt_tab || userSettings.no_cursor_speed || userSettings.nuke_warning) }">
         <div class="user-settings-header">
           <span class="card-title">User Settings</span>
-          <span class="card-desc">wicgate.txt — requires restart</span>
+          <span class="card-desc">{{ compatibilityProxy ? 'Requires the standard proxy — saved choices are preserved' : 'wicgate.txt — requires restart' }}</span>
         </div>
         <div v-if="userError" class="config-error">{{ userError }}</div>
         <div class="card-detail">
           <!-- Highlight color (top) -->
-          <div class="setting-row" @click="toggleHighlight">
+          <div
+            class="setting-row"
+            :class="{ disabled: proxySettingsDisabled }"
+            role="switch"
+            :aria-checked="!!userSettings.hilite_own_color"
+            :aria-disabled="proxySettingsDisabled"
+            :tabindex="proxySettingsDisabled ? -1 : 0"
+            @click="toggleHighlight"
+            @keydown.enter.prevent="toggleHighlight"
+            @keydown.space.prevent="toggleHighlight"
+          >
             <div class="toggle-track" :class="{ on: !!userSettings.hilite_own_color }">
               <div class="toggle-thumb" />
             </div>
@@ -399,6 +456,7 @@ onMounted(async () => {
                 :class="{ active: userSettings.hilite_own_color === c.name }"
                 :style="{ backgroundColor: c.hex }"
                 :title="c.name.charAt(0).toUpperCase() + c.name.slice(1)"
+                :disabled="proxySettingsDisabled"
                 @click="setHighlightColor(c.name)"
               />
             </div>
@@ -408,6 +466,7 @@ onMounted(async () => {
                 :value="currentColorHex"
                 class="color-input-native"
                 title="Custom color"
+                :disabled="proxySettingsDisabled"
                 @input="handleColorWheel"
               />
               <span class="color-hex-label">{{ currentColorHex.toUpperCase() }}</span>
@@ -415,7 +474,17 @@ onMounted(async () => {
           </div>
           <div v-if="userSettings.hilite_own_color" class="detail-sep" />
           <!-- Boolean toggles -->
-          <div v-for="s in boolSettings" :key="s.key" class="setting-row" @click="toggleUserSetting(s.key)">
+          <div
+            v-for="s in boolSettings" :key="s.key" class="setting-row"
+            :class="{ disabled: proxySettingsDisabled }"
+            role="switch"
+            :aria-checked="userSettings[s.key]"
+            :aria-disabled="proxySettingsDisabled"
+            :tabindex="proxySettingsDisabled ? -1 : 0"
+            @click="toggleUserSetting(s.key)"
+            @keydown.enter.prevent="toggleUserSetting(s.key)"
+            @keydown.space.prevent="toggleUserSetting(s.key)"
+          >
             <div class="toggle-track" :class="{ on: userSettings[s.key] }">
               <div class="toggle-thumb" />
             </div>
@@ -586,6 +655,15 @@ onMounted(async () => {
 .config-card.active {
   border-color: rgba(var(--c-brand-rgb), 0.4);
 }
+.proxy-settings-disabled .card-detail {
+  filter: grayscale(1);
+}
+.proxy-settings-disabled .color-picker {
+  opacity: 0.65;
+}
+.proxy-settings-disabled :disabled {
+  cursor: not-allowed;
+}
 
 .card-top {
   display: flex;
@@ -604,6 +682,32 @@ onMounted(async () => {
 
 .startup-error {
   border-width: 1px 0 0;
+}
+
+.config-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(var(--c-brand-rgb), 0.3);
+  background: rgba(var(--c-brand-rgb), 0.07);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.card-detail > .config-warning {
+  margin: 2px 0 8px;
+  padding: 10px;
+  border: 1px solid rgba(var(--c-brand-rgb), 0.3);
+}
+.warning-badge {
+  flex-shrink: 0;
+  color: var(--c-brand);
+  border: 1px solid rgba(var(--c-brand-rgb), 0.5);
+  padding: 1px 5px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .card-title-area {

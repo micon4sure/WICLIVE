@@ -2,10 +2,20 @@ import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test'
 
 let keyResult = { valid: true, detail: 'test key' }
 let keyReadFails = false
-const invoke = mock(async (command: string): Promise<unknown> => {
+let dx9ResetResult = { available: true, enabled: true }
+let dx9ResetReadFails = false
+let dx9ResetWriteFails = false
+const invoke = mock(async (command: string, args?: Record<string, unknown>): Promise<unknown> => {
   switch (command) {
     case 'get_install_path': return 'C:\\Games\\World in Conflict'
     case 'get_autoexec_state': return [true, true]
+    case 'get_dx9_reset':
+      if (dx9ResetReadFails) throw new Error('executable unavailable')
+      return dx9ResetResult
+    case 'set_dx9_reset':
+      if (dx9ResetWriteFails) throw new Error('executable locked')
+      dx9ResetResult = { available: true, enabled: args?.enabled === true }
+      return dx9ResetResult
     case 'get_game_version': return { major: 1, minor: 0, patch: 1, build: 1 }
     case 'check_cd_key':
       if (keyReadFails) throw new Error('registry unavailable')
@@ -33,9 +43,61 @@ beforeAll(async () => {
 beforeEach(() => {
   keyResult = { valid: true, detail: 'test key' }
   keyReadFails = false
+  dx9ResetResult = { available: true, enabled: true }
+  dx9ResetReadFails = false
+  dx9ResetWriteFails = false
   state.wasFixed.value = false
   state.wasInstalled.value = false
   invoke.mockClear()
+})
+
+describe('DX9 reset', () => {
+  test('uses the existing executable setting without changing it during readiness checks', async () => {
+    for (const enabled of [true, false]) {
+      dx9ResetResult = { available: true, enabled }
+      await state.check()
+      expect(state.dx9Reset.value).toBe(enabled)
+      expect(state.dx9ResetAvailable.value).toBe(true)
+      expect(state.isReady.value).toBe(true)
+    }
+    expect(invoke.mock.calls.some(([command]) => command === 'set_dx9_reset')).toBe(false)
+  })
+
+  test('leaves unsupported executables untouched and does not block launch', async () => {
+    dx9ResetResult = { available: false, enabled: false }
+    await state.check()
+    expect(state.dx9ResetAvailable.value).toBe(false)
+    expect(state.isReady.value).toBe(true)
+    expect(await state.setDx9Reset(true)).toBe(false)
+    expect(await state.setDx9Reset(false)).toBe(false)
+    expect(invoke.mock.calls.some(([command]) => command === 'set_dx9_reset')).toBe(false)
+  })
+
+  test('retains the confirmed setting after a failed write and allows retry', async () => {
+    await state.check()
+    dx9ResetWriteFails = true
+    expect(await state.setDx9Reset(false)).toBe(false)
+    expect(state.dx9Reset.value).toBe(true)
+    expect(state.dx9ResetError.value).toContain('executable locked')
+    expect(state.dx9ResetBusy.value).toBe(false)
+    dx9ResetWriteFails = false
+    expect(await state.setDx9Reset(false)).toBe(true)
+    expect(state.dx9Reset.value).toBe(false)
+    expect(state.dx9ResetError.value).toBe('')
+    expect(await state.setDx9Reset(true)).toBe(true)
+    expect(state.dx9Reset.value).toBe(true)
+  })
+
+  test('disables the toggle when the executable can no longer be read', async () => {
+    await state.check()
+    dx9ResetReadFails = true
+    await state.check()
+    expect(state.dx9ResetAvailable.value).toBe(false)
+    expect(state.dx9Reset.value).toBe(false)
+    expect(state.dx9ResetError.value).toContain('executable unavailable')
+    expect(await state.setDx9Reset(false)).toBe(false)
+    expect(invoke.mock.calls.some(([command]) => command === 'set_dx9_reset')).toBe(false)
+  })
 })
 
 describe('CD-key readiness', () => {

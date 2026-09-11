@@ -334,7 +334,7 @@ struct LauncherFlagSite {
 /// `wic_online.exe`, while their file offsets and absolute addresses differ.
 /// Matching the complete instruction sequence keeps this safe across the
 /// known 1.10 and 1.11 layouts without writing to an unrecognised binary.
-fn find_launcher_flag_offset(bytes: &[u8]) -> Result<usize, String> {
+pub(crate) fn find_launcher_flag_offset(bytes: &[u8]) -> Result<usize, String> {
     if bytes.len() < LAUNCHER_SIGNATURE_LEN {
         return Err("welcome launcher flag signature not found".into());
     }
