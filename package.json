@@ -1,11 +1,12 @@
 {
   "name": "wiclive",
   "private": true,
-  "version": "4.7.0",
+  "version": "4.7.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
+    "test": "bun test",
     "preview": "vite preview",
     "tauri": "tauri"
   },

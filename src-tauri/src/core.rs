@@ -6,54 +6,54 @@ const LAUNCHABLE_EXES: &[&str] = &[BASE_EXE, GAME_EXE];
 
 // ── Install detection ──────────────────────────────────────────────
 
-/// Detect game install path from Windows registry.
-pub fn get_install_path() -> Option<String> {
-    use winreg::enums::*;
-    use winreg::RegKey;
+// Preserve the existing standard/GOG priority, then try GOG's install directory.
+const INSTALL_PATH_VALUES: &[(&str, &str)] = &[
+    (
+        r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict",
+        "InstallPath",
+    ),
+    (r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414", "WORKINGDIR"),
+    (r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414", "path"),
+];
 
-    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-
-    // Standard install
-    if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict") {
-        if let Ok(path) = key.get_value::<String, _>("InstallPath") {
-            if PathBuf::from(&path).join(GAME_EXE).exists() {
-                return Some(path);
-            }
-        }
-    }
-
-    // GOG variant
-    if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414") {
-        if let Ok(path) = key.get_value::<String, _>("WORKINGDIR") {
-            if PathBuf::from(&path).join(GAME_EXE).exists() {
-                return Some(path);
-            }
-        }
-    }
-
-    None
+fn install_paths_from(mut read_value: impl FnMut(&str, &str) -> Option<String>) -> Vec<String> {
+    INSTALL_PATH_VALUES
+        .iter()
+        .filter_map(|(key, value)| read_value(key, value))
+        // An empty or relative registry value must not resolve against WIC LIVE's cwd.
+        .filter(|path| PathBuf::from(path).is_absolute())
+        .collect()
 }
 
-/// Check if the registry has an install path entry (regardless of whether files exist).
-pub fn has_registry_install_path() -> bool {
+fn registry_install_paths() -> Vec<String> {
     use winreg::enums::*;
     use winreg::RegKey;
 
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+    install_paths_from(|key, value| hklm.open_subkey(key).ok()?.get_value(value).ok())
+}
 
-    if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict") {
-        if key.get_value::<String, _>("InstallPath").is_ok() {
-            return true;
-        }
-    }
+fn find_install_exe(install_dir: &str) -> Option<PathBuf> {
+    let dir = PathBuf::from(install_dir);
+    // Keep the existing version-check preference, but allow base-game-only installs.
+    [GAME_EXE, BASE_EXE]
+        .iter()
+        .map(|name| dir.join(name))
+        .find(|path| path.is_file())
+}
 
-    if let Ok(key) = hklm.open_subkey(r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414") {
-        if key.get_value::<String, _>("WORKINGDIR").is_ok() {
-            return true;
-        }
-    }
+fn find_install_path(paths: Vec<String>) -> Option<String> {
+    paths.into_iter().find(|path| find_install_exe(path).is_some())
+}
 
-    false
+/// Detect a registered game folder containing either supported executable.
+pub fn get_install_path() -> Option<String> {
+    find_install_path(registry_install_paths())
+}
+
+/// Check for a registered install directory, even if its game files are missing.
+pub fn has_registry_install_path() -> bool {
+    !registry_install_paths().is_empty()
 }
 
 pub fn require_install_path() -> Result<String, String> {
@@ -67,20 +67,10 @@ pub fn clear_install_registry() -> Result<(), String> {
 
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
 
-    // Standard install
-    if let Ok(key) = hklm.open_subkey_with_flags(
-        r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict",
-        KEY_SET_VALUE,
-    ) {
-        let _ = key.delete_value("InstallPath");
-    }
-
-    // GOG variant
-    if let Ok(key) = hklm.open_subkey_with_flags(
-        r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414",
-        KEY_SET_VALUE,
-    ) {
-        let _ = key.delete_value("WORKINGDIR");
+    for (key, value) in INSTALL_PATH_VALUES {
+        if let Ok(key) = hklm.open_subkey_with_flags(key, KEY_SET_VALUE) {
+            let _ = key.delete_value(value);
+        }
     }
 
     Ok(())
@@ -88,11 +78,7 @@ pub fn clear_install_registry() -> Result<(), String> {
 
 pub fn require_exe_path() -> Result<PathBuf, String> {
     let path = require_install_path()?;
-    let exe = PathBuf::from(&path).join(GAME_EXE);
-    if !exe.exists() {
-        return Err(format!("{} not found", GAME_EXE));
-    }
-    Ok(exe)
+    find_install_exe(&path).ok_or_else(|| "No wic.exe or wic_online.exe found".into())
 }
 
 /// Paths of all launchable wic executables that exist in the install dir.
@@ -1465,6 +1451,147 @@ pub fn launch_game(exe_path: &str, nointro: bool, playonline: bool) -> Result<()
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn install_registry_fixture(values: &[(&str, &str, &str)]) -> Vec<String> {
+        install_paths_from(|key, value| {
+            values
+                .iter()
+                .find(|(entry_key, entry_value, _)| *entry_key == key && *entry_value == value)
+                .map(|(_, _, path)| path.to_string())
+        })
+    }
+
+    #[test]
+    fn install_detection_accepts_either_executable_but_not_directories() {
+        let dir = launcher_test_dir("install-detection-exes");
+        let path = dir.to_str().unwrap();
+        assert!(find_install_path(vec![path.to_string()]).is_none());
+
+        for name in [BASE_EXE, GAME_EXE] {
+            let exe = dir.join(name);
+            std::fs::write(&exe, []).unwrap();
+            assert_eq!(
+                find_install_path(vec![path.to_string()]),
+                Some(path.to_string())
+            );
+            assert_eq!(find_install_exe(path), Some(exe.clone()));
+
+            std::fs::remove_file(&exe).unwrap();
+            std::fs::create_dir(&exe).unwrap();
+            assert!(find_install_path(vec![path.to_string()]).is_none());
+            std::fs::remove_dir(&exe).unwrap();
+        }
+
+        std::fs::write(dir.join(BASE_EXE), []).unwrap();
+        std::fs::write(dir.join(GAME_EXE), []).unwrap();
+        assert_eq!(find_install_exe(path), Some(dir.join(GAME_EXE)));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn install_detection_uses_gog_path_without_workingdir() {
+        let dir = launcher_test_dir("GOG Complete Edition");
+        let path = dir.to_str().unwrap();
+        std::fs::write(dir.join(BASE_EXE), []).unwrap();
+        let paths = install_registry_fixture(&[(
+            r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414",
+            "path",
+            path,
+        )]);
+
+        assert_eq!(find_install_path(paths), Some(path.to_string()));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn install_detection_skips_stale_standard_and_gog_workingdir_paths() {
+        let dir = launcher_test_dir("install-detection-stale");
+        let path = dir.to_str().unwrap();
+        let stale = dir.join("removed");
+        std::fs::write(dir.join(GAME_EXE), []).unwrap();
+        let paths = install_registry_fixture(&[
+            (
+                r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict",
+                "InstallPath",
+                stale.to_str().unwrap(),
+            ),
+            (
+                r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414",
+                "WORKINGDIR",
+                stale.to_str().unwrap(),
+            ),
+            (r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414", "path", path),
+        ]);
+
+        assert_eq!(find_install_path(paths.clone()), Some(path.to_string()));
+        std::fs::remove_dir_all(dir).unwrap();
+        // Retain registered paths for the existing broken-install check.
+        assert!(!paths.is_empty());
+        assert!(find_install_path(paths).is_none());
+    }
+
+    #[test]
+    fn install_detection_preserves_standard_then_gog_workingdir_priority() {
+        let dir = launcher_test_dir("install-detection-priority");
+        let standard = dir.join("standard");
+        let working = dir.join("gog-workingdir");
+        let gog = dir.join("gog-path");
+        for install in [&standard, &working, &gog] {
+            std::fs::create_dir(install).unwrap();
+            std::fs::write(install.join(GAME_EXE), []).unwrap();
+        }
+        let paths = install_registry_fixture(&[
+            (
+                r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict",
+                "InstallPath",
+                standard.to_str().unwrap(),
+            ),
+            (
+                r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414",
+                "WORKINGDIR",
+                working.to_str().unwrap(),
+            ),
+            (
+                r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414",
+                "path",
+                gog.to_str().unwrap(),
+            ),
+        ]);
+
+        for install in [&standard, &working, &gog] {
+            assert_eq!(
+                find_install_path(paths.clone()),
+                Some(install.to_str().unwrap().to_string())
+            );
+            std::fs::remove_dir_all(install).unwrap();
+        }
+        assert!(find_install_path(paths).is_none());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn install_detection_ignores_missing_empty_and_relative_registry_values() {
+        assert!(install_registry_fixture(&[]).is_empty());
+        let paths = install_registry_fixture(&[
+            (
+                r"SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict",
+                "InstallPath",
+                "",
+            ),
+            (
+                r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414",
+                "WORKINGDIR",
+                "relative",
+            ),
+            (
+                r"SOFTWARE\WOW6432Node\GOG.com\Games\1438332414",
+                "path",
+                r"C:relative",
+            ),
+        ]);
+        assert!(paths.is_empty());
+        assert!(find_install_path(paths).is_none());
+    }
 
     #[test]
     fn proxy_variant_markers_select_and_switch_the_installed_proxy() {

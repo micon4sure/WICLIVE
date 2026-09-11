@@ -2,14 +2,18 @@
 
 ## Game Installation
 
-### Install Path (read only)
+Detection checks the following values in order and uses the first absolute directory containing a file named `wic.exe` or `wic_online.exe`. Missing files or invalid paths do not prevent checking later values. GOG Galaxy does not need to be running or installed; detection reads the game's registry entries.
+
+### Install Path
 - **Key**: `HKLM\SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict`
 - **Value**: `InstallPath` (REG_SZ)
 - **Example**: `C:\Program Files (x86)\Sierra Entertainment\World in Conflict\`
 
-### GOG Variant (read only, fallback)
+### GOG Variant (fallback)
 - **Key**: `HKLM\SOFTWARE\WOW6432Node\GOG.com\Games\1438332414`
-- **Value**: `WORKINGDIR` (REG_SZ)
+- **Values**: `WORKINGDIR`, then `path` (REG_SZ)
+
+The registered-install check uses the same values even when game files are missing. Registry cleanup removes these install-path values, including the GOG `path` fallback.
 
 ### Game Version (read/write)
 - **Key**: `HKLM\SOFTWARE\WOW6432Node\Massive Entertainment AB\World in Conflict`
@@ -24,6 +28,9 @@
 ### CD Key (read/write)
 - **Key**: `HKCU\Software\Massive Entertainment AB\World In Conflict`
 - **Value**: `CDKEY` (REG_SZ)
+
+Readiness validates the key's checksum and installed edition before accepting it.
+See [CD-key validation](cd-key-validation.md) for the rules and reference tests.
 
 ## VC++ Redistributable
 

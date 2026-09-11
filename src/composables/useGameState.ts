@@ -49,7 +49,7 @@ const installActions = ref<Record<string, InstallAction>>({
 const needInstall = computed(() => !installed.value)
 const needFix = computed(() => installed.value && Object.values(readinessActions.value).some(a => a.need && !a.has && !a.warning))
 const hasWarnings = computed(() => installed.value && Object.values(readinessActions.value).some(a => a.need && !a.has && a.warning))
-const isReady = computed(() => (!needFix.value || wasFixed.value) && (!needInstall.value || wasInstalled.value))
+const isReady = computed(() => readinessActions.value.cdkey.has && (!needFix.value || wasFixed.value) && (!needInstall.value || wasInstalled.value))
 
 async function refreshSkipLauncher() {
   skipLauncherBusy.value = true
@@ -143,9 +143,8 @@ async function check() {
   await refreshSkipLauncher()
 
   try {
-    const key = await invoke<string>('get_cd_key')
-    const has = key.length > 0 && key.toLowerCase() !== 'invalid'
-    readinessActions.value.cdkey = { need: true, has, detail: has ? key : 'Not set' }
+    const result = await invoke<{ valid: boolean; detail: string }>('check_cd_key')
+    readinessActions.value.cdkey = { need: true, has: result.valid, detail: result.detail }
   } catch {
     readinessActions.value.cdkey = { need: true, has: false, detail: 'Error' }
   }

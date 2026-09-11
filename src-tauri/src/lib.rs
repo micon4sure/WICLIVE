@@ -1,4 +1,5 @@
 mod commands;
+mod cdkey;
 pub mod core;
 
 use tauri::Manager;
@@ -32,6 +33,7 @@ pub fn run() {
             commands::get_skip_launcher_flag,
             commands::set_skip_launcher_flag,
             commands::get_cd_key,
+            commands::check_cd_key,
             commands::set_cd_key,
             commands::check_vcredist,
             commands::check_dx9,

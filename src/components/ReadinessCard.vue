@@ -42,7 +42,7 @@ const meta: Record<string, { label: string; desc: string }> = {
   },
   cdkey: {
     label: 'CD Key',
-    desc: 'No valid CD key is set. You need a CD key to play online.',
+    desc: 'Your CD key is missing, invalid, or for another game edition. Fix will request a key for the installed edition.',
   },
   proxy_installed: {
     label: 'Multiplayer Proxy',

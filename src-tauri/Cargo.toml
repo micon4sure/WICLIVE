@@ -1,6 +1,6 @@
 [package]
 name = "wiclive"
-version = "4.7.0"
+version = "4.7.1"
 edition = "2021"
 default-run = "wiclive"
 
@@ -30,6 +30,7 @@ reqwest = { version = "0.12", features = ["stream", "json", "native-tls"] }
 futures-util = "0.3"
 zip = "2"
 md5 = "0.7"
+tiger = "0.3"
 tokio = { version = "1", features = ["fs"] }
 
 [target.'cfg(windows)'.dependencies]

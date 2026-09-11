@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use serde::Serialize;
 use tauri::Emitter;
-use crate::core;
+use crate::{cdkey, core};
 
 // ── Serializable version for IPC ──────────────────────────────────
 
@@ -72,8 +72,30 @@ pub fn get_cd_key() -> Result<String, String> {
     core::read_cd_key()
 }
 
+#[derive(Serialize)]
+pub struct CdKeyReadiness {
+    valid: bool,
+    detail: String,
+}
+
+#[tauri::command]
+pub fn check_cd_key() -> Result<CdKeyReadiness, String> {
+    let key = core::read_cd_key()?;
+    let soviet = core::installed_product_id()? == core::PRODUCT_ID_WIC08_STANDARD_KEY;
+    let result = cdkey::validate(&key, soviet);
+    Ok(CdKeyReadiness {
+        valid: result.is_ok(),
+        detail: result.map(|()| key).unwrap_or_else(|error| error.to_string()),
+    })
+}
+
 #[tauri::command]
 pub fn set_cd_key(key: String) -> Result<(), String> {
+    // Keep the explicit clear action, but never save an incompatible replacement.
+    if !key.is_empty() {
+        let soviet = core::installed_product_id()? == core::PRODUCT_ID_WIC08_STANDARD_KEY;
+        cdkey::validate(&key, soviet).map_err(|error| error.to_string())?;
+    }
     core::write_cd_key(&key)
 }
 
@@ -395,6 +417,9 @@ pub async fn request_cd_key(
         key: String,
     }
     let data: KeyResponse = resp.json().await.map_err(|e| e.to_string())?;
+    // In particular, an empty service response must not become a successful clear.
+    cdkey::validate(&data.key, product == core::PRODUCT_ID_WIC08_STANDARD_KEY)
+        .map_err(|error| format!("Key service returned an unusable CD key: {}", error))?;
     Ok(data.key)
 }
 
